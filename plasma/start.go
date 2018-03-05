@@ -11,11 +11,13 @@ import (
 )
 
 func Start(c *cli.Context) {
-	level, err := db.CreateLevelDatabase(c.GlobalString("db"))
+	db, level, err := db.CreateLevelDatabase(c.GlobalString("db"))
 
 	if err != nil {
 		log.Panic(err)
 	}
+
+	defer db.Close()
 
 	client, err := eth.NewClient(c.GlobalString("node-url"))
 

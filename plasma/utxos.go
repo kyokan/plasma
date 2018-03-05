@@ -11,11 +11,13 @@ import (
 )
 
 func PrintUTXOs(c *cli.Context) {
-	level, err := db.CreateLevelDatabase(c.GlobalString("db"))
+	db, level, err := db.CreateLevelDatabase(c.GlobalString("db"))
 
 	if err != nil {
 		log.Panic("Failed to establish connection with database:", err)
 	}
+
+	defer db.Close()
 
 	addrStr := c.String("addr")
 
