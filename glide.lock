@@ -1,0 +1,78 @@
+hash: 5b313349404107ac57bb31318fb202d9c981cf8a8e1b511139463c891794ce34
+updated: 2018-03-04T16:01:48.914883517-08:00
+imports:
+- name: github.com/btcsuite/btcd
+  version: 2be2f12b358dc57d70b8f501b00be450192efbc3
+  subpackages:
+  - btcec
+- name: github.com/ethereum/go-ethereum
+  version: 0b814d32f8737b194874942f11dc3e9e7399cf7b
+  subpackages:
+  - accounts/abi
+  - common
+  - common/hexutil
+  - common/math
+  - core/types
+  - crypto
+  - crypto/secp256k1
+  - crypto/sha3
+  - ethclient
+  - ethdb
+  - log
+  - metrics
+  - params
+  - rlp
+  - rpc
+  - trie
+- name: github.com/go-stack/stack
+  version: 259ab82a6cad3992b4e21ff5cac294ccb06474bc
+- name: github.com/golang/snappy
+  version: 553a641470496b2327abcac10b36396bd98e45c9
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: 53c1911da2b537f792e7cafcb446b05ffe33b996
+- name: github.com/gorilla/rpc
+  version: 22c016f3df3febe0c1f6727598b6389507e03a18
+  subpackages:
+  - json
+- name: github.com/keybase/go-codec
+  version: 8a39c1d1f00af239dd650a292922fa4f46a39fa2
+  subpackages:
+  - codec
+- name: github.com/mattn/go-runewidth
+  version: a9d6d1e4dc51df2130326793d49971f238839169
+- name: github.com/olekukonko/tablewriter
+  version: b8a9be070da40449e501c3c4730a889e42d87a9e
+- name: github.com/rs/cors
+  version: 36f00aa91d31dac5aeba5cee361f0e5d395116ac
+- name: github.com/syndtr/goleveldb
+  version: c7a14d4b00e222eab6111b4cd1af829c13f53ec2
+  subpackages:
+  - leveldb
+  - leveldb/cache
+  - leveldb/comparer
+  - leveldb/errors
+  - leveldb/filter
+  - leveldb/iterator
+  - leveldb/journal
+  - leveldb/memdb
+  - leveldb/opt
+  - leveldb/storage
+  - leveldb/table
+  - leveldb/util
+- name: github.com/urfave/cli
+  version: cfb38830724cc34fedffe9a2a29fb54fa9169cd1
+- name: golang.org/x/net
+  version: 22ae77b79946ea320088417e4d50825671d82d57
+  subpackages:
+  - websocket
+- name: gopkg.in/fatih/set.v0
+  version: 168a5d71ba0669ae06888225478d73a113f1687e
+- name: gopkg.in/karalabe/cookiejar.v2
+  version: 8dcd6a7f4951f6ff3ee9cbb919a06d8925822e57
+  subpackages:
+  - collections/prque
+- name: gopkg.in/natefinch/npipe.v2
+  version: c1b8fa8bdccecb0b8db834ee0b92fdbcfa606dd6
+testImports: []

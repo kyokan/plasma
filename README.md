@@ -29,6 +29,14 @@ Blocks are emitted under the following conditions:
 
 Every hour, the root node puts the last hour's worth of transactions into a Merkle tree and sends the Merkle root to the Plasma contract.
 
+## Installation
+
+This project uses glide to manage its dependencies.  To install them locally run:
+
+```
+glide install
+```
+
 ## CLI Usage
 
 **Note:** Some of these CLI commands are still in development.
