@@ -37,6 +37,14 @@ This project uses glide to manage its dependencies.  To install them locally run
 glide install
 ```
 
+## Migrate Contracts for Development
+
+For development we are using default ganache settings.  To upload contracts run the following:
+
+```
+truffle migrate --network development
+```
+
 ## CLI Usage
 
 **Note:** Some of these CLI commands are still in development.
