@@ -21,7 +21,7 @@ The following are three main parts of the system:
 ### Validator Nodes:
 
 1. Checking the validity of every block emitted by a root node.
-1. Checks the validity of block headers on the Plasma contract.
+1. Checking the validity of block headers on the Plasma contract.
 2. Exiting the Plasma chain if malfeasance is detected.
 
 ### Plasma Contract:
@@ -67,7 +67,8 @@ mkdir -p ~/geth/chain
 cd ~/geth
 echo '{    "config": {        "chainId": 15,        "homesteadBlock": 0,        "eip155Block": 0,        "eip158Block": 0    },    "difficulty": "1024",    "gasLimit": "10000000",    "alloc": {        "0x44a5cae1ebd47c415630da1e2131b71d1f2f5803": { "balance": "1000000000000000000000" }    }}' > genesis.json
 geth --datadir chain init genesis.json
-geth --datadir chain --rpc --ws --mine
+geth account new --datadir chain
+geth --datadir chain --rpc --ws --mine --unlock [YOUR_ADDRESS]
 ```
 
 3. Deploy contracts:
