@@ -139,4 +139,22 @@ At the same time, customers of the decentralized app may run standardized valida
 
 ## Future Applications
 
-We are actively working on extending the Plasma MVP to beyond payments.  In the use-case above, it would be beneficial if decentralized apps and customers enter into a contract on the child chain, with Plasma-based security guarantees of the root chain.  In this model two parties will review a contract beforehand that details what data will be used to determine costs (i.e. network bandwidth).  The devices will then broadcast transactions to the Root Node, which will execute contract code on the child chain.  The Root Node will then create proofs of the state-transitions and store them in the block header.  The transaction would represent the amount of network bandwidth consumed per customer, and the state-transitions would initially be designed to verify updates to standard Solidity based mappings of type: (address -> uint256).
+We are actively working on extending the Plasma MVP to beyond payments.  In the use-case above, it would be beneficial if the decentralized app could "plug in" to Plasma by executing proprietary business logic while still getting the security guarantees of the Ethereum root chain.  A simple example is a contract that calculates how much network bandwidth customers use.  This gives several advantages:
+
+1. Customers have greater visibility of how they will be charged before agreeing to use the service.
+2. Customers will have confidence in the security because validators will submit challenge proofs incase of incorrect payment calculations.  Currently users would need to trust the amount charged was calculated correctly, and it would be realistically difficult to validate, especially in high transaction volume situations.
+3. Decentralized Apps can more quickly develop without worrying about scalability and security.
+
+Implementing this vision will come down to two major parts:
+
+#### Pluggable Framework for Decentralized Apps
+
+We will create a layer on top of Root Nodes that will allow decentralized apps to run their own business logic.  Our vision is to provide a development framework and/or protocol that is easy to use, while still being secure.  To achieve this, the functionality provided will be incrementally released as specific subsets of state transitions whose priority is determined by real world decentralized app use cases.  Decentralized apps will likely integrate with this layer via pluggable golang code and/or rpc protocols.
+
+#### Contract Security Guarantees
+
+Root Nodes will submit state transition types that are hashed into separate merkle roots stored in Plasma blocks on the contract.  The Plasma contract may track simplified and/or recent state transition functions and storage for each instance, to help increase security.  In the case of byzantine behavior, validators can submit proofs that refute these transitions by re-running state transitions within a challenge window and verifying that the resulting merkle roots match. 
+
+### Conclusion
+
+Decentralized apps and customers may then agree upon pre-defined state transitions on the child chain, with Plasma based security guarantees of the root chain. In this model two parties will review state transition functions beforehand that detail what data will be used to determine costs (i.e. network bandwidth). The devices will then broadcast state transition transactions to the Root Node, which will execute the transition on the child chain. The Root Node will then create proofs of the state transitions and store them in the block header. Validators will then autonomously validate that the latest submitted blocks look legitimate by re-running the state transitions.  This model illustrates how we plan to move towards a pluggable Plasma framework that extends beyond payments.
