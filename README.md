@@ -1,27 +1,37 @@
-# Plasma MVP
+# Plasma
 
-This project is a golang implementation of Vitalik Buterin's [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. It is very much a work-in-progress. Our goals are the following:
+This project is a golang implementation and extension of the [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. Our goals are the following:
 
-1. Implement the Plasma MVP.
-2. Build a pluggable architecture on top of the MVP in order to enable people to build applications on top of a Plasma chain.
+1. Extend the Plasma MVP.
+2. Build a pluggable architecture that enables developers to build decentralized applications on top of a Plasma chain.
 
 ## Architecture
 
-This implementation uses a proof-of-authority model. There are two node types: root nodes, and validator nodes. Root nodes are responsible for:
+This implementation uses a proof-of-authority model. The authority owns root nodes that facilitate child chain transactions and create blocks on the Plasma Contract. Users on the child chain ensure security by running validator nodes, which monitor the validity of each plasma block, and perform exits if problems are detected.
+
+The following are three main parts of the system:
+
+### Root Nodes:
 
 1. Processing deposits and exits via the Plasma smart contract it owns.
 2. Processing transactions and packaging them into blocks.
 3. Broadcasting blocks to validator nodes.
 4. Reporting new blocks to the Plasma smart contract.
 
-Validator nodes are responsible for:
+### Validator Nodes:
 
 1. Checking the validity of every block emitted by a root node.
+1. Checking the validity of block headers on the Plasma contract.
 2. Exiting the Plasma chain if malfeasance is detected.
 
-## Block Emission
+### Plasma Contract:
 
-Blocks are emitted under the following conditions:
+1. A smart contract on the Ethereum root chain.
+2. Supports deposits, block submission, exits, and challenges.
+
+## Block Submission
+
+Blocks are submitted under the following conditions:
 
 1. When a deposit transaction is received.
 2. When 65,535 transactions are in the mempool.
@@ -29,13 +39,63 @@ Blocks are emitted under the following conditions:
 
 Every hour, the root node puts the last hour's worth of transactions into a Merkle tree and sends the Merkle root to the Plasma contract.
 
+## Prerequisites
+
+1. [Golang](https://golang.org/doc/install): This is primarily a golang development environment.
+2. [Glide](https://github.com/Masterminds/glide#install): We use glide for our dependency management.
+3. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used to migrate Plasma contracts to the Ethereum root chain.
+4. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
+
+## Installation and Setup
+
+1. Checkout, install deps, and build:
+
+```
+mkdir -p $GOPATH/src/github.com/kyokan
+git clone https://github.com/kyokan/plasma.git
+cd plasma
+glide install
+make
+```
+
+2. Setup local private chain or testnet:
+
+This is a simple example of setting up a private chain.  For more details refer to the [Private Network](https://github.com/ethereum/go-ethereum/wiki/Private-network) written by Ethereum.
+
+```
+mkdir -p ~/geth/chain
+cd ~/geth
+echo '{    "config": {        "chainId": 15,        "homesteadBlock": 0,        "eip155Block": 0,        "eip158Block": 0    },    "difficulty": "1024",    "gasLimit": "10000000",    "alloc": {        "0x44a5cae1ebd47c415630da1e2131b71d1f2f5803": { "balance": "1000000000000000000000" }    }}' > genesis.json
+geth --datadir chain init genesis.json
+geth account new --datadir chain
+geth --datadir chain --rpc --ws --mine --unlock [YOUR_ADDRESS]
+```
+
+3. Deploy contracts:
+
+Make sure to save the resulting Plasma contract address to be used later.
+
+```
+cd $GOPATH/src/github.com/kyokan/plasma/contracts
+truffle migrate --network development
+```
+
+4. Run root nodes and validators:
+
+Adding the ws scheme will allow us to process deposit events.
+
+```
+plasma start --node-url ws://localhost:8545 --contract-addr [ADD_PLASMA_CONTRACT_ADDRESS_HERE] &
+plasma validate --node-url ws://localhost:8545 --contract-addr [ADD_PLASMA_CONTRACT_ADDRESS_HERE] &
+```
+
 ## CLI Usage
 
 **Note:** Some of these CLI commands are still in development.
 
 ```
 NAME:
-   Plasma - Demonstrates what an example Plasma blockchain can do.
+   Plasma - A secure and scalable solution for decentralized applications.
 
 USAGE:
    plasma [global options] command [command options] [arguments...]
@@ -56,3 +116,27 @@ GLOBAL OPTIONS:
    --help, -h             show help
    --version, -v          print the version
 ```
+
+## Root Node API
+### Send Transaction
+Send a transaction to other participants.
+#### Parameters
+|Name|Type|Required|Description|
+|---|---|---|---|
+|from|Address|Yes|Sender of transaction|
+|to|Address|Yes|Recipient of transaction|
+|amount|Float|Yes|Amount to send|
+#### Sample
+```
+curl http://localhost:8643/rpc -H "Content-Type: application/json" -X POST --data '{ "method": "Transaction.Send", "params": [{"From":"0x627306090abaB3A6e1400e9345bC60c78a8BEf57","To":"0xf17f52151EbEF6C7334FAD080c5704D77216b732","Amount":"3"}], "id":1}'
+```
+
+## Example Applications
+
+Currently there are a growing number of decentralized applications using devices that offer a utility (such as routing network packets) and simultaneously leverage this data to calculate micro payments in a “pay-as-you-go” model.  Solutions such as state-channels help limit costs, but come with complexities when there are thousands of nodes, requiring thousands of channels to be opened and/or chained.  Plasma offers a great alternative solution in these scenarios because in reality the payment contract is between two parties: the decentralized app which owns these devices, and the customer using these devices.  In this way, the decentralized app can maintain their own Plasma child chain, pooling together transactions reported from their devices.  They can then fine tune their costs based on the size of the block headers and frequency these blocks are reported to the Plasma contract.
+
+At the same time, customers of the decentralized app may run standardized validator nodes (provided by this implementation) on a VPC.  This ensures security for customers, since validator nodes will automatically exit in case of byzantine behavior from the decentralized app.  Validators will run autonomously handling the complexities of verifications, exits, and challenges.  This makes them easy to use for normal consumers.  In practice it makes sense for customers to group together into validator pools, since running a VPC could be expensive.
+
+## Future Applications
+
+We are actively working on extending the Plasma MVP to beyond payments.  In the use-case above, it would be beneficial if decentralized apps and customers enter into a contract on the child chain, with Plasma-based security guarantees of the root chain.  In this model two parties will review a contract beforehand that details what data will be used to determine costs (i.e. network bandwidth).  The devices will then broadcast transactions to the Root Node, which will execute contract code on the child chain.  The Root Node will then create proofs of the state-transitions and store them in the block header.  The transaction would represent the amount of network bandwidth consumed per customer, and the state-transitions would initially be designed to verify updates to standard Solidity based mappings of type: (address -> uint256).

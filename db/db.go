@@ -13,13 +13,13 @@ type Database struct {
 	AddressDao AddressDao
 }
 
-func CreateLevelDatabase(location string) (*Database, error) {
+func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
 	loc := path.Join(location, "db")
 	log.Printf("Creating database in %s.", loc)
 	level, err := leveldb.OpenFile(loc, nil)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	txDao := LevelTransactionDao{db: level}
@@ -27,7 +27,7 @@ func CreateLevelDatabase(location string) (*Database, error) {
 	merkleDao := LevelMerkleDao{db: level}
 	addressDao := LevelAddressDao{db: level, txDao: &txDao}
 
-	return &Database{
+	return level, &Database{
 		TxDao:      &txDao,
 		BlockDao:   &blockDao,
 		MerkleDao:  &merkleDao,
