@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/plasma"
 	"github.com/urfave/cli"
-	"os"
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	app.Name = "Plasma"
-	app.Usage = "Demonstrates what an example Plasma blockchain can do."
+	app.Usage = "A secure and scalable solution for decentralized applications."
 	app.Commands = []cli.Command{
 		{
 			Name:   "start",
