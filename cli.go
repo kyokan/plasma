@@ -6,8 +6,10 @@ import (
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/plasma"
-	"github.com/kyokan/plasma/tester"
 	"github.com/urfave/cli"
+
+	plasma_tests "github.com/kyokan/plasma/tester/plasma"
+	pq_tests "github.com/kyokan/plasma/tester/pq"
 )
 
 func main() {
@@ -89,9 +91,14 @@ func main() {
 			},
 		},
 		{
-			Name:   "tester",
-			Usage:  "Runs client tests.",
-			Action: tester.Main,
+			Name:   "plasma-tests",
+			Usage:  "Runs plasma integration tests.",
+			Action: plasma_tests.IntegrationTest,
+		},
+		{
+			Name:   "pq-tests",
+			Usage:  "Runs priority queue integration tests.",
+			Action: pq_tests.IntegrationTest,
 		},
 	}
 
