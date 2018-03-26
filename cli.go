@@ -6,6 +6,7 @@ import (
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/plasma"
+	"github.com/kyokan/plasma/tester"
 	"github.com/urfave/cli"
 )
 
@@ -27,6 +28,26 @@ func main() {
 			Name:  "contract-addr",
 			Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9",
 			Usage: "Plasma contract address.",
+		},
+		cli.StringFlag{
+			Name:  "keystore-dir",
+			Usage: "Keystore directory.",
+		},
+		cli.StringFlag{
+			Name:  "keystore-file",
+			Usage: "Keystore file.",
+		},
+		cli.StringFlag{
+			Name:  "sign-passphrase",
+			Usage: "Passphrase for keystore file.",
+		},
+		cli.StringFlag{
+			Name:  "user-address",
+			Usage: "User address.",
+		},
+		cli.StringFlag{
+			Name:  "private-key",
+			Usage: "Private key of user address.",
 		},
 	}
 
@@ -66,6 +87,11 @@ func main() {
 					Usage: "The address to print UTXOs for.",
 				},
 			},
+		},
+		{
+			Name:   "tester",
+			Usage:  "Runs client tests.",
+			Action: tester.Main,
 		},
 	}
 
