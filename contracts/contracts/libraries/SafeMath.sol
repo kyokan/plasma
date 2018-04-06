@@ -4,6 +4,8 @@ pragma solidity 0.4.18;
  * @title SafeMath
  * @dev Math operations with safety checks that throw on error
  */
+
+
 library SafeMath {
     function mul(uint256 a, uint256 b)
         internal
@@ -46,5 +48,26 @@ library SafeMath {
         uint256 c = a + b;
         assert(c >= a);
         return c;
+    }
+
+    function pow(uint256 a, uint256 b)
+        internal
+        pure
+        returns (uint256)
+    {
+        // This means we have a uint overflow
+        if (a > 0) {
+            assert(a**b > 0);
+        }
+        
+        return a**b;
+    }
+
+    function max()
+        internal
+        pure
+        returns (uint256)
+    {
+        return 2**256-1;
     }
 }

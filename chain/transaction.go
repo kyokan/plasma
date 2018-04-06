@@ -6,11 +6,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/keybase/go-codec/codec"
 	"github.com/kyokan/plasma/util"
-	"math/big"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type Transaction struct {
@@ -170,4 +173,68 @@ func doHash(values []interface{}) util.Hash {
 
 	digest := sha3.Sum256(buf.Bytes())
 	return digest[:]
+}
+
+func (tx *Transaction) RLPHash() util.Hash {
+	bytes, err := rlp.EncodeToBytes(tx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return util.DoHash(bytes)
+}
+
+// EncodeRLP writes p as RLP list [a, b] that omits the Name field.
+func (tx *Transaction) EncodeRLP(w io.Writer) (err error) {
+	if tx == nil {
+		err = rlp.Encode(w, []uint{0, 0, 0, 0})
+	} else {
+		var blkNum0 uint64
+		var txIdx0 uint32
+		var outIdx0 uint8
+		var blkNum1 uint64
+		var txIdx1 uint32
+		var outIdx1 uint8
+		var newOwner0 common.Address
+		var amount0 *big.Int
+		var newOwner1 common.Address
+		var amount1 *big.Int
+
+		if tx.Input0 != nil {
+			blkNum0 = tx.Input0.BlkNum
+			txIdx0 = tx.Input0.TxIdx
+			outIdx0 = tx.Input0.OutIdx
+		}
+
+		if tx.Input1 != nil {
+			blkNum1 = tx.Input1.BlkNum
+			txIdx1 = tx.Input1.TxIdx
+			outIdx1 = tx.Input1.OutIdx
+		}
+
+		if tx.Output0 != nil {
+			newOwner0 = tx.Output0.NewOwner
+			amount0 = tx.Output0.Amount
+		}
+
+		if tx.Output1 != nil {
+			newOwner1 = tx.Output1.NewOwner
+			amount1 = tx.Output1.Amount
+		}
+
+		err = rlp.Encode(w, []interface{}{
+			blkNum0,
+			txIdx0,
+			outIdx0,
+			blkNum1,
+			txIdx1,
+			outIdx1,
+			newOwner0,
+			amount0,
+			newOwner1,
+			amount1,
+		})
+	}
+	return err
 }
