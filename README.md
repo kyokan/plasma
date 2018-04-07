@@ -44,7 +44,8 @@ Every hour, the root node puts the last hour's worth of transactions into a Merk
 1. [Golang](https://golang.org/doc/install): This is primarily a golang development environment.
 2. [Glide](https://github.com/Masterminds/glide#install): We use glide for our dependency management.
 3. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used to migrate Plasma contracts to the Ethereum root chain.
-4. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
+4. [Ganache](https://github.com/trufflesuite/ganache): Currently we use Ganache to test against a root chain.
+5. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
 
 ## Installation and Setup
 
@@ -58,7 +59,18 @@ glide install
 make
 ```
 
-2. Setup local private chain or testnet:
+2. Run ganache on default port 7545
+
+3. Deploy contracts:
+
+Make sure to save the resulting Plasma contract address to be used later.
+
+```
+cd $GOPATH/src/github.com/kyokan/plasma/contracts
+./generate.js --network ganache
+```
+
+4. You can optionally setup a local private chain or testnet:
 
 This is a simple example of setting up a private chain.  For more details refer to the [Private Network](https://github.com/ethereum/go-ethereum/wiki/Private-network) written by Ethereum.
 
@@ -71,50 +83,101 @@ geth account new --datadir chain
 geth --datadir chain --rpc --ws --mine --unlock [YOUR_ADDRESS]
 ```
 
-3. Deploy contracts:
+## CLI Usage Examples
 
-Make sure to save the resulting Plasma contract address to be used later.
+These examples work with running ganache as the root chain.  Be sure to set the contract address either through the command line or by setting them directly in cli.go.  They have been omitted from the examples to make it easier to read.
 
-```
-cd $GOPATH/src/github.com/kyokan/plasma/contracts
-truffle migrate --network development
-```
+Also note that these examples require you to run generate.js again in between tests.
 
-4. Run root nodes and validators:
+#### Getting Balances
 
-Adding the ws scheme will allow us to process deposit events.
+Run the following to get the balance of each account at any point:
 
 ```
-plasma start --node-url ws://localhost:8545 --contract-addr [ADD_PLASMA_CONTRACT_ADDRESS_HERE] &
-plasma validate --node-url ws://localhost:8545 --contract-addr [ADD_PLASMA_CONTRACT_ADDRESS_HERE] &
+plasma balance
+plasma --user-address 0xf17f52151EbEF6C7334FAD080c5704D77216b732 balance
 ```
 
-## CLI Usage
+### Simulate Exits
 
-**Note:** Some of these CLI commands are still in development.
+In one tab run:
 
 ```
-NAME:
-   Plasma - A secure and scalable solution for decentralized applications.
+plasma start
+```
 
-USAGE:
-   plasma [global options] command [command options] [arguments...]
+In a second tab run:
 
-VERSION:
-   0.0.0
+```
+plasma validate
+```
 
-COMMANDS:
-     start     Starts running a Plasma root node.
-     validate  Starts running a Plasma validator node.
-     utxos     Prints UTXOs for the given address.
-     help, h   Shows a list of commands or help for one command
+In a third tab run:
 
-GLOBAL OPTIONS:
-   --db value             Filepath for Plasma's database. (default: "~/.plasma")
-   --node-url value       Full URL to a running geth node. (default: "http://localhost:8545")
-   --contract-addr value  Plasma contract address. (default: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9")
-   --help, -h             show help
-   --version, -v          print the version
+```
+plasma deposit --amount 1000000
+plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 1234
+plasma --user-address 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --private-key ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f exit --blocknum 3 --txindex 0 --oindex 0
+plasma exit --blocknum 3 --txindex 0 --oindex 1
+plasma finalize
+```
+
+### Simulate Exit Challenges
+
+In one tab run:
+
+```
+plasma start
+```
+
+In a second tab run:
+
+```
+plasma validate
+```
+
+In a third tab run:
+
+```
+plasma deposit --amount 1000000
+plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 1234
+plasma exit --blocknum 2 --txindex 0 --oindex 0
+plasma finalize
+```
+
+### Simulate Root Validation
+
+In one tab run:
+
+```
+plasma start
+```
+
+In a second tab run:
+
+```
+plasma validate
+```
+
+In a third tab run:
+
+```
+plasma deposit --amount 1000000
+plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 3
+```
+
+Cancel the first two tabs.
+
+Run a force submission just for this example:
+
+```
+plasma force-submit --merkle-root f2972273de7810c2f290efd7f61e0d4a --prev-hash 344decbb42838bb176dc2e5a1ca51700a02f1d2d5e65d328222dfed5446f7c5d --number 4
+```
+
+Start root node and validator again then run finalize to see exits:
+
+```
+plasma finalize
 ```
 
 ## Root Node API

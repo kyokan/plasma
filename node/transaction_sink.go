@@ -2,14 +2,15 @@ package node
 
 import (
 	"errors"
+	"log"
+	"math/big"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-	"log"
-	"math/big"
-	"math/rand"
 	"github.com/kyokan/plasma/util"
 )
 
@@ -125,6 +126,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan Transact
 				Fee:     big.NewInt(0),
 			}
 
+			// TODO: Optionally use local private key for testing
 			tx.Sig0, err = sink.client.SignData(&req.From, tx.SignatureHash())
 			tx.Sig1, err = sink.client.SignData(&req.From, tx.SignatureHash())
 

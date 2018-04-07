@@ -2,16 +2,18 @@ package eth
 
 import (
 	"context"
+	"log"
+	"math/big"
+	"strings"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
-	"log"
-	"math/big"
-	"strings"
 )
 
 const depositFilter = "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"
@@ -37,6 +39,12 @@ func NewClient(url string) (*Client, error) {
 	return &Client{typedClient: ethclient.NewClient(c), rpcClient: c}, nil
 }
 
+func (c *Client) GetBalance(addr common.Address) (*big.Int, error) {
+	log.Printf("Attempting to get balance for %s", util.AddressToHex(&addr))
+
+	return c.typedClient.BalanceAt(context.Background(), addr, nil)
+}
+
 func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	log.Printf("Attempting to sign data on behalf of %s", util.AddressToHex(addr))
 	var res []byte
@@ -48,6 +56,22 @@ func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	}
 
 	return res, nil
+}
+
+// Can be used by plasma client to send a sign transaction request to a remote geth node.
+// TODO: needs to be tested.
+func (c *Client) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
+	return &bind.TransactOpts{
+		From: keyAddr,
+		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+			data := signer.Hash(tx).Bytes()
+			signature, err := c.SignData(&address, data)
+			if err != nil {
+				return nil, err
+			}
+			return tx.WithSignature(signer, signature)
+		},
+	}
 }
 
 func (c *Client) SubscribeDeposits(address common.Address, resChan chan<- DepositEvent) error {

@@ -1,12 +1,13 @@
 package rpc
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/chain"
-	"github.com/kyokan/plasma/node"
 	"log"
 	"math/big"
 	"net/http"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/kyokan/plasma/chain"
+	"github.com/kyokan/plasma/node"
 )
 
 type SendArgs struct {
@@ -24,7 +25,7 @@ type TransactionService struct {
 }
 
 func (t *TransactionService) Send(r *http.Request, args *SendArgs, reply *SendResponse) error {
-	log.Printf("Received Transaction.Send request.")
+	log.Println("Received Transaction.Send request.")
 
 	from := common.HexToAddress(args.From)
 	to := common.HexToAddress(args.To)

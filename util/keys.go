@@ -1,10 +1,11 @@
-package tester
+package util
 
 import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -12,6 +13,31 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pborman/uuid"
 )
+
+func CreatePrivateKeyECDSA(
+	userAddress string,
+	privateKey string,
+	keystoreDir string,
+	keystoreFile string,
+	signPassphrase string,
+) *ecdsa.PrivateKey {
+	var privateKeyECDSA *ecdsa.PrivateKey
+
+	if exists(userAddress) && exists(privateKey) {
+		privateKeyECDSA = ToPrivateKeyECDSA(privateKey)
+	} else if exists(keystoreDir) &&
+		exists(keystoreFile) &&
+		exists(userAddress) {
+		keyWrapper := GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
+		privateKeyECDSA = keyWrapper.PrivateKey
+	}
+
+	if privateKeyECDSA == nil {
+		log.Fatalln("Private key ecdsa not found")
+	}
+
+	return privateKeyECDSA
+}
 
 func ToKeyWrapper(privateKey string) *keystore.Key {
 	privateKeyECDSA := ToPrivateKeyECDSA(privateKey)
@@ -28,13 +54,13 @@ func ToKeyWrapper(privateKey string) *keystore.Key {
 func ToPrivateKeyECDSA(privateKey string) *ecdsa.PrivateKey {
 	key, err := hex.DecodeString(privateKey)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to decode string to hex bytes: %v", err)
 	}
 
 	privateKeyECDSA, err := crypto.ToECDSA(key)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to convert key to ECDSA: %v", err)
 	}
 
 	return privateKeyECDSA
@@ -90,4 +116,8 @@ func GetFromKeyStore(
 	}
 
 	return keyWrapper
+}
+
+func exists(str string) bool {
+	return len(str) > 0
 }

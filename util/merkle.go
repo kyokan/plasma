@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"math"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/keybase/go-codec/codec"
@@ -35,6 +36,47 @@ func (n MerkleNode) ToCbor() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+func CreateMerkleProof(merkle MerkleTree, index *big.Int) []byte {
+	proofs := FindProofs(&merkle.Root, [][]byte{}, 1)
+
+	if index.Int64() >= int64(len(proofs)) {
+		panic("Transaction index must be within set of proofs")
+	}
+
+	return proofs[index.Int64()]
+}
+
+// TODO: we could optimize this with an index.
+func FindProofs(node *MerkleNode, curr [][]byte, depth int) [][]byte {
+	if node.Left == nil && node.Right == nil {
+		if depth == 16 {
+			// Reverse it.
+			var copyCurr []byte
+
+			for i := len(curr) - 1; i >= 0; i-- {
+				copyCurr = append(copyCurr, curr[i]...)
+			}
+
+			return [][]byte{copyCurr}
+		}
+
+		return [][]byte{}
+	}
+
+	var left [][]byte
+	var right [][]byte
+
+	if node.Left != nil {
+		left = FindProofs(node.Left, append(curr, node.Right.Hash), depth+1)
+	}
+
+	if node.Right != nil {
+		right = FindProofs(node.Right, append(curr, node.Left.Hash), depth+1)
+	}
+
+	return append(left, right...)
+}
+
 func TreeFromRLPItems(items []RLPHashable) MerkleTree {
 	if len(items) == 0 {
 		return emptyTree()
@@ -47,7 +89,9 @@ func TreeFromRLPItems(items []RLPHashable) MerkleTree {
 		level[i] = MerkleNode{Hash: item.RLPHash()}
 	}
 
-	return treeFromLevel16(level)
+	tree := treeFromLevel16(level)
+
+	return tree
 }
 
 func TreeFromItems(items []Hashable) MerkleTree {
