@@ -1,22 +1,26 @@
 package node
 
 import (
-	"github.com/kyokan/plasma/chain"
-	"github.com/kyokan/plasma/db"
-	"github.com/kyokan/plasma/util"
 	"log"
 	"time"
+
+	"github.com/kyokan/plasma/chain"
+	"github.com/kyokan/plasma/db"
+	"github.com/kyokan/plasma/eth"
+	"github.com/kyokan/plasma/util"
 )
 
 type PlasmaNode struct {
-	DB     *db.Database
-	TxSink *TransactionSink
+	DB           *db.Database
+	TxSink       *TransactionSink
+	PlasmaClient *eth.PlasmaClient
 }
 
-func NewPlasmaNode(db *db.Database, sink *TransactionSink) *PlasmaNode {
+func NewPlasmaNode(db *db.Database, sink *TransactionSink, plasmaClient *eth.PlasmaClient) *PlasmaNode {
 	return &PlasmaNode{
-		DB:     db,
-		TxSink: sink,
+		DB:           db,
+		TxSink:       sink,
+		PlasmaClient: plasmaClient,
 	}
 }
 
@@ -46,7 +50,7 @@ func (node *PlasmaNode) Start() {
 		}
 	}
 
-	ticker := time.NewTicker(time.Millisecond * 500)
+	ticker := time.NewTicker(time.Second * 10)
 	blockChan := make(chan *chain.Block)
 	go node.awaitTxs(blockChan, ticker.C)
 	blockChan <- lastBlock
@@ -78,11 +82,18 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
 }
 
 func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transaction, blockChan chan<- *chain.Block) {
+	if len(txs) == 0 {
+		// skip for now
+		log.Println("Skipping package blocks because there are no transactions.")
+		return
+	}
+
 	blkNum := lastBlock.Header.Number + 1
 
 	log.Printf("Packaging block %d containing %d transactions.", blkNum, len(txs))
 
 	accepted, rejected := EnsureNoDoubleSpend(txs)
+
 	hashables := make([]util.Hashable, len(accepted))
 
 	log.Printf("Accepted %d of %d transactions. %d rejected due to double spend.",
@@ -111,5 +122,21 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 	}
 
 	node.DB.BlockDao.Save(&block)
+
+	// Report this block to the plasma contract
+	node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
+
 	blockChan <- &block
+}
+
+func rlpMerkleTree(accepted []chain.Transaction) util.MerkleTree {
+	hashables := make([]util.RLPHashable, len(accepted))
+
+	for i := range accepted {
+		txPtr := &accepted[i]
+		hashables[i] = util.RLPHashable(txPtr)
+	}
+
+	merkle := util.TreeFromRLPItems(hashables)
+	return merkle
 }

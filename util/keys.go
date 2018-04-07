@@ -1,4 +1,4 @@
-package tester
+package util
 
 import (
 	"crypto/ecdsa"

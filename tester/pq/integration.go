@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/kyokan/plasma/contracts/gen/contracts"
-	"github.com/kyokan/plasma/tester"
 	"github.com/kyokan/plasma/util"
 	"github.com/urfave/cli"
 )
@@ -22,11 +21,11 @@ func IntegrationTest(c *cli.Context) {
 	var privateKeyECDSA *ecdsa.PrivateKey
 
 	if exists(userAddress) && exists(privateKey) {
-		privateKeyECDSA = tester.ToPrivateKeyECDSA(privateKey)
+		privateKeyECDSA = util.ToPrivateKeyECDSA(privateKey)
 	} else if exists(keystoreDir) &&
 		exists(keystoreFile) &&
 		exists(userAddress) {
-		keyWrapper := tester.GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
+		keyWrapper := util.GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
 		privateKeyECDSA = keyWrapper.PrivateKey
 	}
 

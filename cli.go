@@ -1,15 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/plasma"
-	"github.com/urfave/cli"
-
 	plasma_tests "github.com/kyokan/plasma/tester/plasma"
 	pq_tests "github.com/kyokan/plasma/tester/pq"
+	"github.com/urfave/cli"
 )
 
 func main() {
@@ -22,34 +20,49 @@ func main() {
 			Usage: "Filepath for Plasma's database.",
 		},
 		cli.StringFlag{
-			Name:  "node-url",
-			Value: "http://localhost:8545",
+			Name: "node-url",
+			// Value: "http://localhost:8545", // dev
+			// Value: "ws://localhost:8546", // websocket
+			Value: "http://localhost:7545",
 			Usage: "Full URL to a running geth node.",
 		},
 		cli.StringFlag{
-			Name:  "contract-addr",
-			Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9",
+			Name: "contract-addr",
+			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
+			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
+			Value: "0x9fbda871d559710256a2502a2517b794b482db40",
+			Usage: "Plasma contract address.",
+		},
+		cli.StringFlag{
+			Name:  "priority-queue-contract-addr",
+			Value: "0xaee7f3641abe7b3fe364325df0482af04fc638b2",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
 			Name:  "keystore-dir",
+			Value: "/Users/mattkim/geth/chain/keystore", // private chain
 			Usage: "Keystore directory.",
 		},
 		cli.StringFlag{
 			Name:  "keystore-file",
+			Value: "/Users/mattkim/geth/chain/keystore/UTC--2018-03-13T17-33-34.839516799Z--44a5cae1ebd47c415630da1e2131b71d1f2f5803", // private chain
 			Usage: "Keystore file.",
 		},
 		cli.StringFlag{
-			Name:  "sign-passphrase",
-			Usage: "Passphrase for keystore file.",
-		},
-		cli.StringFlag{
-			Name:  "user-address",
+			Name: "user-address",
+			// Value: "44a5cae1ebd47c415630da1e2131b71d1f2f5803" // private chain
+			Value: "0x627306090abaB3A6e1400e9345bC60c78a8BEf57", // ganache
 			Usage: "User address.",
 		},
 		cli.StringFlag{
 			Name:  "private-key",
+			Value: "c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3", // ganache
 			Usage: "Private key of user address.",
+		},
+		cli.StringFlag{
+			Name:  "sign-passphrase",
+			Value: "test", // private chain
+			Usage: "Passphrase for keystore file.",
 		},
 	}
 
@@ -65,17 +78,6 @@ func main() {
 					Name:  "rpc-port",
 					Value: 8643,
 					Usage: "Port for the RPC server to listen on.",
-				},
-			},
-		},
-		{
-			Name:   "validate",
-			Usage:  "Starts running a Plasma validator node.",
-			Action: func() { fmt.Println("Not implemented yet.") },
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "root-url",
-					Usage: "The URL of the root node.",
 				},
 			},
 		},

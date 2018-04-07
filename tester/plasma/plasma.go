@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/contracts/gen/contracts"
-	"github.com/kyokan/plasma/tester"
 	"github.com/kyokan/plasma/util"
 )
 
@@ -35,7 +34,7 @@ func CurrentChildBlock(
 	plasma *contracts.Plasma,
 	address string,
 ) *big.Int {
-	opts := tester.CreateCallOpts(address)
+	opts := util.CreateCallOpts(address)
 
 	blocknum, err := plasma.CurrentChildBlock(opts)
 
@@ -50,7 +49,7 @@ func LastExitId(
 	plasma *contracts.Plasma,
 	address string,
 ) *big.Int {
-	opts := tester.CreateCallOpts(address)
+	opts := util.CreateCallOpts(address)
 	exitId, err := plasma.LastExitId(opts)
 
 	if err != nil {
@@ -64,7 +63,7 @@ func Finalize(
 	plasma *contracts.Plasma,
 	privateKeyECDSA *ecdsa.PrivateKey,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	tx, err := plasma.Finalize(auth)
 
 	if err != nil {
@@ -84,13 +83,15 @@ func ChallengeExit(
 	txindex *big.Int,
 	exitId *big.Int,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	bytes, err := rlp.EncodeToBytes(&txs[txindex.Int64()])
 
 	if err != nil {
 		panic(err)
 	}
 
+	// This must be a tx and it's okay if it's the same block, but could be another.
+	// Weird to do down cast but lets try it.
 	proof := CreateMerkleProof(merkle, txindex)
 
 	tx, err := plasma.ChallengeExit(
@@ -118,7 +119,7 @@ func StartExit(
 	blocknum *big.Int,
 	txindex *big.Int,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	oindex := new(big.Int).SetUint64(0)
 	bytes, err := rlp.EncodeToBytes(&txs[txindex.Int64()])
 
@@ -151,7 +152,7 @@ func SubmitBlock(
 	txs []chain.Transaction,
 	merkle util.MerkleTree,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 
 	var root [32]byte
 	copy(root[:], merkle.Root.Hash[:32])
@@ -171,7 +172,7 @@ func Deposit(
 	value int,
 	t *chain.Transaction,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	auth.Value = new(big.Int).SetInt64(int64(value))
 
 	bytes, err := rlp.EncodeToBytes(&t)

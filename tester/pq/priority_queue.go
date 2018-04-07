@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/kyokan/plasma/contracts/gen/contracts"
-	"github.com/kyokan/plasma/tester"
+	"github.com/kyokan/plasma/util"
 )
 
 func CreatePriorityQueueClient(nodeUrl string, contractAddress string) *contracts.PriorityQueue {
@@ -35,7 +35,7 @@ func Add(
 	userAddress string,
 	priority *big.Int,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	tx, err := pq.Add(auth, priority)
 
 	if err != nil {
@@ -53,7 +53,7 @@ func Remove(
 	userAddress string,
 	priority *big.Int,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	tx, err := pq.Remove(auth, priority)
 
 	if err != nil {
@@ -70,7 +70,7 @@ func Pop(
 	privateKeyECDSA *ecdsa.PrivateKey,
 	userAddress string,
 ) {
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 	tx, err := pq.Pop(auth)
 
 	if err != nil {
@@ -89,7 +89,7 @@ func GetPriorities(
 ) {
 	// View needs gas even thought it's not paid for
 	// opts := tester.CreateCallOpts(userAddress)
-	auth := tester.CreateAuth(privateKeyECDSA)
+	auth := util.CreateAuth(privateKeyECDSA)
 
 	tx, err := pq.GetPriorities(auth)
 
