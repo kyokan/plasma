@@ -30,12 +30,12 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0x9fbda871d559710256a2502a2517b794b482db40",
+			Value: "0x38cf23c52bb4b13f051aec09580a2de845a7fa35",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
 			Name:  "priority-queue-contract-addr",
-			Value: "0xaee7f3641abe7b3fe364325df0482af04fc638b2",
+			Value: "0xecfcab0a285d3380e488a39b4bb21e777f8a4eac",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{

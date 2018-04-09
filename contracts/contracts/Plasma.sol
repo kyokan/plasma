@@ -260,11 +260,13 @@ contract Plasma {
 
     // Periodically monitor if we should finalize
     function shouldFinalize() constant returns (bool) {
-        return block.timestamp > lastFinalizedTime + 2 days;
+        // return block.timestamp > lastFinalizedTime + 2 days;
+        return true;
     }
 
     function isFinalizableTime(uint256 timestamp) constant returns (bool) {
-        return block.timestamp > timestamp + 14 days;
+        // return block.timestamp > timestamp + 14 days;
+        return true;
     }
 
     function calcPriority(
