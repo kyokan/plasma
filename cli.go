@@ -7,6 +7,7 @@ import (
 	"github.com/kyokan/plasma/plasma"
 	plasma_tests "github.com/kyokan/plasma/tester/plasma"
 	pq_tests "github.com/kyokan/plasma/tester/pq"
+	"github.com/kyokan/plasma/validator"
 	"github.com/urfave/cli"
 )
 
@@ -82,6 +83,18 @@ func main() {
 			},
 		},
 		{
+			Name:   "validate",
+			Usage:  "Starts running a Plasma validator node.",
+			Action: validator.Start,
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "rpc-port",
+					Value: 8644,
+					Usage: "Port for the RPC server to listen on.",
+				},
+			},
+		},
+		{
 			Name:   "utxos",
 			Usage:  "Prints UTXOs for the given address.",
 			Action: plasma.PrintUTXOs,
@@ -101,6 +114,11 @@ func main() {
 			Name:   "pq-tests",
 			Usage:  "Runs priority queue integration tests.",
 			Action: pq_tests.IntegrationTest,
+		},
+		{
+			Name:   "validator-main",
+			Usage:  "Runs validator main.",
+			Action: validator.Main,
 		},
 	}
 
