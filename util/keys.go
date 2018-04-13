@@ -13,6 +13,31 @@ import (
 	"github.com/pborman/uuid"
 )
 
+func CreatePrivateKeyECDSA(
+	userAddress string,
+	privateKey string,
+	keystoreDir string,
+	keystoreFile string,
+	signPassphrase string,
+) *ecdsa.PrivateKey {
+	var privateKeyECDSA *ecdsa.PrivateKey
+
+	if exists(userAddress) && exists(privateKey) {
+		privateKeyECDSA = ToPrivateKeyECDSA(privateKey)
+	} else if exists(keystoreDir) &&
+		exists(keystoreFile) &&
+		exists(userAddress) {
+		keyWrapper := GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
+		privateKeyECDSA = keyWrapper.PrivateKey
+	}
+
+	if privateKeyECDSA == nil {
+		panic("Private key ecdsa not found")
+	}
+
+	return privateKeyECDSA
+}
+
 func ToKeyWrapper(privateKey string) *keystore.Key {
 	privateKeyECDSA := ToPrivateKeyECDSA(privateKey)
 
@@ -90,4 +115,8 @@ func GetFromKeyStore(
 	}
 
 	return keyWrapper
+}
+
+func exists(str string) bool {
+	return len(str) > 0
 }

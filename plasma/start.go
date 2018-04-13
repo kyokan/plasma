@@ -37,7 +37,6 @@ func Start(c *cli.Context) {
 	}
 
 	sink := node.NewTransactionSink(level, client)
-
 	var privateKeyECDSA *ecdsa.PrivateKey
 
 	if exists(userAddress) && exists(privateKey) {
@@ -55,13 +54,16 @@ func Start(c *cli.Context) {
 
 	plasma := eth.CreatePlasmaClient(nodeURL, contractAddress, userAddress, privateKeyECDSA)
 
+	// TODO: wtf y is this so complicated
 	p := node.NewPlasmaNode(level, sink, plasma)
 
 	go p.Start()
 
 	go func() {
+		blockService := &rpc.BlockService{}
 		chch := make(chan chan node.TransactionRequest)
-		go rpc.Start(c.Int("rpc-port"), chch)
+
+		go rpc.Start(c.Int("rpc-port"), chch, blockService)
 		sink.AcceptTransactionRequests(chch)
 	}()
 

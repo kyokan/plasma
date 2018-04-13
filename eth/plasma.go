@@ -15,6 +15,7 @@ type PlasmaClient struct {
 	plasma      *contracts.Plasma
 	privateKey  *ecdsa.PrivateKey
 	userAddress string
+	ethClient   *Client
 }
 
 func CreatePlasmaClient(
@@ -39,21 +40,33 @@ func CreatePlasmaClient(
 		panic("Private key ecdsa not found")
 	}
 
+	// And another eth client?
+
+	ethClient, err := NewClient(nodeUrl)
+
+	if err != nil {
+		log.Panic("Failed to create a new eth client", err)
+	}
+
 	return &PlasmaClient{
 		plasma,
 		privateKeyECDSA,
 		userAddress,
+		ethClient,
 	}
 }
 
 func (p *PlasmaClient) SubmitBlock(
 	merkle util.MerkleTree,
 ) {
-	auth := util.CreateAuth(p.privateKey)
+	// TODO: if the geth node is unlocked for the user
+	// can we send tx without the private key?
+	// auth := util.CreateAuth(p.privateKey)
+	opts := p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
 
 	var root [32]byte
 	copy(root[:], merkle.Root.Hash[:32])
-	tx, err := p.plasma.SubmitBlock(auth, root)
+	tx, err := p.plasma.SubmitBlock(opts, root)
 
 	if err != nil {
 		log.Fatalf("Failed to submit block: %v", err)

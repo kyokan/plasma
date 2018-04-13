@@ -33,6 +33,10 @@ func Run(port int) {
 func watchRootNode() {
 	for {
 		fmt.Println("Watching root node...")
+
+		// TODO: download blocks from the root node.  Make sure they look good
+		// Download blocks.
+
 		time.Sleep(3 * time.Second)
 	}
 }

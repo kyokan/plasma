@@ -123,6 +123,7 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 
 	node.DB.BlockDao.Save(&block)
 
+	// TODO: can we use the eth client instead.
 	// Report this block to the plasma contract
 	node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
 
