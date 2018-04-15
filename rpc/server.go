@@ -8,12 +8,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
-	"github.com/kyokan/plasma/node"
 )
 
 func Start(
 	port int,
-	txChan chan<- chan node.TransactionRequest,
+	txService *TransactionService,
 	blockService *BlockService,
 ) {
 	log.Printf("Starting RPC server on port %d.", port)
@@ -21,7 +20,7 @@ func Start(
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")
 	s.RegisterCodec(json.NewCodec(), "application/json;charset=utf-8")
-	s.RegisterService(&TransactionService{TxChan: txChan}, "Transaction")
+	s.RegisterService(txService, "Transaction")
 	s.RegisterService(blockService, "Block")
 	r := mux.NewRouter()
 	r.Handle("/rpc", s)

@@ -60,10 +60,18 @@ func Start(c *cli.Context) {
 	go p.Start()
 
 	go func() {
-		blockService := &rpc.BlockService{}
 		chch := make(chan chan node.TransactionRequest)
 
-		go rpc.Start(c.Int("rpc-port"), chch, blockService)
+		txService := &rpc.TransactionService{
+			TxChan: chch,
+		}
+
+		blockService := &rpc.BlockService{
+			DB:     level,
+			Client: client,
+		}
+
+		go rpc.Start(c.Int("rpc-port"), txService, blockService)
 		sink.AcceptTransactionRequests(chch)
 	}()
 

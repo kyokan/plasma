@@ -2,12 +2,14 @@ package db
 
 import (
 	"errors"
+	"log"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
-	"log"
-	"strconv"
+	leveldb_util "github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const txKeyPrefix = "tx"
@@ -17,6 +19,7 @@ const spendKeyPrefix = "spend"
 type TransactionDao interface {
 	Save(tx *chain.Transaction) error
 	SaveMany(txs []chain.Transaction) error
+	FindByBlockNum(blkNum uint64) ([]chain.Transaction, error)
 	FindByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error)
 }
 
@@ -40,6 +43,46 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 	}
 
 	return dao.db.Write(batch, nil)
+}
+
+func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
+	startKey := blkNumTxIdxKey(blkNum, 0)
+	// For now limit to 100 txs.
+	endKey := blkNumTxIdxKey(blkNum, 100)
+	gd := &GuardedDb{db: dao.db}
+
+	iter := gd.db.NewIterator(
+		&leveldb_util.Range{
+			Start: []byte(startKey),
+			Limit: []byte(endKey),
+		}, nil)
+
+	var txs []chain.Transaction
+
+	for iter.Next() {
+		data := gd.Get(iter.Value(), nil)
+
+		if gd.err != nil {
+			return nil, gd.err
+		}
+
+		tx, err := chain.TransactionFromCbor(data)
+
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, *tx)
+	}
+
+	iter.Release()
+	err := iter.Error()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return txs, nil
 }
 
 func (dao *LevelTransactionDao) FindByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error) {

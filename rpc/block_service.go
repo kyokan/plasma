@@ -10,8 +10,7 @@ import (
 )
 
 type GetBlocksArgs struct {
-	Start  int
-	Offset int
+	Height uint64
 }
 
 type GetBlocksResponse struct {
@@ -20,33 +19,30 @@ type GetBlocksResponse struct {
 }
 
 type BlockService struct {
-	db     *db.Database
-	client *eth.Client
+	DB     *db.Database
+	Client *eth.Client
 }
 
-func (t *BlockService) GetBlocks(r *http.Request, args *GetBlocksArgs, reply *GetBlocksResponse) error {
+func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *GetBlocksResponse) error {
 	log.Printf("Received Block.GetBlocks request.")
 
-	start := args.Start
-	offset := args.Offset
+	height := args.Height
 
-	// req := node.BlockRequest{
-	// 	Start:  start,
-	// 	Offset: offset,
-	// }
+	block, err := t.DB.BlockDao.BlockAtHeight(height)
 
-	// ch := make(chan node.BlockRequest)
-	// t.BlockChan <- ch
-	// ch <- req
-	// // res := <-ch
-	// close(ch)
-	// // Query db.
+	if err != nil {
+		panic(err)
+	}
 
-	// node.DB.BlockDao.Save(nil)
+	txs, err := t.DB.TxDao.FindByBlockNum(height)
+
+	if err != nil {
+		panic(err)
+	}
 
 	*reply = GetBlocksResponse{
-		Block:       nil,
-		Transaction: nil,
+		Block:       block,
+		Transaction: txs,
 	}
 
 	return nil

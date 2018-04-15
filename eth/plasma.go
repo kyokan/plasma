@@ -61,6 +61,7 @@ func (p *PlasmaClient) SubmitBlock(
 ) {
 	// TODO: if the geth node is unlocked for the user
 	// can we send tx without the private key?
+	// TODO: add a cli flag to switch.
 	// auth := util.CreateAuth(p.privateKey)
 	opts := p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
 
