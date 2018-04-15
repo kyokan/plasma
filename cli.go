@@ -5,6 +5,7 @@ import (
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/plasma"
+	db_tests "github.com/kyokan/plasma/tester/db"
 	plasma_tests "github.com/kyokan/plasma/tester/plasma"
 	pq_tests "github.com/kyokan/plasma/tester/pq"
 	"github.com/kyokan/plasma/validator"
@@ -114,6 +115,11 @@ func main() {
 			Name:   "pq-tests",
 			Usage:  "Runs priority queue integration tests.",
 			Action: pq_tests.IntegrationTest,
+		},
+		{
+			Name:   "db-tests",
+			Usage:  "Runs level db integration tests.",
+			Action: db_tests.IntegrationTest,
 		},
 		{
 			Name:   "validator-main",
