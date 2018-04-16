@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,11 +36,6 @@ func (dao *LevelBlockDao) Save(blk *chain.Block) error {
 	}
 
 	key := blockPrefixKey(common.ToHex(blk.BlockHash))
-
-	fmt.Println("**** Save")
-	fmt.Println(string(key))
-	fmt.Println("**** Putting Key")
-	fmt.Println(string(blockNumKey(blk.Header.Number)))
 
 	gd := &GuardedDb{db: dao.db}
 	gd.Put(key, cbor, nil)

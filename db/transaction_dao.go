@@ -9,7 +9,6 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
-	leveldb_util "github.com/syndtr/goleveldb/leveldb/util"
 )
 
 const txKeyPrefix = "tx"
@@ -46,24 +45,20 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 }
 
 func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
-	startKey := blkNumTxIdxKey(blkNum, 0)
-	// For now limit to 100 txs.
-	endKey := blkNumTxIdxKey(blkNum, 100)
+	var txs []chain.Transaction
 	gd := &GuardedDb{db: dao.db}
 
-	iter := gd.db.NewIterator(
-		&leveldb_util.Range{
-			Start: []byte(startKey),
-			Limit: []byte(endKey),
-		}, nil)
+	for i := 0; i < 100; i++ {
+		key := blkNumTxIdxKey(blkNum, uint32(i))
 
-	var txs []chain.Transaction
+		data, err := gd.db.Get(key, nil)
 
-	for iter.Next() {
-		data := gd.Get(iter.Value(), nil)
+		if err != nil {
+			if err.Error() == "leveldb: not found" {
+				break
+			}
 
-		if gd.err != nil {
-			return nil, gd.err
+			panic(err)
 		}
 
 		tx, err := chain.TransactionFromCbor(data)
@@ -73,13 +68,6 @@ func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transacti
 		}
 
 		txs = append(txs, *tx)
-	}
-
-	iter.Release()
-	err := iter.Error()
-
-	if err != nil {
-		return nil, err
 	}
 
 	return txs, nil
@@ -146,6 +134,7 @@ func (dao *LevelTransactionDao) save(batch *leveldb.Batch, tx *chain.Transaction
 	hexHash := common.ToHex(hash)
 	hashKey := txPrefixKey("hash", hexHash)
 
+	// TODO: why multiple indexes for the same thing?
 	batch.Put(hashKey, cbor)
 	batch.Put(blkNumHashkey(tx.BlkNum, hexHash), cbor)
 	batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), cbor)
