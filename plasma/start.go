@@ -52,6 +52,7 @@ func Start(c *cli.Context) {
 		panic("Private key ecdsa not found")
 	}
 
+	// TODO: be able to switch between local client and geth node for signing.
 	plasma := eth.CreatePlasmaClient(nodeURL, contractAddress, userAddress, privateKeyECDSA)
 
 	// TODO: wtf y is this so complicated
