@@ -65,6 +65,7 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
 	for {
 		select {
 		case tx := <-node.TxSink.c:
+			// TODO: this needs to be synchronized.
 			if tx.IsDeposit() {
 				log.Print("Received deposit transaction. Packaging into block.")
 				go node.packageBlock(*lastBlock, []chain.Transaction{tx}, blks)
@@ -125,7 +126,8 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 
 	// TODO: can we use the eth client instead.
 	// Report this block to the plasma contract
-	node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
+	// 2018/04/17 10:22:51 Failed to submit block: Error: the tx doesn't have the correct nonce. account has nonce of: 16 tx has nonce of: 15
+	// node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
 
 	blockChan <- &block
 }

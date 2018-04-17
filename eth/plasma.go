@@ -1,9 +1,12 @@
 package eth
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"log"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -16,6 +19,7 @@ type PlasmaClient struct {
 	privateKey  *ecdsa.PrivateKey
 	userAddress string
 	ethClient   *Client
+	useGeth     bool
 }
 
 func CreatePlasmaClient(
@@ -23,6 +27,7 @@ func CreatePlasmaClient(
 	contractAddress string,
 	userAddress string,
 	privateKeyECDSA *ecdsa.PrivateKey,
+	useGeth bool,
 ) *PlasmaClient {
 	conn, err := ethclient.Dial(nodeUrl)
 
@@ -40,8 +45,6 @@ func CreatePlasmaClient(
 		panic("Private key ecdsa not found")
 	}
 
-	// And another eth client?
-
 	ethClient, err := NewClient(nodeUrl)
 
 	if err != nil {
@@ -53,17 +56,20 @@ func CreatePlasmaClient(
 		privateKeyECDSA,
 		userAddress,
 		ethClient,
+		useGeth,
 	}
 }
 
 func (p *PlasmaClient) SubmitBlock(
 	merkle util.MerkleTree,
 ) {
-	// TODO: if the geth node is unlocked for the user
-	// can we send tx without the private key?
-	// TODO: add a cli flag to switch.
-	// auth := util.CreateAuth(p.privateKey)
-	opts := p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
+	var opts *bind.TransactOpts
+
+	if p.useGeth {
+		opts = p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
+	} else {
+		opts = util.CreateAuth(p.privateKey)
+	}
 
 	var root [32]byte
 	copy(root[:], merkle.Root.Hash[:32])
@@ -74,4 +80,36 @@ func (p *PlasmaClient) SubmitBlock(
 	}
 
 	fmt.Printf("Submit block pending: 0x%x\n", tx.Hash())
+}
+
+func (p *PlasmaClient) DepositFilter(
+	start uint64,
+) ([]contracts.PlasmaDeposit, uint64) {
+	opts := bind.FilterOpts{
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
+		Context: context.Background(),
+	}
+
+	itr, err := p.plasma.FilterDeposit(&opts)
+
+	if err != nil {
+		panic(err)
+	}
+
+	next := true
+
+	var events []contracts.PlasmaDeposit
+
+	var lastBlockNumber uint64
+
+	for next {
+		if itr.Event != nil {
+			lastBlockNumber = itr.Event.Raw.BlockNumber
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, lastBlockNumber
 }

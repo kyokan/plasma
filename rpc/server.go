@@ -6,18 +6,32 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/rpc"
+	grpc "github.com/gorilla/rpc"
 	"github.com/gorilla/rpc/json"
+	"github.com/kyokan/plasma/db"
+	"github.com/kyokan/plasma/node"
 )
 
 func Start(
 	port int,
-	txService *TransactionService,
-	blockService *BlockService,
+	level *db.Database,
+	sink *node.TransactionSink,
 ) {
 	log.Printf("Starting RPC server on port %d.", port)
 
-	s := rpc.NewServer()
+	chch := make(chan chan node.TransactionRequest)
+
+	txService := &TransactionService{
+		TxChan: chch,
+	}
+
+	blockService := &BlockService{
+		DB: level,
+	}
+
+	sink.AcceptTransactionRequests(chch)
+
+	s := grpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")
 	s.RegisterCodec(json.NewCodec(), "application/json;charset=utf-8")
 	s.RegisterService(txService, "Transaction")

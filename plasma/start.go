@@ -21,6 +21,7 @@ func Start(c *cli.Context) {
 	privateKey := c.GlobalString("private-key")
 	signPassphrase := c.GlobalString("sign-passphrase")
 	dburl := c.GlobalString("db")
+	useGeth := c.GlobalBool("use-geth")
 
 	db, level, err := db.CreateLevelDatabase(dburl)
 
@@ -37,6 +38,8 @@ func Start(c *cli.Context) {
 	}
 
 	sink := node.NewTransactionSink(level, client)
+
+	// TODO: move private key constructor into utils.
 	var privateKeyECDSA *ecdsa.PrivateKey
 
 	if exists(userAddress) && exists(privateKey) {
@@ -52,43 +55,22 @@ func Start(c *cli.Context) {
 		panic("Private key ecdsa not found")
 	}
 
-	// TODO: be able to switch between local client and geth node for signing.
-	plasma := eth.CreatePlasmaClient(nodeURL, contractAddress, userAddress, privateKeyECDSA)
+	plasma := eth.CreatePlasmaClient(
+		nodeURL,
+		contractAddress,
+		userAddress,
+		privateKeyECDSA,
+		useGeth,
+	)
 
-	// TODO: wtf y is this so complicated
 	p := node.NewPlasmaNode(level, sink, plasma)
 
 	go p.Start()
 
-	go func() {
-		chch := make(chan chan node.TransactionRequest)
+	// TODO: move level and sink into constructor
+	go rpc.Start(c.Int("rpc-port"), level, sink)
 
-		txService := &rpc.TransactionService{
-			TxChan: chch,
-		}
-
-		blockService := &rpc.BlockService{
-			DB:     level,
-			Client: client,
-		}
-
-		go rpc.Start(c.Int("rpc-port"), txService, blockService)
-		sink.AcceptTransactionRequests(chch)
-	}()
-
-	// TODO: remember last log scan position
-
-	// go func() {
-
-	// 	ch := make(chan eth.DepositEvent)
-	// 	err = client.SubscribeDeposits(common.HexToAddress(c.GlobalString("contract-addr")), ch)
-
-	// 	if err != nil {
-	// 		log.Panic("Failed to subscribe to deposits: ", err)
-	// 	}
-
-	// 	sink.AcceptDepositEvents(ch)
-	// }()
+	go node.StartDepositListener(level, sink, plasma)
 
 	select {}
 }

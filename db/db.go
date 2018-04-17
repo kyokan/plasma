@@ -1,9 +1,10 @@
 package db
 
 import (
-	"github.com/syndtr/goleveldb/leveldb"
 	"log"
 	"path"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type Database struct {
@@ -11,6 +12,7 @@ type Database struct {
 	BlockDao   BlockDao
 	MerkleDao  MerkleDao
 	AddressDao AddressDao
+	DepositDao DepositDao
 }
 
 func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
@@ -26,11 +28,13 @@ func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
 	blockDao := LevelBlockDao{db: level}
 	merkleDao := LevelMerkleDao{db: level}
 	addressDao := LevelAddressDao{db: level, txDao: &txDao}
+	depositDao := LevelDepositDao{db: level}
 
 	return level, &Database{
 		TxDao:      &txDao,
 		BlockDao:   &blockDao,
 		MerkleDao:  &merkleDao,
 		AddressDao: &addressDao,
+		DepositDao: &depositDao,
 	}, nil
 }

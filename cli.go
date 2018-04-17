@@ -32,7 +32,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf",
+			Value: "0xfb88de099e13c3ed21f80a7a1e49f8caecf10df6",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
@@ -65,6 +65,10 @@ func main() {
 			Name:  "sign-passphrase",
 			Value: "test", // private chain
 			Usage: "Passphrase for keystore file.",
+		},
+		cli.BoolFlag{
+			Name:  "use-geth",
+			Usage: "Use geth to sign transactions.",
 		},
 	}
 
@@ -120,6 +124,11 @@ func main() {
 			Name:   "db-tests",
 			Usage:  "Runs level db integration tests.",
 			Action: db_tests.IntegrationTest,
+		},
+		{
+			Name:   "deposit-tests",
+			Usage:  "Runs deposit integration tests.",
+			Action: plasma_tests.DepositIntegrationTest,
 		},
 		{
 			Name:   "validator-main",

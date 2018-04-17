@@ -6,7 +6,6 @@ import (
 
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
-	"github.com/kyokan/plasma/eth"
 )
 
 type GetBlocksArgs struct {
@@ -19,8 +18,7 @@ type GetBlocksResponse struct {
 }
 
 type BlockService struct {
-	DB     *db.Database
-	Client *eth.Client
+	DB *db.Database
 }
 
 func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *GetBlocksResponse) error {
