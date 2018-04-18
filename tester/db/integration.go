@@ -67,10 +67,12 @@ func txTest(level *db.Database) {
 		),
 	}
 
-	err := level.TxDao.SaveMany(txs)
+	for _, tx := range txs {
+		err := level.TxDao.Save(&tx)
 
-	if err != nil {
-		panic(err)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	resTxs, err := level.TxDao.FindByBlockNum(1)

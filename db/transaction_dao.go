@@ -34,6 +34,8 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 	batch := new(leveldb.Batch)
 
 	for _, tx := range txs {
+		// TODO: there is a bug here because the prev tx must always exist,
+		// but it could be included in this save.
 		err := dao.save(batch, &tx)
 
 		if err != nil {

@@ -18,20 +18,13 @@ func IntegrationTest(c *cli.Context) {
 	privateKey := c.GlobalString("private-key")
 	signPassphrase := c.GlobalString("sign-passphrase")
 
-	var privateKeyECDSA *ecdsa.PrivateKey
-
-	if exists(userAddress) && exists(privateKey) {
-		privateKeyECDSA = util.ToPrivateKeyECDSA(privateKey)
-	} else if exists(keystoreDir) &&
-		exists(keystoreFile) &&
-		exists(userAddress) {
-		keyWrapper := util.GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
-		privateKeyECDSA = keyWrapper.PrivateKey
-	}
-
-	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
-	}
+	privateKeyECDSA := util.CreatePrivateKeyECDSA(
+		userAddress,
+		privateKey,
+		keystoreDir,
+		keystoreFile,
+		signPassphrase,
+	)
 
 	pq := CreatePriorityQueueClient(nodeURL, priorityQueueContractAddress)
 

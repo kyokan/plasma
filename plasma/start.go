@@ -1,7 +1,6 @@
 package plasma
 
 import (
-	"crypto/ecdsa"
 	"log"
 
 	"github.com/kyokan/plasma/db"
@@ -39,21 +38,13 @@ func Start(c *cli.Context) {
 
 	sink := node.NewTransactionSink(level, client)
 
-	// TODO: move private key constructor into utils.
-	var privateKeyECDSA *ecdsa.PrivateKey
-
-	if exists(userAddress) && exists(privateKey) {
-		privateKeyECDSA = util.ToPrivateKeyECDSA(privateKey)
-	} else if exists(keystoreDir) &&
-		exists(keystoreFile) &&
-		exists(userAddress) {
-		keyWrapper := util.GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
-		privateKeyECDSA = keyWrapper.PrivateKey
-	}
-
-	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
-	}
+	privateKeyECDSA := util.CreatePrivateKeyECDSA(
+		userAddress,
+		privateKey,
+		keystoreDir,
+		keystoreFile,
+		signPassphrase,
+	)
 
 	plasma := eth.CreatePlasmaClient(
 		nodeURL,
@@ -67,7 +58,6 @@ func Start(c *cli.Context) {
 
 	go p.Start()
 
-	// TODO: move level and sink into constructor
 	go rpc.Start(c.Int("rpc-port"), level, sink)
 
 	go node.StartDepositListener(level, sink, plasma)
