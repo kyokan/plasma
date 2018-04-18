@@ -1,9 +1,6 @@
 package db
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -43,20 +40,4 @@ func (dao *LevelDepositDao) LastDepositEventIdx() (uint64, error) {
 	}
 
 	return bytesToUint64(b), nil
-}
-
-func uint64ToBytes(i uint64) []byte {
-	return []byte(fmt.Sprintf("%X", i))
-}
-
-func bytesToUint64(b []byte) uint64 {
-	s := string(b)
-
-	n, err := strconv.ParseUint(s, 16, 32)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return uint64(n)
 }

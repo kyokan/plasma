@@ -94,8 +94,13 @@ func main() {
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "rpc-port",
-					Value: 8644,
+					Value: 8643,
 					Usage: "Port for the RPC server to listen on.",
+				},
+				cli.IntFlag{
+					Name:  "validator-port",
+					Value: 8644,
+					Usage: "Port for the validator server to listen on.",
 				},
 			},
 		},

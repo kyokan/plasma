@@ -4,22 +4,22 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/rpc"
+	"github.com/kyokan/plasma/db"
+	"github.com/kyokan/plasma/eth"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/rpc/json"
 )
 
-func Run(port int) {
+// TODO: clean up these args
+func Run(rpcPort int, validatorPort int, level *db.Database, plasma *eth.PlasmaClient) {
 	fmt.Println("Validator Server Starting")
-	log.Printf("Starting RPC server on port %d.", port)
+	log.Printf("Starting validator server on port %d.", validatorPort)
 
-	// TODO: we need to continually polling.
-
-	go watchRootNode()
-	go watchPlasmaContract()
+	go RootNodeListener(rpcPort, level)
+	go ExitStartedListener(level, plasma)
 
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")
@@ -27,23 +27,5 @@ func Run(port int) {
 	s.RegisterService(&ValidatorService{}, "Validator")
 	r := mux.NewRouter()
 	r.Handle("/rpc", s)
-	http.ListenAndServe(fmt.Sprint(":", port), r)
-}
-
-func watchRootNode() {
-	for {
-		fmt.Println("Watching root node...")
-
-		// TODO: download blocks from the root node.  Make sure they look good
-		// Download blocks.
-
-		time.Sleep(3 * time.Second)
-	}
-}
-
-func watchPlasmaContract() {
-	for {
-		fmt.Println("Watching plasma contract...")
-		time.Sleep(3 * time.Second)
-	}
+	http.ListenAndServe(fmt.Sprint(":", validatorPort), r)
 }

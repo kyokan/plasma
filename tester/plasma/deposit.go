@@ -7,6 +7,7 @@ import (
 	"github.com/urfave/cli"
 )
 
+// TODO: move to client with sub args for deposit args.
 func DepositIntegrationTest(c *cli.Context) {
 	contractAddress := c.GlobalString("contract-addr")
 	nodeURL := c.GlobalString("node-url")

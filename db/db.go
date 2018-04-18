@@ -13,6 +13,7 @@ type Database struct {
 	MerkleDao  MerkleDao
 	AddressDao AddressDao
 	DepositDao DepositDao
+	ExitDao    ExitDao
 }
 
 func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
@@ -29,6 +30,7 @@ func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
 	merkleDao := LevelMerkleDao{db: level}
 	addressDao := LevelAddressDao{db: level, txDao: &txDao}
 	depositDao := LevelDepositDao{db: level}
+	exitDao := LevelExitDao{db: level}
 
 	return level, &Database{
 		TxDao:      &txDao,
@@ -36,5 +38,6 @@ func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
 		MerkleDao:  &merkleDao,
 		AddressDao: &addressDao,
 		DepositDao: &depositDao,
+		ExitDao:    &exitDao,
 	}, nil
 }
