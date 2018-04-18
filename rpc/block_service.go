@@ -13,8 +13,8 @@ type GetBlocksArgs struct {
 }
 
 type GetBlocksResponse struct {
-	Block       *chain.Block
-	Transaction []chain.Transaction
+	Block        *chain.Block
+	Transactions []chain.Transaction
 }
 
 type BlockService struct {
@@ -29,18 +29,18 @@ func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *Get
 	block, err := t.DB.BlockDao.BlockAtHeight(height)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	txs, err := t.DB.TxDao.FindByBlockNum(height)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	*reply = GetBlocksResponse{
-		Block:       block,
-		Transaction: txs,
+		Block:        block,
+		Transactions: txs,
 	}
 
 	return nil
