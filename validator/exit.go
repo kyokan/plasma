@@ -3,7 +3,10 @@ package validator
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"time"
+
+	"github.com/kyokan/plasma/chain"
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
@@ -35,8 +38,19 @@ func ExitStartedListener(level *db.Database, plasma *eth.PlasmaClient) {
 				fmt.Println(event)
 				exitId := event.ExitId
 				exit := plasma.GetExit(exitId.Uint64())
+				spend := FindSpend(plasma, exit)
 
-				fmt.Println(exit)
+				if spend != nil {
+					// challenge
+					plasma.ChallengeExit(
+						exitId,
+						// This is the tx that we want to use to prove it's spent.
+						spend.block,
+						spend.txs,
+						spend.blocknum,
+						spend.txindex,
+					)
+				}
 
 				// It's not synchronized right now...
 				time.Sleep(time.Second * 3)
@@ -51,4 +65,17 @@ func ExitStartedListener(level *db.Database, plasma *eth.PlasmaClient) {
 
 		time.Sleep(time.Second * 10)
 	}
+}
+
+// TODO: move this struct and reuse in exit_client.
+type TransactionInfo struct {
+	block    *chain.Block
+	txs      []chain.Transaction
+	blocknum *big.Int
+	txindex  *big.Int
+}
+
+func FindSpend(plasma *eth.PlasmaClient, exit eth.Exit) *TransactionInfo {
+	// TODO: this needs to return the tx that is found to cause a double spend.
+	return &TransactionInfo{}
 }

@@ -136,10 +136,6 @@ func (p *PlasmaClient) StartExit(
 		opts = util.CreateAuth(p.privateKey)
 	}
 
-	fmt.Println("**** start exit")
-	fmt.Println(block)
-	fmt.Println(txs)
-
 	tx := txs[txindex.Int64()]
 
 	bytes, err := rlp.EncodeToBytes(&tx)
@@ -150,9 +146,6 @@ func (p *PlasmaClient) StartExit(
 
 	merkle := CreateMerkleTree(txs)
 	proof := util.CreateMerkleProof(merkle, txindex)
-
-	fmt.Println(merkle)
-	fmt.Println(proof)
 
 	res, err := p.plasma.StartExit(
 		opts,
@@ -168,6 +161,48 @@ func (p *PlasmaClient) StartExit(
 	}
 
 	fmt.Printf("Start Exit pending: 0x%x\n", res.Hash())
+}
+
+func (p *PlasmaClient) ChallengeExit(
+	exitId *big.Int,
+	block *chain.Block,
+	txs []chain.Transaction,
+	blocknum *big.Int,
+	txindex *big.Int,
+) {
+	var opts *bind.TransactOpts
+
+	if p.useGeth {
+		opts = p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
+	} else {
+		opts = util.CreateAuth(p.privateKey)
+	}
+
+	tx := txs[txindex.Int64()]
+
+	bytes, err := rlp.EncodeToBytes(&tx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	merkle := CreateMerkleTree(txs)
+	proof := util.CreateMerkleProof(merkle, txindex)
+
+	res, err := p.plasma.ChallengeExit(
+		opts,
+		util.NewUint64(exitId),
+		blocknum,
+		txindex,
+		bytes,
+		proof,
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to challenge exit: %v", err)
+	}
+
+	fmt.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
 }
 
 func (p *PlasmaClient) GetExit(exitId uint64) Exit {
