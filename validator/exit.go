@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -32,16 +31,11 @@ func ExitStartedListener(level *db.Database, plasma *eth.PlasmaClient) {
 			for _, event := range events {
 				count += 1
 
-				// TODO: do something with these...
-				// we want to validate that this exit looks legit
-				// meaning that it wasn't spent already.
-				fmt.Println(event)
 				exitId := event.ExitId
 				exit := plasma.GetExit(exitId.Uint64())
 				spend := FindSpend(plasma, exit)
 
 				if spend != nil {
-					// challenge
 					plasma.ChallengeExit(
 						exitId,
 						// This is the tx that we want to use to prove it's spent.
