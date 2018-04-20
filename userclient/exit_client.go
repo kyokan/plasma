@@ -1,9 +1,8 @@
 package userclient
 
 import (
-	"log"
+	"fmt"
 
-	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/util"
 	"github.com/urfave/cli"
@@ -18,21 +17,15 @@ func StartExit(c *cli.Context) {
 	userAddress := c.GlobalString("user-address")
 	privateKey := c.GlobalString("private-key")
 	signPassphrase := c.GlobalString("sign-passphrase")
-	dburl := c.GlobalString("db")
 	useGeth := c.GlobalBool("use-geth")
 
 	// Used for starting exit.
+	rootPort := c.Int("root-port")
 	blocknum := c.Int("blocknum")
 	txindex := c.Int("txindex")
 	oindex := c.Int("oindex")
 
-	db, level, err := db.CreateLevelDatabase(dburl)
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	defer db.Close()
+	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d", blocknum, txindex, oindex)
 
 	privateKeyECDSA := util.CreatePrivateKeyECDSA(
 		userAddress,
@@ -50,21 +43,13 @@ func StartExit(c *cli.Context) {
 		useGeth,
 	)
 
-	block, err := level.BlockDao.BlockAtHeight(uint64(blocknum))
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
-	if err != nil {
-		panic(err)
-	}
-
-	txs, err := level.TxDao.FindByBlockNum(uint64(blocknum))
-
-	if err != nil {
-		panic(err)
-	}
+	res := GetBlock(rootUrl, uint64(blocknum))
 
 	plasma.StartExit(
-		block,
-		txs,
+		res.Block,
+		res.Transactions,
 		util.NewInt(blocknum),
 		util.NewInt(txindex),
 		util.NewInt(oindex),

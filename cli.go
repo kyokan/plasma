@@ -33,7 +33,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0x8acee021a27779d8e98b9650722676b850b25e11",
+			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
@@ -94,9 +94,9 @@ func main() {
 			Action: validator.Start,
 			Flags: []cli.Flag{
 				cli.IntFlag{
-					Name:  "rpc-port",
+					Name:  "root-port",
 					Value: 8643,
-					Usage: "Port for the RPC server to listen on.",
+					Usage: "Port for the root server to listen on.",
 				},
 				cli.IntFlag{
 					Name:  "validator-port",
@@ -141,6 +141,11 @@ func main() {
 			Usage:  "Runs exit started",
 			Action: userclient.StartExit,
 			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "root-port",
+					Value: 8643,
+					Usage: "Port for the root server to listen on.",
+				},
 				cli.IntFlag{
 					Name:  "blocknum",
 					Usage: "Block to exit.",

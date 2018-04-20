@@ -1,16 +1,13 @@
-package validator
+package userclient
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	encoding_json "encoding/json"
 
 	"github.com/gorilla/rpc/json"
-	"github.com/kyokan/plasma/db"
 	plasma_rpc "github.com/kyokan/plasma/rpc"
 )
 
@@ -21,42 +18,6 @@ type ClientResponse struct {
 	Id     uint64                    `json:"id"`
 }
 
-func RootNodeListener(rootPort int, level *db.Database) {
-	for {
-		fmt.Println("Watching root node...")
-
-		block, err := level.BlockDao.Latest()
-
-		// what if latest is null
-		if err != nil {
-			panic(err)
-		}
-
-		var blockNum uint64
-
-		if block == nil {
-			blockNum = 1
-		} else {
-			blockNum = block.Header.Number + 1
-		}
-
-		log.Printf("Latest block number found: %d\n", blockNum)
-
-		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
-
-		response := GetBlock(rootUrl, blockNum)
-
-		fmt.Println(response)
-
-		if response != nil {
-			level.BlockDao.Save(response.Block)
-		}
-
-		time.Sleep(3 * time.Second)
-	}
-}
-
-// TODO: make this a real client.
 func GetBlock(url string, height uint64) *plasma_rpc.GetBlocksResponse {
 	// TODO: this is plural but shouldn't be
 	args := &plasma_rpc.GetBlocksArgs{

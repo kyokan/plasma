@@ -14,11 +14,11 @@ import (
 )
 
 // TODO: clean up these args
-func Run(rpcPort int, validatorPort int, level *db.Database, plasma *eth.PlasmaClient) {
+func Run(rootPort int, validatorPort int, level *db.Database, plasma *eth.PlasmaClient) {
 	fmt.Println("Validator Server Starting")
 	log.Printf("Starting validator server on port %d.", validatorPort)
 
-	go RootNodeListener(rpcPort, level)
+	go RootNodeListener(rootPort, level)
 	go ExitStartedListener(level, plasma)
 
 	s := rpc.NewServer()

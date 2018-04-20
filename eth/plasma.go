@@ -109,9 +109,13 @@ func (p *PlasmaClient) StartExit(
 		opts = util.CreateAuth(p.privateKey)
 	}
 
+	fmt.Println("**** start exit")
+	fmt.Println(block)
+	fmt.Println(txs)
+
 	tx := txs[txindex.Int64()]
 
-	bytes, err := rlp.EncodeToBytes(tx)
+	bytes, err := rlp.EncodeToBytes(&tx)
 
 	if err != nil {
 		panic(err)
@@ -119,6 +123,9 @@ func (p *PlasmaClient) StartExit(
 
 	merkle := CreateMerkleTree(txs)
 	proof := util.CreateMerkleProof(merkle, txindex)
+
+	fmt.Println(merkle)
+	fmt.Println(proof)
 
 	res, err := p.plasma.StartExit(
 		opts,

@@ -50,7 +50,7 @@ func Start(c *cli.Context) {
 		useGeth,
 	)
 
-	go Run(c.Int("rpc-port"), c.Int("validator-port"), level, plasma)
+	go Run(c.Int("root-port"), c.Int("validator-port"), level, plasma)
 
 	select {}
 }
