@@ -50,9 +50,6 @@ func StartExit(c *cli.Context) {
 		useGeth,
 	)
 
-	// prob need block id
-	// from there get txs
-	// then pass it in
 	block, err := level.BlockDao.BlockAtHeight(uint64(blocknum))
 
 	if err != nil {
