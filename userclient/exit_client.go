@@ -25,7 +25,7 @@ func StartExit(c *cli.Context) {
 	txindex := c.Int("txindex")
 	oindex := c.Int("oindex")
 
-	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d", blocknum, txindex, oindex)
+	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d\n", blocknum, txindex, oindex)
 
 	privateKeyECDSA := util.CreatePrivateKeyECDSA(
 		userAddress,

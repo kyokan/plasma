@@ -33,7 +33,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf",
+			Value: "0x059e17ceb15ef8470b7184b858d356317518aab3",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
@@ -132,9 +132,15 @@ func main() {
 			Action: db_tests.IntegrationTest,
 		},
 		{
-			Name:   "deposit-tests",
-			Usage:  "Runs deposit integration tests.",
-			Action: plasma_tests.DepositIntegrationTest,
+			Name:   "deposit",
+			Usage:  "Runs deposit.",
+			Action: userclient.Deposit,
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "amount",
+					Usage: "Amount to deposit.",
+				},
+			},
 		},
 		{
 			Name:   "exit",
@@ -159,11 +165,6 @@ func main() {
 					Usage: "Output to exit.",
 				},
 			},
-		},
-		{
-			Name:   "validator-main",
-			Usage:  "Runs validator main.",
-			Action: validator.Main,
 		},
 	}
 

@@ -94,6 +94,33 @@ func (p *PlasmaClient) SubmitBlock(
 	fmt.Printf("Submit block pending: 0x%x\n", tx.Hash())
 }
 
+func (p *PlasmaClient) Deposit(
+	value int,
+	t *chain.Transaction,
+) {
+	var opts *bind.TransactOpts
+
+	if p.useGeth {
+		opts = p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
+	} else {
+		opts = util.CreateAuth(p.privateKey)
+	}
+
+	bytes, err := rlp.EncodeToBytes(&t)
+
+	if err != nil {
+		panic(err)
+	}
+
+	tx, err := p.plasma.Deposit(opts, bytes)
+
+	if err != nil {
+		log.Fatalf("Failed to deposit: %v", err)
+	}
+
+	fmt.Printf("Deposit pending: 0x%x\n", tx.Hash())
+}
+
 func (p *PlasmaClient) StartExit(
 	block *chain.Block,
 	txs []chain.Transaction,
