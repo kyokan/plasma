@@ -8,6 +8,7 @@ import (
 	db_tests "github.com/kyokan/plasma/tester/db"
 	plasma_tests "github.com/kyokan/plasma/tester/plasma"
 	pq_tests "github.com/kyokan/plasma/tester/pq"
+	"github.com/kyokan/plasma/userclient"
 	"github.com/kyokan/plasma/validator"
 	"github.com/urfave/cli"
 )
@@ -32,7 +33,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0x2c2b9c9a4a25e24b174f26114e8926a9f2128fe4",
+			Value: "0x8acee021a27779d8e98b9650722676b850b25e11",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
@@ -134,6 +135,25 @@ func main() {
 			Name:   "deposit-tests",
 			Usage:  "Runs deposit integration tests.",
 			Action: plasma_tests.DepositIntegrationTest,
+		},
+		{
+			Name:   "exit",
+			Usage:  "Runs exit started",
+			Action: userclient.StartExit,
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "blocknum",
+					Usage: "Block to exit.",
+				},
+				cli.IntFlag{
+					Name:  "txindex",
+					Usage: "Transaction to exit.",
+				},
+				cli.IntFlag{
+					Name:  "oindex",
+					Usage: "Output to exit.",
+				},
+			},
 		},
 		{
 			Name:   "validator-main",

@@ -46,7 +46,7 @@ function generate(filename) {
   shell.mkdir('-p', ['abi','gen']);
 
   const parts = filename.split("/");
-  const path = parts.slice(1, parts.length - 1).join("/");
+  const path = parts.slice(2, parts.length - 1).join("/");
 
   shell.mkdir('-p', [`abi/${path}`, `gen/${path}`])
 

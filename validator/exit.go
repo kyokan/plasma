@@ -33,6 +33,10 @@ func ExitStartedListener(level *db.Database, plasma *eth.PlasmaClient) {
 				// we want to validate that this exit looks legit
 				// meaning that it wasn't spent already.
 				fmt.Println(event)
+				exitId := event.ExitId
+				exit := plasma.GetExit(exitId.Uint64())
+
+				fmt.Println(exit)
 
 				// It's not synchronized right now...
 				time.Sleep(time.Second * 3)

@@ -92,7 +92,7 @@ func ChallengeExit(
 
 	// This must be a tx and it's okay if it's the same block, but could be another.
 	// Weird to do down cast but lets try it.
-	proof := CreateMerkleProof(merkle, txindex)
+	proof := util.CreateMerkleProof(merkle, txindex)
 
 	tx, err := plasma.ChallengeExit(
 		auth,
@@ -127,7 +127,7 @@ func StartExit(
 		panic(err)
 	}
 
-	proof := CreateMerkleProof(merkle, txindex)
+	proof := util.CreateMerkleProof(merkle, txindex)
 
 	tx, err := plasma.StartExit(
 		auth,
@@ -165,6 +165,7 @@ func SubmitBlock(
 	fmt.Printf("Submit block pending: 0x%x\n", tx.Hash())
 }
 
+// TODO: move these into the eth plasma client.
 func Deposit(
 	plasma *contracts.Plasma,
 	privateKeyECDSA *ecdsa.PrivateKey,
@@ -188,4 +189,17 @@ func Deposit(
 	}
 
 	fmt.Printf("Deposit pending: 0x%x\n", tx.Hash())
+}
+
+// TODO: it prevents import cycle with utils.
+func CreateMerkleTree(accepted []chain.Transaction) util.MerkleTree {
+	hashables := make([]util.RLPHashable, len(accepted))
+
+	for i := range accepted {
+		txPtr := &accepted[i]
+		hashables[i] = util.RLPHashable(txPtr)
+	}
+
+	merkle := util.TreeFromRLPItems(hashables)
+	return merkle
 }

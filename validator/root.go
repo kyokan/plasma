@@ -40,10 +40,9 @@ func RootNodeListener(rpcPort int, level *db.Database) {
 			blockNum = block.Header.Number + 1
 		}
 
-		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rpcPort)
+		log.Printf("Latest block number found: %d\n", blockNum)
 
-		fmt.Println(rootUrl)
-		fmt.Println(blockNum)
+		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rpcPort)
 
 		response := GetBlock(rootUrl, blockNum)
 

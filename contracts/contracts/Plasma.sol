@@ -138,6 +138,16 @@ contract Plasma {
         ExitStarted(msg.sender, priority);
     }
 
+    function getExit(uint256 exitId)
+        public
+        view
+        returns (address, uint256, uint256, uint256, uint256, uint256)
+    {
+        var exit = exits[exitId];
+
+        return (exit.owner, exit.amount, exit.blocknum, exit.txindex, exit.oindex, exit.started_at);
+    }
+
     function challengeExit(
         uint256 exitId,
         uint256 blocknum,
@@ -172,6 +182,7 @@ contract Plasma {
 
             currExit.owner.send(-burn);
 
+            // TODO: can i use delete here.
             exits[exitId] = exit({
                 owner: address(0),
                 amount: 0,
@@ -227,6 +238,9 @@ contract Plasma {
     }
 
     // TODO: passively finalize.
+    // If root node doesn't finalize, and validators finalize,
+    // validators have to pay.
+    // Finalizing is an expensive operation if the queue is large.
     function finalize() {
         if (!shouldFinalize()) {
             return;
@@ -243,6 +257,8 @@ contract Plasma {
                 currExit.amount > 0
             ) {
                 currExit.owner.send(currExit.amount);
+                
+                // TODO: can i use delete here.
                 exits[exitId] = exit({
                     owner: address(0),
                     amount: 0,
