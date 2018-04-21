@@ -26,6 +26,7 @@ func Start(c *cli.Context) {
 
 	// TODO: use different db url for validator -- this helps us run both at once.
 	// TODO: add validator dao to keep track of last validator point. maybe?
+	// TODO: create diff directory per user.
 	db, level, err := db.CreateLevelDatabase(path.Join(dburl, "validator"))
 
 	if err != nil {

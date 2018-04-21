@@ -3,6 +3,7 @@ package userclient
 import (
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
@@ -23,7 +24,7 @@ func Deposit(c *cli.Context) {
 	useGeth := c.GlobalBool("use-geth")
 
 	// Used for starting exit.
-	amount := c.Int("amount")
+	amount := uint64(c.Int("amount"))
 
 	fmt.Printf("Deposit starting for amount: %d\n", amount)
 
@@ -46,32 +47,31 @@ func Deposit(c *cli.Context) {
 	t := createDepositTx(userAddress, amount)
 
 	plasma.Deposit(amount, &t)
+
+	time.Sleep(3 * time.Second)
+
+	curr, err := plasma.CurrentChildBlock()
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("**** deposit last child block")
+	fmt.Println(curr.Uint64())
 }
 
-// TODO: move this to utils
-func createDepositTx(userAddress string, value int) chain.Transaction {
-	return createTransaction(
-		chain.ZeroInput(),
-		&chain.Output{
-			NewOwner: common.HexToAddress(userAddress),
-			Amount:   util.NewInt(value),
-		},
-	)
-}
-
-func createTransaction(
-	input0 *chain.Input,
-	output0 *chain.Output,
-) chain.Transaction {
+// TODO: use same code as transaction sink.
+func createDepositTx(userAddress string, value uint64) chain.Transaction {
+	fmt.Println("***** createDepositTx")
+	fmt.Println(value)
 	return chain.Transaction{
-		Input0:  input0,
-		Input1:  chain.ZeroInput(),
-		Sig0:    []byte{},
-		Sig1:    []byte{},
-		Output0: output0,
+		Input0: chain.ZeroInput(),
+		Input1: chain.ZeroInput(),
+		Output0: &chain.Output{
+			NewOwner: common.HexToAddress(userAddress),
+			Amount:   util.NewUint64(value),
+		},
 		Output1: chain.ZeroOutput(),
-		Fee:     new(big.Int),
-		BlkNum:  uint64(0),
-		TxIdx:   0,
+		Fee:     big.NewInt(0),
 	}
 }

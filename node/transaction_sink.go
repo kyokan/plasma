@@ -2,6 +2,7 @@ package node
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"math/rand"
@@ -150,6 +151,10 @@ func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 	go func() {
 		for {
 			deposit := <-ch
+
+			fmt.Println("**** AccpetDepositEvents")
+			fmt.Println(deposit.Sender.String())
+			fmt.Println(deposit.Value.Uint64())
 
 			tx := chain.Transaction{
 				Input0: chain.ZeroInput(),

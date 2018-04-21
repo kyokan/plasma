@@ -45,7 +45,12 @@ func StartExit(c *cli.Context) {
 
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
+	// TODO: is the hash i'm exiting with the wrong one?
 	res := GetBlock(rootUrl, uint64(blocknum))
+
+	if res == nil {
+		panic("Block does not exist!")
+	}
 
 	plasma.StartExit(
 		res.Block,
@@ -54,4 +59,22 @@ func StartExit(c *cli.Context) {
 		util.NewInt(txindex),
 		util.NewInt(oindex),
 	)
+
+	events, _ := plasma.DebugAddressFilter(0)
+
+	for _, event := range events {
+		fmt.Println(event.Item)
+	}
+
+	events2, _ := plasma.DebugUintFilter(0)
+
+	for _, event := range events2 {
+		fmt.Println(event.Item)
+	}
+
+	events3, _ := plasma.DebugBoolFilter(0)
+
+	for _, event := range events3 {
+		fmt.Println(event.Item)
+	}
 }

@@ -33,7 +33,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0x059e17ceb15ef8470b7184b858d356317518aab3",
+			Value: "0xd54b47f8e6a1b97f3a84f63c867286272b273b7c",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{

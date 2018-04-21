@@ -2,6 +2,7 @@ package node
 
 import (
 	"log"
+	"math/big"
 	"time"
 
 	"github.com/kyokan/plasma/chain"
@@ -34,20 +35,7 @@ func (node *PlasmaNode) Start() {
 	}
 
 	if lastBlock == nil {
-		log.Print("Creating genesis block.")
-
-		header := &chain.BlockHeader{
-			Number: 1,
-		}
-
-		lastBlock = &chain.Block{
-			Header:    header,
-			BlockHash: header.Hash(),
-		}
-
-		if err := node.DB.BlockDao.Save(lastBlock); err != nil {
-			log.Panic("Failed to create genesis block:", err)
-		}
+		lastBlock = node.createGenesisBlock()
 	}
 
 	ticker := time.NewTicker(time.Second * 10)
@@ -124,12 +112,65 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 
 	node.DB.BlockDao.Save(&block)
 
-	// TODO: can we use the eth client instead.
-	// Report this block to the plasma contract
-	// 2018/04/17 10:22:51 Failed to submit block: Error: the tx doesn't have the correct nonce. account has nonce of: 16 tx has nonce of: 15
-	// node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
-
 	blockChan <- &block
+
+	if len(accepted) == 1 && accepted[0].IsDeposit() {
+		// Skip reporting block is this is a deposit
+		return
+	}
+
+	node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
+}
+
+func (node *PlasmaNode) createGenesisBlock() *chain.Block {
+	log.Println("Creating genesis block.")
+
+	blkNum := 1
+
+	txs := []chain.Transaction{
+		chain.Transaction{
+			Input0:  chain.ZeroInput(),
+			Input1:  chain.ZeroInput(),
+			Sig0:    []byte{},
+			Sig1:    []byte{},
+			Output0: chain.ZeroOutput(),
+			Output1: chain.ZeroOutput(),
+			Fee:     new(big.Int),
+			BlkNum:  uint64(blkNum),
+			TxIdx:   0,
+		},
+	}
+
+	hashables := make([]util.Hashable, len(txs))
+
+	for i := range txs {
+		txPtr := &txs[i]
+		hashables[i] = util.Hashable(txPtr)
+	}
+
+	node.DB.TxDao.SaveMany(txs)
+	merkle := util.TreeFromItems(hashables)
+	node.DB.MerkleDao.Save(&merkle.Root)
+
+	header := chain.BlockHeader{
+		MerkleRoot: merkle.Root.Hash,
+		// TODO: is it okay to omit here.
+		// PrevHash:   lastBlock.BlockHash,
+		Number: uint64(blkNum),
+	}
+
+	block := chain.Block{
+		Header:    &header,
+		BlockHash: header.Hash(),
+	}
+
+	if err := node.DB.BlockDao.Save(&block); err != nil {
+		log.Panic("Failed to create genesis block:", err)
+	}
+
+	node.PlasmaClient.SubmitBlock(rlpMerkleTree(txs))
+
+	return &block
 }
 
 func rlpMerkleTree(accepted []chain.Transaction) util.MerkleTree {

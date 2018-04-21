@@ -3,6 +3,7 @@ package eth
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
@@ -87,6 +88,9 @@ func (p *PlasmaClient) SubmitBlock(
 	copy(root[:], merkle.Root.Hash[:32])
 	tx, err := p.plasma.SubmitBlock(opts, root)
 
+	fmt.Println("**** submit block")
+	fmt.Println(hex.EncodeToString(root[:]))
+
 	if err != nil {
 		log.Fatalf("Failed to submit block: %v", err)
 	}
@@ -95,7 +99,7 @@ func (p *PlasmaClient) SubmitBlock(
 }
 
 func (p *PlasmaClient) Deposit(
-	value int,
+	value uint64,
 	t *chain.Transaction,
 ) {
 	var opts *bind.TransactOpts
@@ -105,6 +109,8 @@ func (p *PlasmaClient) Deposit(
 	} else {
 		opts = util.CreateAuth(p.privateKey)
 	}
+
+	opts.Value = util.NewUint64(value)
 
 	bytes, err := rlp.EncodeToBytes(&t)
 
@@ -144,8 +150,17 @@ func (p *PlasmaClient) StartExit(
 		panic(err)
 	}
 
+	// TODO: are these hashes correct?
 	merkle := CreateMerkleTree(txs)
 	proof := util.CreateMerkleProof(merkle, txindex)
+
+	fmt.Println("**** start exit")
+	fmt.Printf("block: %d\n", blocknum)
+	fmt.Printf("txindex: %d\n", txindex)
+	fmt.Printf("oindex: %d\n", oindex)
+	fmt.Println("tx: " + hex.EncodeToString(bytes))
+	fmt.Println("proof: " + hex.EncodeToString(proof))
+	fmt.Println("address: " + tx.Output0.NewOwner.Hex())
 
 	res, err := p.plasma.StartExit(
 		opts,
@@ -191,7 +206,7 @@ func (p *PlasmaClient) ChallengeExit(
 
 	res, err := p.plasma.ChallengeExit(
 		opts,
-		util.NewUint64(exitId),
+		exitId,
 		blocknum,
 		txindex,
 		bytes,
@@ -205,10 +220,10 @@ func (p *PlasmaClient) ChallengeExit(
 	fmt.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
 }
 
-func (p *PlasmaClient) GetExit(exitId uint64) Exit {
+func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
 	opts := util.CreateCallOpts(p.userAddress)
 
-	owner, amount, blocknum, txindex, oindex, startedAt, err := p.plasma.GetExit(opts, util.NewUint64(exitId))
+	owner, amount, blocknum, txindex, oindex, startedAt, err := p.plasma.GetExit(opts, exitId)
 
 	if err != nil {
 		log.Fatalf("Failed to get exit: %v", err)
@@ -222,6 +237,11 @@ func (p *PlasmaClient) GetExit(exitId uint64) Exit {
 		oindex,
 		startedAt,
 	}
+}
+
+func (p *PlasmaClient) CurrentChildBlock() (*big.Int, error) {
+	opts := util.CreateCallOpts(p.userAddress)
+	return p.plasma.CurrentChildBlock(opts)
 }
 
 func (p *PlasmaClient) DepositFilter(
@@ -274,6 +294,102 @@ func (p *PlasmaClient) ExitStartedFilter(
 	next := true
 
 	var events []contracts.PlasmaExitStarted
+
+	var lastBlockNumber uint64
+
+	for next {
+		if itr.Event != nil {
+			lastBlockNumber = itr.Event.Raw.BlockNumber
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, lastBlockNumber
+}
+
+func (p *PlasmaClient) DebugAddressFilter(
+	start uint64,
+) ([]contracts.PlasmaDebugAddress, uint64) {
+	opts := bind.FilterOpts{
+		Start:   start, // TODO: in the future we should store the last starting point in the db.
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	itr, err := p.plasma.FilterDebugAddress(&opts)
+
+	if err != nil {
+		panic(err)
+	}
+
+	next := true
+
+	var events []contracts.PlasmaDebugAddress
+
+	var lastBlockNumber uint64
+
+	for next {
+		if itr.Event != nil {
+			lastBlockNumber = itr.Event.Raw.BlockNumber
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, lastBlockNumber
+}
+
+func (p *PlasmaClient) DebugUintFilter(
+	start uint64,
+) ([]contracts.PlasmaDebugUint, uint64) {
+	opts := bind.FilterOpts{
+		Start:   start, // TODO: in the future we should store the last starting point in the db.
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	itr, err := p.plasma.FilterDebugUint(&opts)
+
+	if err != nil {
+		panic(err)
+	}
+
+	next := true
+
+	var events []contracts.PlasmaDebugUint
+
+	var lastBlockNumber uint64
+
+	for next {
+		if itr.Event != nil {
+			lastBlockNumber = itr.Event.Raw.BlockNumber
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, lastBlockNumber
+}
+
+func (p *PlasmaClient) DebugBoolFilter(
+	start uint64,
+) ([]contracts.PlasmaDebugBool, uint64) {
+	opts := bind.FilterOpts{
+		Start:   0x0, // TODO: in the future we should store the last starting point in the db.
+		End:     nil,
+		Context: context.Background(),
+	}
+
+	itr, err := p.plasma.FilterDebugBool(&opts)
+
+	if err != nil {
+		panic(err)
+	}
+
+	next := true
+
+	var events []contracts.PlasmaDebugBool
 
 	var lastBlockNumber uint64
 

@@ -38,25 +38,24 @@ func RootNodeListener(rootPort int, level *db.Database) {
 			blockNum = block.Header.Number + 1
 		}
 
-		log.Printf("Latest block number found: %d\n", blockNum)
+		log.Printf("Looking for block number: %d\n", blockNum)
 
 		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 		response := userclient.GetBlock(rootUrl, blockNum)
 
-		fmt.Println(response)
-
-		// TODO: compare block with that on the plasma chain.
-
-		if ValidBlock(response.Block) {
+		if response != nil {
+			log.Printf("Found block number: %d\n", blockNum)
+			fmt.Println(response)
+			// TODO: compare block with that on the plasma chain.
 			level.BlockDao.Save(response.Block)
-		} else {
-			// TODO: start exit.
 		}
 
 		time.Sleep(3 * time.Second)
 	}
 }
+
+// TODO: need a plasma GetBlock function as well.
 
 func ValidBlock(block *chain.Block) bool {
 	// TODO: compare this block with that on the plasma chain.

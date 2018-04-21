@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -32,18 +33,25 @@ func ExitStartedListener(level *db.Database, plasma *eth.PlasmaClient) {
 				count += 1
 
 				exitId := event.ExitId
-				exit := plasma.GetExit(exitId.Uint64())
+
+				fmt.Println("Found exit id")
+				fmt.Println(exitId.Uint64())
+				exit := plasma.GetExit(exitId)
+				fmt.Println("**** exit found")
+				fmt.Println(exit)
+
 				spend := FindSpend(plasma, exit)
 
 				if spend != nil {
-					plasma.ChallengeExit(
-						exitId,
-						// This is the tx that we want to use to prove it's spent.
-						spend.block,
-						spend.txs,
-						spend.blocknum,
-						spend.txindex,
-					)
+					fmt.Println(spend)
+					// plasma.ChallengeExit(
+					// 	exitId,
+					// 	// This is the tx that we want to use to prove it's spent.
+					// 	spend.block,
+					// 	spend.txs,
+					// 	spend.blocknum,
+					// 	spend.txindex,
+					// )
 				}
 
 				// It's not synchronized right now...

@@ -68,7 +68,9 @@ contract Plasma {
         var txList = txItem.toList();
 
         var newOwnerIdx = 6;
+        var amountIdx = 7;
         require(msg.sender == txList[newOwnerIdx].toAddress());
+        require(msg.value == txList[amountIdx].toUint());
 
         bytes32 root = createSimpleMerkleRoot(txBytes);
 
@@ -110,7 +112,6 @@ contract Plasma {
         require(msg.sender == txList[baseIndex].toAddress());
 
         var amount = txList[baseIndex + 1].toUint();
-
         // Simplify contract by only allowing exits > 0
         require(amount > 0);
 
