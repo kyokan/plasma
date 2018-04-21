@@ -166,6 +166,42 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:   "block",
+			Usage:  "Runs get blocks",
+			Action: userclient.GetBlockCLI,
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "root-port",
+					Value: 8643,
+					Usage: "Port for the root server to listen on.",
+				},
+				cli.IntFlag{
+					Name:  "height",
+					Usage: "Block height.",
+				},
+			},
+		},
+		{
+			Name:   "send",
+			Usage:  "Runs send",
+			Action: userclient.SendCLI,
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "root-port",
+					Value: 8643,
+					Usage: "Port for the root server to listen on.",
+				},
+				cli.StringFlag{
+					Name:  "to",
+					Usage: "Recipient.",
+				},
+				cli.IntFlag{
+					Name:  "amount",
+					Usage: "Amont to send.",
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)

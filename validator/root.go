@@ -47,6 +47,9 @@ func RootNodeListener(rootPort int, level *db.Database) {
 		if response != nil {
 			log.Printf("Found block number: %d\n", blockNum)
 			fmt.Println(response)
+			// if not valid
+			//	txs, err := level.AddressDao.UTXOs(&addr)
+
 			// TODO: compare block with that on the plasma chain.
 			level.BlockDao.Save(response.Block)
 		}
