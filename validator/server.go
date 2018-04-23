@@ -18,8 +18,9 @@ func Run(rootPort int, validatorPort int, level *db.Database, plasma *eth.Plasma
 	fmt.Println("Validator Server Starting")
 	log.Printf("Starting validator server on port %d.", validatorPort)
 
+	// TODO: move it to the starter.
 	go RootNodeListener(rootPort, level)
-	go ExitStartedListener(level, plasma)
+	go ExitStartedListener(rootPort, level, plasma)
 
 	s := rpc.NewServer()
 	s.RegisterCodec(json.NewCodec(), "application/json")

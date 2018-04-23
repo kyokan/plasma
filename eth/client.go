@@ -39,6 +39,12 @@ func NewClient(url string) (*Client, error) {
 	return &Client{typedClient: ethclient.NewClient(c), rpcClient: c}, nil
 }
 
+func (c *Client) GetBalance(addr common.Address) (*big.Int, error) {
+	log.Printf("Attempting to get balance for %s", util.AddressToHex(&addr))
+
+	return c.typedClient.BalanceAt(context.Background(), addr, nil)
+}
+
 func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	log.Printf("Attempting to sign data on behalf of %s", util.AddressToHex(addr))
 	var res []byte

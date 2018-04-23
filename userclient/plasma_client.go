@@ -12,37 +12,49 @@ import (
 	"github.com/urfave/cli"
 )
 
+func Finalize(c *cli.Context) {
+	plasma := eth.CreatePlasmaClientCLI(c)
+	plasma.Finalize()
+}
+
 // TODO: move to client with sub args for deposit args.
-func Deposit(c *cli.Context) {
-	contractAddress := c.GlobalString("contract-addr")
-	nodeURL := c.GlobalString("node-url")
-	keystoreDir := c.GlobalString("keystore-dir")
-	keystoreFile := c.GlobalString("keystore-file")
-	userAddress := c.GlobalString("user-address")
-	privateKey := c.GlobalString("private-key")
-	signPassphrase := c.GlobalString("sign-passphrase")
-	useGeth := c.GlobalBool("use-geth")
+func StartExit(c *cli.Context) {
+	plasma := eth.CreatePlasmaClientCLI(c)
 
 	// Used for starting exit.
+	rootPort := c.Int("root-port")
+	blocknum := c.Int("blocknum")
+	txindex := c.Int("txindex")
+	oindex := c.Int("oindex")
+
+	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d\n", blocknum, txindex, oindex)
+
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
+
+	// TODO: is the hash i'm exiting with the wrong one?
+	res := GetBlock(rootUrl, uint64(blocknum))
+
+	if res == nil {
+		panic("Block does not exist!")
+	}
+
+	plasma.StartExit(
+		res.Block,
+		res.Transactions,
+		util.NewInt(blocknum),
+		util.NewInt(txindex),
+		util.NewInt(oindex),
+	)
+}
+
+// TODO: move to client with sub args for deposit args.
+func Deposit(c *cli.Context) {
+	plasma := eth.CreatePlasmaClientCLI(c)
+
+	userAddress := c.GlobalString("user-address")
 	amount := uint64(c.Int("amount"))
 
 	fmt.Printf("Deposit starting for amount: %d\n", amount)
-
-	privateKeyECDSA := util.CreatePrivateKeyECDSA(
-		userAddress,
-		privateKey,
-		keystoreDir,
-		keystoreFile,
-		signPassphrase,
-	)
-
-	plasma := eth.CreatePlasmaClient(
-		nodeURL,
-		contractAddress,
-		userAddress,
-		privateKeyECDSA,
-		useGeth,
-	)
 
 	t := createDepositTx(userAddress, amount)
 

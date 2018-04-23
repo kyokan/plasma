@@ -22,6 +22,10 @@ func NewUint64(a uint64) *big.Int {
 	return new(big.Int).SetUint64(a)
 }
 
+func NewUint32(a uint32) *big.Int {
+	return new(big.Int).SetUint64(uint64(a))
+}
+
 func NewInt(a int) *big.Int {
 	return new(big.Int).SetInt64(int64(a))
 }

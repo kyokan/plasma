@@ -61,7 +61,8 @@ func RootNodeListener(rootPort int, level *db.Database) {
 // TODO: need a plasma GetBlock function as well.
 
 func ValidBlock(block *chain.Block) bool {
-	// TODO: compare this block with that on the plasma chain.
+	// TODO: compare this block hash. with that on the plasma chain.
+
 	// TODO: how long has it been since we created a new block in plasma.
 	return false
 }

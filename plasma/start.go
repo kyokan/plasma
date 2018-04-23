@@ -60,7 +60,12 @@ func Start(c *cli.Context) {
 
 	go rpc.Start(c.Int("rpc-port"), level, sink)
 
+	// TODO: deposits must always be in their own block.
 	go node.StartDepositListener(level, sink, plasma)
+
+	// TODO: add an exit listener to make sure to add an exit transaction.
+	// inputs linking to the utxo, and outputs with zeros.
+	// This also needs to match the tx that is added to the plasma chain.
 
 	select {}
 }

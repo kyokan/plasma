@@ -33,7 +33,7 @@ func main() {
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
 			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0xd54b47f8e6a1b97f3a84f63c867286272b273b7c",
+			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
@@ -165,6 +165,16 @@ func main() {
 					Usage: "Output to exit.",
 				},
 			},
+		},
+		{
+			Name:   "finalize",
+			Usage:  "Runs finalize",
+			Action: userclient.Finalize,
+		},
+		{
+			Name:   "balance",
+			Usage:  "Runs get balance",
+			Action: userclient.GetBalance,
 		},
 		{
 			Name:   "block",

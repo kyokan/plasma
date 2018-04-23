@@ -1,7 +1,6 @@
 package eth
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -33,6 +33,33 @@ type Exit struct {
 	TxIndex   *big.Int
 	OIndex    *big.Int
 	StartedAt *big.Int
+}
+
+func CreatePlasmaClientCLI(c *cli.Context) *PlasmaClient {
+	contractAddress := c.GlobalString("contract-addr")
+	nodeURL := c.GlobalString("node-url")
+	keystoreDir := c.GlobalString("keystore-dir")
+	keystoreFile := c.GlobalString("keystore-file")
+	userAddress := c.GlobalString("user-address")
+	privateKey := c.GlobalString("private-key")
+	signPassphrase := c.GlobalString("sign-passphrase")
+	useGeth := c.GlobalBool("use-geth")
+
+	privateKeyECDSA := util.CreatePrivateKeyECDSA(
+		userAddress,
+		privateKey,
+		keystoreDir,
+		keystoreFile,
+		signPassphrase,
+	)
+
+	return CreatePlasmaClient(
+		nodeURL,
+		contractAddress,
+		userAddress,
+		privateKeyECDSA,
+		useGeth,
+	)
 }
 
 func CreatePlasmaClient(
@@ -180,7 +207,6 @@ func (p *PlasmaClient) StartExit(
 
 func (p *PlasmaClient) ChallengeExit(
 	exitId *big.Int,
-	block *chain.Block,
 	txs []chain.Transaction,
 	blocknum *big.Int,
 	txindex *big.Int,
@@ -220,6 +246,24 @@ func (p *PlasmaClient) ChallengeExit(
 	fmt.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
 }
 
+func (p *PlasmaClient) Finalize() {
+	var opts *bind.TransactOpts
+
+	if p.useGeth {
+		opts = p.ethClient.NewGethTransactor(common.HexToAddress(p.userAddress))
+	} else {
+		opts = util.CreateAuth(p.privateKey)
+	}
+
+	res, err := p.plasma.Finalize(opts)
+
+	if err != nil {
+		log.Fatalf("Failed to finalize exits: %v", err)
+	}
+
+	fmt.Printf("Finalize pending: 0x%x\n", res.Hash())
+}
+
 func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
 	opts := util.CreateCallOpts(p.userAddress)
 
@@ -242,166 +286,6 @@ func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
 func (p *PlasmaClient) CurrentChildBlock() (*big.Int, error) {
 	opts := util.CreateCallOpts(p.userAddress)
 	return p.plasma.CurrentChildBlock(opts)
-}
-
-func (p *PlasmaClient) DepositFilter(
-	start uint64,
-) ([]contracts.PlasmaDeposit, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := p.plasma.FilterDeposit(&opts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	next := true
-
-	var events []contracts.PlasmaDeposit
-
-	var lastBlockNumber uint64
-
-	for next {
-		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, lastBlockNumber
-}
-
-func (p *PlasmaClient) ExitStartedFilter(
-	start uint64,
-) ([]contracts.PlasmaExitStarted, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := p.plasma.FilterExitStarted(&opts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	next := true
-
-	var events []contracts.PlasmaExitStarted
-
-	var lastBlockNumber uint64
-
-	for next {
-		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, lastBlockNumber
-}
-
-func (p *PlasmaClient) DebugAddressFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugAddress, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
-		Context: context.Background(),
-	}
-
-	itr, err := p.plasma.FilterDebugAddress(&opts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	next := true
-
-	var events []contracts.PlasmaDebugAddress
-
-	var lastBlockNumber uint64
-
-	for next {
-		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, lastBlockNumber
-}
-
-func (p *PlasmaClient) DebugUintFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugUint, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
-		Context: context.Background(),
-	}
-
-	itr, err := p.plasma.FilterDebugUint(&opts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	next := true
-
-	var events []contracts.PlasmaDebugUint
-
-	var lastBlockNumber uint64
-
-	for next {
-		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, lastBlockNumber
-}
-
-func (p *PlasmaClient) DebugBoolFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugBool, uint64) {
-	opts := bind.FilterOpts{
-		Start:   0x0, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
-		Context: context.Background(),
-	}
-
-	itr, err := p.plasma.FilterDebugBool(&opts)
-
-	if err != nil {
-		panic(err)
-	}
-
-	next := true
-
-	var events []contracts.PlasmaDebugBool
-
-	var lastBlockNumber uint64
-
-	for next {
-		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, lastBlockNumber
 }
 
 // TODO: it prevents import cycle with utils.
