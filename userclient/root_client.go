@@ -26,13 +26,13 @@ type ClientResponse struct {
 func SendCLI(c *cli.Context) {
 	userAddress := c.GlobalString("user-address")
 
-	// Used for starting exit.
 	rootPort := c.Int("root-port")
 	toAddr := c.String("to")
 	amount := uint64(c.Int("amount"))
 
 	fmt.Printf("Sending amount: %d to: %s\n", amount, toAddr)
 
+	// TODO: move to config
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	args := &plasma_rpc.SendArgs{
@@ -61,6 +61,7 @@ func GetBlockCLI(c *cli.Context) {
 
 	fmt.Printf("Getting block for height: %d\n", height)
 
+	// TODO: move to config
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	response := GetBlock(rootUrl, height)
@@ -116,7 +117,7 @@ func GetBlockCLI(c *cli.Context) {
 
 		table2.Render()
 	} else {
-		fmt.Println("Transction failed no repsonse given\n")
+		fmt.Println("Transaction failed no repsonse given\n")
 	}
 }
 
@@ -160,7 +161,7 @@ func Request(url string, args interface{}, endpoint string) *encoding_json.RawMe
 	err = encoding_json.NewDecoder(resp.Body).Decode(&c)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to decode to json: %v", err)
 	}
 
 	if c.Error == nil {

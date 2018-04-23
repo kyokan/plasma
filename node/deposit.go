@@ -13,11 +13,10 @@ func StartDepositListener(level *db.Database, sink *TransactionSink, plasma *eth
 	sink.AcceptDepositEvents(ch)
 
 	for {
-		// TODO: change name to block number
 		idx, err := level.DepositDao.LastDepositEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
-			panic(err)
+			log.Fatalf("Failed to get last deposit event idx: %v", err)
 		}
 
 		log.Printf("Looking for deposit events at block number: %d\n", idx)
@@ -33,15 +32,14 @@ func StartDepositListener(level *db.Database, sink *TransactionSink, plasma *eth
 					Value:  event.Value,
 				}
 
-				count += 1
+				count++
 
-				// It's not synchronized right now...
+				// TODO: AcceptDepositEvents is not synchronized so sleeps are required.
 				time.Sleep(time.Second * 3)
 			}
 
 			log.Printf("Found %d deposit events at from blocks %d to %d.\n", count, idx, lastIdx)
 
-			// update deposits for the next round.
 			level.DepositDao.SaveDepositEventIdx(lastIdx + 1)
 		} else {
 			log.Printf("No deposit events at block %d.\n", idx)

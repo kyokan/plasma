@@ -21,13 +21,12 @@ type ClientResponse struct {
 
 func RootNodeListener(rootPort int, level *db.Database) {
 	for {
-		fmt.Println("Watching root node...")
+		log.Println("Watching root node...")
 
 		block, err := level.BlockDao.Latest()
 
-		// what if latest is null
 		if err != nil {
-			panic(err)
+			log.Fatalf("Failed to get latest block: %v", err)
 		}
 
 		var blockNum uint64
@@ -40,17 +39,16 @@ func RootNodeListener(rootPort int, level *db.Database) {
 
 		log.Printf("Looking for block number: %d\n", blockNum)
 
+		// TODO: move to config
 		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 		response := userclient.GetBlock(rootUrl, blockNum)
 
 		if response != nil {
 			log.Printf("Found block number: %d\n", blockNum)
-			fmt.Println(response)
-			// if not valid
-			//	txs, err := level.AddressDao.UTXOs(&addr)
 
 			// TODO: compare block with that on the plasma chain.
+
 			level.BlockDao.Save(response.Block)
 		}
 
@@ -62,7 +60,6 @@ func RootNodeListener(rootPort int, level *db.Database) {
 
 func ValidBlock(block *chain.Block) bool {
 	// TODO: compare this block hash. with that on the plasma chain.
-
 	// TODO: how long has it been since we created a new block in plasma.
 	return false
 }

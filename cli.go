@@ -23,22 +23,19 @@ func main() {
 			Usage: "Filepath for Plasma's database.",
 		},
 		cli.StringFlag{
-			Name: "node-url",
-			// Value: "http://localhost:8545", // dev
+			Name:  "node-url",
+			Value: "http://localhost:8545", // ropsten
 			// Value: "ws://localhost:8546", // websocket
-			Value: "http://localhost:7545",
+			// Value: "http://localhost:7545", // ganache
 			Usage: "Full URL to a running geth node.",
 		},
 		cli.StringFlag{
-			Name: "contract-addr",
-			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // test
-			// Value: "0x4db27d728a8714af06474786dbaeadea9673c511", / dev
-			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf",
+			Name:  "contract-addr",
+			Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // ropsten
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
 			Name:  "priority-queue-contract-addr",
-			Value: "0xecfcab0a285d3380e488a39b4bb21e777f8a4eac",
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{

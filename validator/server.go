@@ -15,7 +15,7 @@ import (
 
 // TODO: clean up these args
 func Run(rootPort int, validatorPort int, level *db.Database, plasma *eth.PlasmaClient) {
-	fmt.Println("Validator Server Starting")
+	log.Println("Validator Server Starting")
 	log.Printf("Starting validator server on port %d.", validatorPort)
 
 	// TODO: move it to the starter.

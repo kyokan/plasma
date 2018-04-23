@@ -2,6 +2,7 @@ package userclient
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 	"time"
 
@@ -17,11 +18,9 @@ func Finalize(c *cli.Context) {
 	plasma.Finalize()
 }
 
-// TODO: move to client with sub args for deposit args.
 func StartExit(c *cli.Context) {
 	plasma := eth.CreatePlasmaClientCLI(c)
 
-	// Used for starting exit.
 	rootPort := c.Int("root-port")
 	blocknum := c.Int("blocknum")
 	txindex := c.Int("txindex")
@@ -29,13 +28,13 @@ func StartExit(c *cli.Context) {
 
 	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d\n", blocknum, txindex, oindex)
 
+	// TODO: move url creation to configs
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
-	// TODO: is the hash i'm exiting with the wrong one?
 	res := GetBlock(rootUrl, uint64(blocknum))
 
 	if res == nil {
-		panic("Block does not exist!")
+		log.Fatalln("Block does not exist!")
 	}
 
 	plasma.StartExit(
@@ -47,7 +46,6 @@ func StartExit(c *cli.Context) {
 	)
 }
 
-// TODO: move to client with sub args for deposit args.
 func Deposit(c *cli.Context) {
 	plasma := eth.CreatePlasmaClientCLI(c)
 
@@ -65,17 +63,14 @@ func Deposit(c *cli.Context) {
 	curr, err := plasma.CurrentChildBlock()
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to get current child block: %v", err)
 	}
 
-	fmt.Println("**** deposit last child block")
-	fmt.Println(curr.Uint64())
+	fmt.Printf("Last child block: %v\n", curr)
 }
 
-// TODO: use same code as transaction sink.
+// TODO: Use same code as transaction sink.
 func createDepositTx(userAddress string, value uint64) chain.Transaction {
-	fmt.Println("***** createDepositTx")
-	fmt.Println(value)
 	return chain.Transaction{
 		Input0: chain.ZeroInput(),
 		Input1: chain.ZeroInput(),

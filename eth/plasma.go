@@ -2,8 +2,6 @@ package eth
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
-	"fmt"
 	"log"
 	"math/big"
 
@@ -72,7 +70,7 @@ func CreatePlasmaClient(
 	conn, err := ethclient.Dial(nodeUrl)
 
 	if err != nil {
-		log.Panic("Failed to start ETH client: ", err)
+		log.Fatalf("Failed to start ETH client: %v", err)
 	}
 
 	plasma, err := contracts.NewPlasma(common.HexToAddress(contractAddress), conn)
@@ -82,13 +80,14 @@ func CreatePlasmaClient(
 	}
 
 	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
+		log.Fatalln("Private key ecdsa not found")
 	}
 
+	// TODO: this is a duplicate eth client, might be able to merge them.
 	ethClient, err := NewClient(nodeUrl)
 
 	if err != nil {
-		log.Panic("Failed to create a new eth client", err)
+		log.Fatalf("Failed to create a new eth client: %v", err)
 	}
 
 	return &PlasmaClient{
@@ -115,14 +114,11 @@ func (p *PlasmaClient) SubmitBlock(
 	copy(root[:], merkle.Root.Hash[:32])
 	tx, err := p.plasma.SubmitBlock(opts, root)
 
-	fmt.Println("**** submit block")
-	fmt.Println(hex.EncodeToString(root[:]))
-
 	if err != nil {
 		log.Fatalf("Failed to submit block: %v", err)
 	}
 
-	fmt.Printf("Submit block pending: 0x%x\n", tx.Hash())
+	log.Printf("Submit block pending: 0x%x\n", tx.Hash())
 }
 
 func (p *PlasmaClient) Deposit(
@@ -142,7 +138,7 @@ func (p *PlasmaClient) Deposit(
 	bytes, err := rlp.EncodeToBytes(&t)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to encode tx to rlp bytes: %v", err)
 	}
 
 	tx, err := p.plasma.Deposit(opts, bytes)
@@ -151,7 +147,7 @@ func (p *PlasmaClient) Deposit(
 		log.Fatalf("Failed to deposit: %v", err)
 	}
 
-	fmt.Printf("Deposit pending: 0x%x\n", tx.Hash())
+	log.Printf("Deposit pending: 0x%x\n", tx.Hash())
 }
 
 func (p *PlasmaClient) StartExit(
@@ -174,20 +170,11 @@ func (p *PlasmaClient) StartExit(
 	bytes, err := rlp.EncodeToBytes(&tx)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to encode tx to rlp bytes: %v", err)
 	}
 
-	// TODO: are these hashes correct?
 	merkle := CreateMerkleTree(txs)
 	proof := util.CreateMerkleProof(merkle, txindex)
-
-	fmt.Println("**** start exit")
-	fmt.Printf("block: %d\n", blocknum)
-	fmt.Printf("txindex: %d\n", txindex)
-	fmt.Printf("oindex: %d\n", oindex)
-	fmt.Println("tx: " + hex.EncodeToString(bytes))
-	fmt.Println("proof: " + hex.EncodeToString(proof))
-	fmt.Println("address: " + tx.Output0.NewOwner.Hex())
 
 	res, err := p.plasma.StartExit(
 		opts,
@@ -199,10 +186,10 @@ func (p *PlasmaClient) StartExit(
 	)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to start exit: %v", err)
 	}
 
-	fmt.Printf("Start Exit pending: 0x%x\n", res.Hash())
+	log.Printf("Start Exit pending: 0x%x\n", res.Hash())
 }
 
 func (p *PlasmaClient) ChallengeExit(
@@ -224,7 +211,7 @@ func (p *PlasmaClient) ChallengeExit(
 	bytes, err := rlp.EncodeToBytes(&tx)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to encode tx to rlp bytes: %v", err)
 	}
 
 	merkle := CreateMerkleTree(txs)
@@ -243,7 +230,7 @@ func (p *PlasmaClient) ChallengeExit(
 		log.Fatalf("Failed to challenge exit: %v", err)
 	}
 
-	fmt.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
+	log.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
 }
 
 func (p *PlasmaClient) Finalize() {
@@ -261,7 +248,7 @@ func (p *PlasmaClient) Finalize() {
 		log.Fatalf("Failed to finalize exits: %v", err)
 	}
 
-	fmt.Printf("Finalize pending: 0x%x\n", res.Hash())
+	log.Printf("Finalize pending: 0x%x\n", res.Hash())
 }
 
 func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
@@ -288,7 +275,7 @@ func (p *PlasmaClient) CurrentChildBlock() (*big.Int, error) {
 	return p.plasma.CurrentChildBlock(opts)
 }
 
-// TODO: it prevents import cycle with utils.
+// Note this prevents import cycle with utils.
 func CreateMerkleTree(accepted []chain.Transaction) util.MerkleTree {
 	hashables := make([]util.RLPHashable, len(accepted))
 

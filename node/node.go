@@ -72,7 +72,7 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
 
 func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transaction, blockChan chan<- *chain.Block) {
 	if len(txs) == 0 {
-		// skip for now
+		// TODO: skip for now because it makes logs noisy
 		log.Println("Skipping package blocks because there are no transactions.")
 		return
 	}
@@ -115,7 +115,9 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 	blockChan <- &block
 
 	if len(accepted) == 1 && accepted[0].IsDeposit() {
-		// Skip reporting block is this is a deposit
+		// Skip reporting block if this is a deposit, because
+		// the plasma contract already creates a plasma block on deposit
+		// Submitting again here would submit duplicate deposit blocks.
 		return
 	}
 
@@ -165,9 +167,10 @@ func (node *PlasmaNode) createGenesisBlock() *chain.Block {
 	}
 
 	if err := node.DB.BlockDao.Save(&block); err != nil {
-		log.Panic("Failed to create genesis block:", err)
+		log.Fatalf("Failed to create genesis block:%v", err)
 	}
 
+	// Report genesis block to plasma
 	node.PlasmaClient.SubmitBlock(rlpMerkleTree(txs))
 
 	return &block

@@ -183,7 +183,6 @@ contract Plasma {
 
             currExit.owner.send(-burn);
 
-            // TODO: can i use delete here.
             exits[exitId] = exit({
                 owner: address(0),
                 amount: 0,
@@ -259,7 +258,6 @@ contract Plasma {
             ) {
                 currExit.owner.send(currExit.amount);
                 
-                // TODO: can i use delete here.
                 exits[exitId] = exit({
                     owner: address(0),
                     amount: 0,
@@ -277,11 +275,13 @@ contract Plasma {
 
     // Periodically monitor if we should finalize
     function shouldFinalize() constant returns (bool) {
+        // Not used for testing
         // return block.timestamp > lastFinalizedTime + 2 days;
         return true;
     }
 
     function isFinalizableTime(uint256 timestamp) constant returns (bool) {
+        // Not used for testing
         // return block.timestamp > timestamp + 14 days;
         return true;
     }

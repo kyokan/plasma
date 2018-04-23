@@ -117,7 +117,6 @@ func TreeFromItems(items []Hashable) MerkleTree {
 	level = make([]MerkleNode, len(items))
 
 	for i, item := range items {
-		// TODO: have a bug here why?
 		level[i] = MerkleNode{Hash: item.Hash()}
 	}
 

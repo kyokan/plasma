@@ -2,6 +2,7 @@ package userclient
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/eth"
@@ -14,7 +15,7 @@ func GetBalance(c *cli.Context) {
 	client, err := eth.NewClient(nodeURL)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to create eth client: %v", err)
 	}
 
 	addr := common.HexToAddress(userAddress)
@@ -22,7 +23,7 @@ func GetBalance(c *cli.Context) {
 	res, err := client.GetBalance(addr)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to get balance: %v", err)
 	}
 
 	fmt.Printf("Balance: %v\n", res)

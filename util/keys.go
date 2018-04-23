@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -32,7 +33,7 @@ func CreatePrivateKeyECDSA(
 	}
 
 	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
+		log.Fatalln("Private key ecdsa not found")
 	}
 
 	return privateKeyECDSA
@@ -53,13 +54,13 @@ func ToKeyWrapper(privateKey string) *keystore.Key {
 func ToPrivateKeyECDSA(privateKey string) *ecdsa.PrivateKey {
 	key, err := hex.DecodeString(privateKey)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to decode string to hex bytes: %v", err)
 	}
 
 	privateKeyECDSA, err := crypto.ToECDSA(key)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to convert key to ECDSA: %v", err)
 	}
 
 	return privateKeyECDSA

@@ -7,20 +7,14 @@ import (
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/node"
 	"github.com/kyokan/plasma/rpc"
-	"github.com/kyokan/plasma/util"
 	"github.com/urfave/cli"
 )
 
 func Start(c *cli.Context) {
-	contractAddress := c.GlobalString("contract-addr")
 	nodeURL := c.GlobalString("node-url")
-	keystoreDir := c.GlobalString("keystore-dir")
-	keystoreFile := c.GlobalString("keystore-file")
-	userAddress := c.GlobalString("user-address")
-	privateKey := c.GlobalString("private-key")
-	signPassphrase := c.GlobalString("sign-passphrase")
 	dburl := c.GlobalString("db")
-	useGeth := c.GlobalBool("use-geth")
+
+	plasma := eth.CreatePlasmaClientCLI(c)
 
 	db, level, err := db.CreateLevelDatabase(dburl)
 
@@ -38,38 +32,17 @@ func Start(c *cli.Context) {
 
 	sink := node.NewTransactionSink(level, client)
 
-	privateKeyECDSA := util.CreatePrivateKeyECDSA(
-		userAddress,
-		privateKey,
-		keystoreDir,
-		keystoreFile,
-		signPassphrase,
-	)
-
-	plasma := eth.CreatePlasmaClient(
-		nodeURL,
-		contractAddress,
-		userAddress,
-		privateKeyECDSA,
-		useGeth,
-	)
-
 	p := node.NewPlasmaNode(level, sink, plasma)
 
 	go p.Start()
 
 	go rpc.Start(c.Int("rpc-port"), level, sink)
 
-	// TODO: deposits must always be in their own block.
+	// TODO: ensure that 1 deposit tx is always 1 block
 	go node.StartDepositListener(level, sink, plasma)
 
-	// TODO: add an exit listener to make sure to add an exit transaction.
-	// inputs linking to the utxo, and outputs with zeros.
-	// This also needs to match the tx that is added to the plasma chain.
+	// TODO: add an exit listener to make sure to add an exit transaction to root node.
+	// Also add an exit block to the plasma contract.
 
 	select {}
-}
-
-func exists(s string) bool {
-	return len(s) != 0
 }

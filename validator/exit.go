@@ -15,16 +15,15 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-// TODO: add an exit client to make from the command line.
 func ExitStartedListener(rootPort int, level *db.Database, plasma *eth.PlasmaClient) {
+	// TODO: move to config.
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	for {
-		// TODO: change name to block number
 		idx, err := level.ExitDao.LastExitEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
-			panic(err)
+			log.Fatalf("Failed to get last exit event idx: %v", err)
 		}
 
 		log.Printf("Looking for exit events at block number: %d\n", idx)
@@ -39,19 +38,11 @@ func ExitStartedListener(rootPort int, level *db.Database, plasma *eth.PlasmaCli
 
 				exitId := event.ExitId
 
-				fmt.Println("Found exit id")
-				fmt.Println(exitId.Uint64())
 				exit := plasma.GetExit(exitId)
-				fmt.Println("**** exit found")
-				fmt.Println(exit)
 
 				txs, blockId, txId := FindDoubleSpend(rootUrl, level, plasma, exit)
 
 				if txs != nil && txId != nil {
-					fmt.Println("inputs to the challenge!")
-					fmt.Println(exitId)
-					fmt.Println(blockId)
-					fmt.Println(txId)
 					plasma.ChallengeExit(
 						exitId,
 						txs,
@@ -64,15 +55,13 @@ func ExitStartedListener(rootPort int, level *db.Database, plasma *eth.PlasmaCli
 					events, _ := plasma.ChallengeSuccessFilter(0)
 
 					for _, event := range events {
-						fmt.Println("success")
-						fmt.Println(event.ExitId)
+						log.Printf("challenge success: %v", event.ExitId)
 					}
 
 					events2, _ := plasma.ChallengeFailureFilter(0)
 
 					for _, event := range events2 {
-						fmt.Println("failure")
-						fmt.Println(event.ExitId)
+						log.Printf("challenge failure: %v", event.ExitId)
 					}
 				}
 
@@ -101,19 +90,11 @@ func ExitStartedListener(rootPort int, level *db.Database, plasma *eth.PlasmaCli
 	}
 }
 
-// TODO: move this struct and reuse in exit_client.
-type TransactionInfo struct {
-	block    *chain.Block
-	txs      []chain.Transaction
-	blocknum *big.Int
-	txindex  *big.Int
-}
-
 func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClient, exit eth.Exit) ([]chain.Transaction, *big.Int, *big.Int) {
 	latestBlock, err := level.BlockDao.Latest()
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to get latest block: %v", err)
 	}
 
 	txIdx := exit.TxIndex.Uint64()
@@ -123,12 +104,12 @@ func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClien
 	response := userclient.GetBlock(rootUrl, exit.BlockNum.Uint64())
 
 	if txIdx >= uint64(len(response.Transactions)) {
-		log.Fatalf("The following exit does not exist within this block!")
+		log.Fatalln("The following exit does not exist within this block!")
 	}
 
 	exitTx := response.Transactions[exit.TxIndex.Uint64()]
 
-	fmt.Printf("Finding spends from blocks %d to %d\n", currBlockHeight, lastBlockHeight)
+	log.Printf("Finding spends from blocks %d to %d\n", currBlockHeight, lastBlockHeight)
 
 	// Find possible double spends in every block
 	// TODO: actually in theory it should never happen in the current block.
@@ -140,27 +121,11 @@ func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClien
 		rej := node.FindMatchingInputs(&exitTx, currTxs)
 
 		if len(rej) > 0 {
-			fmt.Printf("Found %d double spends at block %d\n", len(rej), i)
-
-			fmt.Println(exit.BlockNum)
-			fmt.Println(exit.TxIndex)
-			fmt.Println(exit.OIndex)
-			fmt.Println(rej[0].BlkNum)
-			fmt.Println(rej[0].Hash())
-			fmt.Println(rej[0].Input0.BlkNum)
-			fmt.Println(rej[0].Input0.TxIdx)
-			fmt.Println(rej[0].Input0.OutIdx)
-			fmt.Println(rej[0].Input1.BlkNum)
-			fmt.Println(rej[0].Input1.TxIdx)
-			fmt.Println(rej[0].Input1.OutIdx)
-			fmt.Println(rej[0].Output0.NewOwner)
-			fmt.Println(rej[0].Output0.Amount)
-			fmt.Println(rej[0].Output1.NewOwner)
-			fmt.Println(rej[0].Output1.Amount)
-			// Always return the first one.
+			log.Printf("Found %d double spends at block %d\n", len(rej), i)
+			// Always return the first one for now
 			return currTxs, util.NewUint64(i), util.NewUint32(rej[0].TxIdx)
 		} else {
-			fmt.Printf("Found no double spends for block %d\n", i)
+			log.Printf("Found no double spends for block %d\n", i)
 		}
 	}
 

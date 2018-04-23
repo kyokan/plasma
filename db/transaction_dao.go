@@ -46,6 +46,7 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 	return dao.db.Write(batch, nil)
 }
 
+// Currently only returns the first 100 transactions.
 func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
 	var txs []chain.Transaction
 	gd := &GuardedDb{db: dao.db}
@@ -56,11 +57,12 @@ func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transacti
 		data, err := gd.db.Get(key, nil)
 
 		if err != nil {
+			// Return early if we can't find the next transaction.
 			if err.Error() == "leveldb: not found" {
 				break
 			}
 
-			panic(err)
+			return nil, err
 		}
 
 		tx, err := chain.TransactionFromCbor(data)
@@ -136,7 +138,6 @@ func (dao *LevelTransactionDao) save(batch *leveldb.Batch, tx *chain.Transaction
 	hexHash := common.ToHex(hash)
 	hashKey := txPrefixKey("hash", hexHash)
 
-	// TODO: why multiple indexes for the same thing?
 	batch.Put(hashKey, cbor)
 	batch.Put(blkNumHashkey(tx.BlkNum, hexHash), cbor)
 	batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), cbor)

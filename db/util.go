@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -64,7 +65,7 @@ func bytesToUint64(b []byte) uint64 {
 	n, err := strconv.ParseUint(s, 16, 32)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to parse string as hex: %v", err)
 	}
 
 	return uint64(n)

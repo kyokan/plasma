@@ -58,8 +58,8 @@ func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	return res, nil
 }
 
-// TODO: refactor this around.
-// TODO: can this be tested?
+// Can be used by plasma client to send a sign transaction request to a remote geth node.
+// TODO: needs to be tested.
 func (c *Client) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
 	return &bind.TransactOpts{
 		From: keyAddr,

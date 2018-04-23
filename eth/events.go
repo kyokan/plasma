@@ -2,6 +2,7 @@ package eth
 
 import (
 	"context"
+	"log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/kyokan/plasma/contracts/gen/contracts"
@@ -19,7 +20,7 @@ func (p *PlasmaClient) DepositFilter(
 	itr, err := p.plasma.FilterDeposit(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter deposit events: %v", err)
 	}
 
 	next := true
@@ -51,7 +52,7 @@ func (p *PlasmaClient) ExitStartedFilter(
 	itr, err := p.plasma.FilterExitStarted(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter exit started events: %v", err)
 	}
 
 	next := true
@@ -75,15 +76,15 @@ func (p *PlasmaClient) DebugAddressFilter(
 	start uint64,
 ) ([]contracts.PlasmaDebugAddress, uint64) {
 	opts := bind.FilterOpts{
-		Start:   start, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
 	itr, err := p.plasma.FilterDebugAddress(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter debug address events: %v", err)
 	}
 
 	next := true
@@ -107,15 +108,15 @@ func (p *PlasmaClient) DebugUintFilter(
 	start uint64,
 ) ([]contracts.PlasmaDebugUint, uint64) {
 	opts := bind.FilterOpts{
-		Start:   start, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
 	itr, err := p.plasma.FilterDebugUint(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter debug uint events: %v", err)
 	}
 
 	next := true
@@ -139,15 +140,15 @@ func (p *PlasmaClient) DebugBoolFilter(
 	start uint64,
 ) ([]contracts.PlasmaDebugBool, uint64) {
 	opts := bind.FilterOpts{
-		Start:   start, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
 	itr, err := p.plasma.FilterDebugBool(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter debug bool events: %v", err)
 	}
 
 	next := true
@@ -171,15 +172,15 @@ func (p *PlasmaClient) ChallengeSuccessFilter(
 	start uint64,
 ) ([]contracts.PlasmaChallengeSuccess, uint64) {
 	opts := bind.FilterOpts{
-		Start:   0x0, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
 	itr, err := p.plasma.FilterChallengeSuccess(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter challenge success events: %v", err)
 	}
 
 	next := true
@@ -203,15 +204,15 @@ func (p *PlasmaClient) ChallengeFailureFilter(
 	start uint64,
 ) ([]contracts.PlasmaChallengeFailure, uint64) {
 	opts := bind.FilterOpts{
-		Start:   0x0, // TODO: in the future we should store the last starting point in the db.
-		End:     nil,
+		Start:   start,
+		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
 	itr, err := p.plasma.FilterChallengeFailure(&opts)
 
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to filter challenge failure events: %v", err)
 	}
 
 	next := true

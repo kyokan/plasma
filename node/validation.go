@@ -17,20 +17,15 @@ func EnsureNoDoubleSpend(txs []chain.Transaction) (okTxs []chain.Transaction, re
 	for _, tx := range txs {
 		if tx.IsDeposit() {
 			deposits = append(deposits, tx)
-			// TODO: does it make sense to skip deposits?
-			continue
 		}
 
 		txPtr := &tx
-
-		// These are the input keys
-		// Because it means we spend this combination.
 		keys := txToKeys(txPtr)
 
 		for _, k := range keys {
 			if _, exists := used[k]; exists {
-				// Append this transaction if we already have the array.
 				used[k] = append(used[k], &tx)
+				continue
 			}
 
 			used[k] = []*chain.Transaction{&tx}
