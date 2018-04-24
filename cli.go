@@ -32,7 +32,7 @@ func main() {
 		cli.StringFlag{
 			Name: "contract-addr",
 			// Value: "0xd1d7dddd82189ea452eb5e104d13f0ca367887d9", // ropsten
-			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf", // ganache
+			Value: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf", // temp ganache
 			Usage: "Plasma contract address.",
 		},
 		cli.StringFlag{
