@@ -5,6 +5,7 @@ var shell = require('shelljs');
 var fs = require("fs");
 
 program
+  .option('-n, --network [value]', 'Network to deploy to')
   .option('-c, --clean', 'Clean build folders')
   .option('-f, --filename [value]', 'Single file to generate')
   .version('0.1.0');
@@ -35,7 +36,11 @@ generateDefault();
 function generateDefault() {
   console.log('Do default generate logic...');
 
-  shell.exec(`truffle migrate --network ganache --reset`);
+  const network = program.network ? program.network : "ganache";
+
+  console.log(`Using network: ${network}`);
+
+  shell.exec(`truffle migrate --network ${network} --reset`);
   generate('./build/contracts/Plasma.json');
   generate('./build/contracts/PriorityQueue.json');
 

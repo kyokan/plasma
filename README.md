@@ -63,13 +63,11 @@ make
 
 3. Deploy contracts:
 
-This runs on ganache by default.
-
 Make sure to save the resulting Plasma contract address to be used later.
 
 ```
 cd $GOPATH/src/github.com/kyokan/plasma/contracts
-./generate.js
+./generate.js --network ganache
 ```
 
 4. You can optionally setup a local private chain or testnet:
