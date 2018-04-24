@@ -85,7 +85,7 @@ geth --datadir chain --rpc --ws --mine --unlock [YOUR_ADDRESS]
 
 ## CLI Usage Examples
 
-These examples work with running ganache as the root chain.  Be sure to set the contract address either through the command line or by setting them directly in cli.go.  They have been ommitted from the examples to make it easier to read.
+These examples work with running ganache as the root chain.  Be sure to set the contract address either through the command line or by setting them directly in cli.go.  They have been omitted from the examples to make it easier to read.
 
 Also note that these examples require you to run generate.js again in between tests.
 
