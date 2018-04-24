@@ -8,12 +8,13 @@ import (
 )
 
 type Database struct {
-	TxDao      TransactionDao
-	BlockDao   BlockDao
-	MerkleDao  MerkleDao
-	AddressDao AddressDao
-	DepositDao DepositDao
-	ExitDao    ExitDao
+	TxDao           TransactionDao
+	BlockDao        BlockDao
+	MerkleDao       MerkleDao
+	AddressDao      AddressDao
+	DepositDao      DepositDao
+	ExitDao         ExitDao
+	InvalidBlockDao InvalidBlockDao
 }
 
 func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
@@ -31,13 +32,15 @@ func CreateLevelDatabase(location string) (*leveldb.DB, *Database, error) {
 	addressDao := LevelAddressDao{db: level, txDao: &txDao}
 	depositDao := LevelDepositDao{db: level}
 	exitDao := LevelExitDao{db: level}
+	invalidBlockDao := LevelInvalidBlockDao{db: level}
 
 	return level, &Database{
-		TxDao:      &txDao,
-		BlockDao:   &blockDao,
-		MerkleDao:  &merkleDao,
-		AddressDao: &addressDao,
-		DepositDao: &depositDao,
-		ExitDao:    &exitDao,
+		TxDao:           &txDao,
+		BlockDao:        &blockDao,
+		MerkleDao:       &merkleDao,
+		AddressDao:      &addressDao,
+		DepositDao:      &depositDao,
+		ExitDao:         &exitDao,
+		InvalidBlockDao: &invalidBlockDao,
 	}, nil
 }

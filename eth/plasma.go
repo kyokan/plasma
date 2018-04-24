@@ -33,6 +33,11 @@ type Exit struct {
 	StartedAt *big.Int
 }
 
+type Block struct {
+	Root      []byte
+	StartedAt *big.Int
+}
+
 func CreatePlasmaClientCLI(c *cli.Context) *PlasmaClient {
 	contractAddress := c.GlobalString("contract-addr")
 	nodeURL := c.GlobalString("node-url")
@@ -266,6 +271,21 @@ func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
 		blocknum,
 		txindex,
 		oindex,
+		startedAt,
+	}
+}
+
+func (p *PlasmaClient) GetBlock(blocknum *big.Int) Block {
+	opts := util.CreateCallOpts(p.userAddress)
+
+	root, startedAt, err := p.plasma.GetBlock(opts, blocknum)
+
+	if err != nil {
+		log.Fatalf("Failed to get block: %v", err)
+	}
+
+	return Block{
+		root[:],
 		startedAt,
 	}
 }

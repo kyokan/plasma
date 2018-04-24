@@ -1,6 +1,8 @@
 package node
 
 import (
+	"encoding/hex"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -99,10 +101,14 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 	merkle := util.TreeFromItems(hashables)
 	node.DB.MerkleDao.Save(&merkle.Root)
 
+	// TODO: replace previous merkle root.
+	rlpMerkle := rlpMerkleTree(accepted)
+
 	header := chain.BlockHeader{
-		MerkleRoot: merkle.Root.Hash,
-		PrevHash:   lastBlock.BlockHash,
-		Number:     blkNum,
+		MerkleRoot:    merkle.Root.Hash,
+		RLPMerkleRoot: rlpMerkle.Root.Hash,
+		PrevHash:      lastBlock.BlockHash,
+		Number:        blkNum,
 	}
 
 	block := chain.Block{
@@ -121,7 +127,7 @@ func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transacti
 		return
 	}
 
-	node.PlasmaClient.SubmitBlock(rlpMerkleTree(accepted))
+	node.PlasmaClient.SubmitBlock(rlpMerkle)
 }
 
 func (node *PlasmaNode) createGenesisBlock() *chain.Block {
@@ -154,8 +160,12 @@ func (node *PlasmaNode) createGenesisBlock() *chain.Block {
 	merkle := util.TreeFromItems(hashables)
 	node.DB.MerkleDao.Save(&merkle.Root)
 
+	// TODO: replace previous merkle root.
+	rlpMerkle := rlpMerkleTree(txs)
+
 	header := chain.BlockHeader{
-		MerkleRoot: merkle.Root.Hash,
+		MerkleRoot:    merkle.Root.Hash,
+		RLPMerkleRoot: rlpMerkle.Root.Hash,
 		// TODO: is it okay to omit here.
 		// PrevHash:   lastBlock.BlockHash,
 		Number: uint64(blkNum),
@@ -166,12 +176,16 @@ func (node *PlasmaNode) createGenesisBlock() *chain.Block {
 		BlockHash: header.Hash(),
 	}
 
+	fmt.Printf("block hash: %s\n", hex.EncodeToString(block.Header.RLPMerkleRoot))
+
 	if err := node.DB.BlockDao.Save(&block); err != nil {
 		log.Fatalf("Failed to create genesis block:%v", err)
 	}
 
+	fmt.Printf("merkle hash: %s\n", hex.EncodeToString(rlpMerkle.Root.Hash))
+
 	// Report genesis block to plasma
-	node.PlasmaClient.SubmitBlock(rlpMerkleTree(txs))
+	node.PlasmaClient.SubmitBlock(rlpMerkle)
 
 	return &block
 }

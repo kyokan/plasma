@@ -133,6 +133,25 @@ func GetBlock(url string, height uint64) *plasma_rpc.GetBlocksResponse {
 	return nil
 }
 
+func GetUTXOs(url string, userAddress string) *plasma_rpc.GetUTXOsResponse {
+	args := &plasma_rpc.GetUTXOsArgs{
+		UserAddress: userAddress,
+	}
+	endpoint := "Block.GetUTXOs"
+
+	response := Request(url, args, endpoint)
+
+	if response != nil {
+		var result plasma_rpc.GetUTXOsResponse
+
+		encoding_json.Unmarshal(*response, &result)
+
+		return &result
+	}
+
+	return nil
+}
+
 func Request(url string, args interface{}, endpoint string) *encoding_json.RawMessage {
 	message, err := json.EncodeClientRequest(endpoint, args)
 	if err != nil {

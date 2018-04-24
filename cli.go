@@ -210,6 +210,25 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:   "force-submit",
+			Usage:  "Runs force submit block",
+			Action: plasma.ForceSubmitBlock,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "merkle-root",
+					Usage: "Merkle root.",
+				},
+				cli.StringFlag{
+					Name:  "prev-hash",
+					Usage: "Previous block hash.",
+				},
+				cli.IntFlag{
+					Name:  "number",
+					Usage: "Block number.",
+				},
+			},
+		},
 	}
 
 	app.Run(os.Args)

@@ -15,6 +15,7 @@ func Start(c *cli.Context) {
 
 	userAddress := c.GlobalString("user-address")
 	dburl := c.GlobalString("db")
+	// TODO: turn this into a client.
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
 	validatorPort := c.Int("validator-port")
 
@@ -28,7 +29,7 @@ func Start(c *cli.Context) {
 
 	defer db.Close()
 
-	go RootNodeListener(rootUrl, level)
+	go RootNodeListener(rootUrl, level, plasma, userAddress)
 
 	go ExitStartedListener(rootUrl, level, plasma)
 

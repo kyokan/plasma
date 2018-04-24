@@ -63,6 +63,16 @@ contract Plasma {
         SubmitBlock(msg.sender, root);
     }
 
+    function getBlock(uint256 blocknum)
+        public
+        view
+        returns (bytes32, uint256)
+    {
+        var block = childChain[blocknum];
+
+        return (block.root, block.created_at);
+    }
+
     function deposit(bytes txBytes) public payable {
         var txItem = txBytes.toRLPItem();
         var txList = txItem.toList();
