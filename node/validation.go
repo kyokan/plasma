@@ -2,6 +2,7 @@ package node
 
 import (
 	"fmt"
+
 	"github.com/kyokan/plasma/chain"
 )
 
@@ -55,6 +56,29 @@ func EnsureNoDoubleSpend(txs []chain.Transaction) (okTxs []chain.Transaction, re
 	}
 
 	return ret, rej
+}
+
+func FindMatchingInputs(tx *chain.Transaction, txs []chain.Transaction) (rejections []chain.Transaction) {
+	usedKey0 := fmt.Sprintf("%d::%d::%d", tx.BlkNum, tx.TxIdx, 0)
+	usedKey1 := fmt.Sprintf("%d::%d::%d", tx.BlkNum, tx.TxIdx, 1)
+
+	var used []chain.Transaction
+
+	for _, currTx := range txs {
+		if currTx.IsDeposit() {
+			continue
+		}
+
+		keys := txToKeys(&currTx)
+
+		for _, k := range keys {
+			if k == usedKey0 || k == usedKey1 {
+				used = append(used, currTx)
+			}
+		}
+	}
+
+	return used
 }
 
 func txToKeys(tx *chain.Transaction) []string {

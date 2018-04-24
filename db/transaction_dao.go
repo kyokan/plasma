@@ -2,12 +2,13 @@ package db
 
 import (
 	"errors"
+	"log"
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
-	"log"
-	"strconv"
 )
 
 const txKeyPrefix = "tx"
@@ -17,6 +18,7 @@ const spendKeyPrefix = "spend"
 type TransactionDao interface {
 	Save(tx *chain.Transaction) error
 	SaveMany(txs []chain.Transaction) error
+	FindByBlockNum(blkNum uint64) ([]chain.Transaction, error)
 	FindByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error)
 }
 
@@ -32,6 +34,8 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 	batch := new(leveldb.Batch)
 
 	for _, tx := range txs {
+		// TODO: there is a bug here because the prev tx must always exist,
+		// but it could be included in this save.
 		err := dao.save(batch, &tx)
 
 		if err != nil {
@@ -40,6 +44,37 @@ func (dao *LevelTransactionDao) SaveMany(txs []chain.Transaction) error {
 	}
 
 	return dao.db.Write(batch, nil)
+}
+
+// Currently only returns the first 100 transactions.
+func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
+	var txs []chain.Transaction
+	gd := &GuardedDb{db: dao.db}
+
+	for i := 0; i < 100; i++ {
+		key := blkNumTxIdxKey(blkNum, uint32(i))
+
+		data, err := gd.db.Get(key, nil)
+
+		if err != nil {
+			// Return early if we can't find the next transaction.
+			if err.Error() == "leveldb: not found" {
+				break
+			}
+
+			return nil, err
+		}
+
+		tx, err := chain.TransactionFromCbor(data)
+
+		if err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, *tx)
+	}
+
+	return txs, nil
 }
 
 func (dao *LevelTransactionDao) FindByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error) {

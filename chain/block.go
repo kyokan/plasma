@@ -4,15 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/binary"
+
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/keybase/go-codec/codec"
 	"github.com/kyokan/plasma/util"
 )
 
 type BlockHeader struct {
-	MerkleRoot util.Hash
-	PrevHash   util.Hash
-	Number     uint64
+	MerkleRoot    util.Hash
+	RLPMerkleRoot util.Hash
+	PrevHash      util.Hash
+	Number        uint64
 }
 
 type Block struct {

@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/contracts/gen/contracts"
-	"github.com/kyokan/plasma/tester"
 	"github.com/kyokan/plasma/util"
 	"github.com/urfave/cli"
 )
@@ -22,20 +21,13 @@ func IntegrationTest(c *cli.Context) {
 	privateKey := c.GlobalString("private-key")
 	signPassphrase := c.GlobalString("sign-passphrase")
 
-	var privateKeyECDSA *ecdsa.PrivateKey
-
-	if exists(userAddress) && exists(privateKey) {
-		privateKeyECDSA = tester.ToPrivateKeyECDSA(privateKey)
-	} else if exists(keystoreDir) &&
-		exists(keystoreFile) &&
-		exists(userAddress) {
-		keyWrapper := tester.GetFromKeyStore(userAddress, keystoreDir, keystoreFile, signPassphrase)
-		privateKeyECDSA = keyWrapper.PrivateKey
-	}
-
-	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
-	}
+	privateKeyECDSA := util.CreatePrivateKeyECDSA(
+		userAddress,
+		privateKey,
+		keystoreDir,
+		keystoreFile,
+		signPassphrase,
+	)
 
 	plasma := CreatePlasmaClient(nodeURL, contractAddress)
 
@@ -50,7 +42,7 @@ func exitAndChallengeSameBlock(
 	privateKeyECDSA *ecdsa.PrivateKey,
 	userAddress string,
 ) {
-	// TODO: Current block is the next block.
+	// Current block is the next block. Should we change that?
 	blocknum := CurrentChildBlock(plasma, userAddress)
 	txs := createSubmitBlockTxs(blocknum, userAddress)
 	merkle := CreateMerkleTree(txs)
@@ -111,6 +103,7 @@ func exitAndChallengeDeposit(
 		privateKeyECDSA,
 		userAddress,
 		[]chain.Transaction{t},
+		// But this shouldn't work because the merkle for the deposit is diff.
 		depositMerkle,
 		// Exit deposit which is the previous block
 		util.Sub(blocknum, 2),
