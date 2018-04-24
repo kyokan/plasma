@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"log"
 	"path"
 
@@ -12,12 +13,14 @@ import (
 func Start(c *cli.Context) {
 	log.Println("Validator Starting")
 
+	userAddress := c.GlobalString("user-address")
 	dburl := c.GlobalString("db")
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
+	validatorPort := c.Int("validator-port")
 
 	plasma := eth.CreatePlasmaClientCLI(c)
 
-	// TODO: create diff directory per user.
-	db, level, err := db.CreateLevelDatabase(path.Join(dburl, "validator"))
+	db, level, err := db.CreateLevelDatabase(path.Join(dburl, "validator", userAddress))
 
 	if err != nil {
 		log.Panic(err)
@@ -25,7 +28,11 @@ func Start(c *cli.Context) {
 
 	defer db.Close()
 
-	go Run(c.Int("root-port"), c.Int("validator-port"), level, plasma)
+	go RootNodeListener(rootUrl, level)
+
+	go ExitStartedListener(rootUrl, level, plasma)
+
+	go Run(validatorPort)
 
 	select {}
 }

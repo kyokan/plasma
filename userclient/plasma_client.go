@@ -21,15 +21,12 @@ func Finalize(c *cli.Context) {
 func StartExit(c *cli.Context) {
 	plasma := eth.CreatePlasmaClientCLI(c)
 
-	rootPort := c.Int("root-port")
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
 	blocknum := c.Int("blocknum")
 	txindex := c.Int("txindex")
 	oindex := c.Int("oindex")
 
 	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d\n", blocknum, txindex, oindex)
-
-	// TODO: move url creation to configs
-	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	res := GetBlock(rootUrl, uint64(blocknum))
 

@@ -2,12 +2,12 @@ package plasma
 
 import (
 	"crypto/ecdsa"
+	"log"
 
 	"github.com/kyokan/plasma/util"
 	"github.com/urfave/cli"
 )
 
-// TODO: move to client with sub args for deposit args.
 func DepositIntegrationTest(c *cli.Context) {
 	contractAddress := c.GlobalString("contract-addr")
 	nodeURL := c.GlobalString("node-url")
@@ -29,7 +29,7 @@ func DepositIntegrationTest(c *cli.Context) {
 	}
 
 	if privateKeyECDSA == nil {
-		panic("Private key ecdsa not found")
+		log.Fatalln("Private key ecdsa not found")
 	}
 
 	plasma := CreatePlasmaClient(nodeURL, contractAddress)

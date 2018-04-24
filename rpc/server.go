@@ -17,7 +17,7 @@ func Start(
 	level *db.Database,
 	sink *node.TransactionSink,
 ) {
-	log.Printf("Starting RPC server on port %d.", port)
+	log.Printf("Starting RPC server on port %d.\n", port)
 
 	chch := make(chan chan node.TransactionRequest)
 

@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -15,10 +14,7 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-func ExitStartedListener(rootPort int, level *db.Database, plasma *eth.PlasmaClient) {
-	// TODO: move to config.
-	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
-
+func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClient) {
 	for {
 		idx, err := level.ExitDao.LastExitEventIdx()
 

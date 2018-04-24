@@ -35,7 +35,6 @@ func (dao *LevelDepositDao) LastDepositEventIdx() (uint64, error) {
 	b := gd.Get(key, nil)
 
 	if gd.err != nil {
-		// TODO: if it's not found return 0.
 		return 0, gd.err
 	}
 

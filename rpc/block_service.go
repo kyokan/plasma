@@ -22,7 +22,7 @@ type BlockService struct {
 }
 
 func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *GetBlocksResponse) error {
-	log.Printf("Received Block.GetBlocks request.")
+	log.Println("Received Block.GetBlocks request.")
 
 	height := args.Height
 

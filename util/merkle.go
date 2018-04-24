@@ -3,13 +3,10 @@ package util
 import (
 	"bufio"
 	"bytes"
-	"encoding/hex"
-	"fmt"
 	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/keybase/go-codec/codec"
 )
 
@@ -89,21 +86,10 @@ func TreeFromRLPItems(items []RLPHashable) MerkleTree {
 	level = make([]MerkleNode, len(items))
 
 	for i, item := range items {
-		bytes, err := rlp.EncodeToBytes(item)
-
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Println("txbytes: " + hex.EncodeToString(bytes))
-		r := item.RLPHash()
-		fmt.Println("rlptx: " + hex.EncodeToString(r))
-		level[i] = MerkleNode{Hash: r}
+		level[i] = MerkleNode{Hash: item.RLPHash()}
 	}
 
 	tree := treeFromLevel16(level)
-
-	fmt.Println("tree: " + hex.EncodeToString(tree.Root.Hash))
 
 	return tree
 }

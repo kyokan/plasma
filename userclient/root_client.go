@@ -25,15 +25,11 @@ type ClientResponse struct {
 
 func SendCLI(c *cli.Context) {
 	userAddress := c.GlobalString("user-address")
-
-	rootPort := c.Int("root-port")
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
 	toAddr := c.String("to")
 	amount := uint64(c.Int("amount"))
 
 	fmt.Printf("Sending amount: %d to: %s\n", amount, toAddr)
-
-	// TODO: move to config
-	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	args := &plasma_rpc.SendArgs{
 		From:   userAddress,
@@ -56,13 +52,10 @@ func SendCLI(c *cli.Context) {
 }
 
 func GetBlockCLI(c *cli.Context) {
-	rootPort := c.Int("root-port")
+	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
 	height := uint64(c.Int("height"))
 
 	fmt.Printf("Getting block for height: %d\n", height)
-
-	// TODO: move to config
-	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 	response := GetBlock(rootUrl, height)
 

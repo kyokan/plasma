@@ -1,7 +1,6 @@
 package validator
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -19,7 +18,7 @@ type ClientResponse struct {
 	Id     uint64                    `json:"id"`
 }
 
-func RootNodeListener(rootPort int, level *db.Database) {
+func RootNodeListener(rootUrl string, level *db.Database) {
 	for {
 		log.Println("Watching root node...")
 
@@ -38,9 +37,6 @@ func RootNodeListener(rootPort int, level *db.Database) {
 		}
 
 		log.Printf("Looking for block number: %d\n", blockNum)
-
-		// TODO: move to config
-		rootUrl := fmt.Sprintf("http://localhost:%d/rpc", rootPort)
 
 		response := userclient.GetBlock(rootUrl, blockNum)
 

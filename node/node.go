@@ -72,7 +72,7 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
 
 func (node PlasmaNode) packageBlock(lastBlock chain.Block, txs []chain.Transaction, blockChan chan<- *chain.Block) {
 	if len(txs) == 0 {
-		// TODO: skip for now because it makes logs noisy
+		// Skip for now because it makes logs noisy
 		log.Println("Skipping package blocks because there are no transactions.")
 		return
 	}
