@@ -5,6 +5,7 @@ var shell = require('shelljs');
 var fs = require("fs");
 
 program
+  .option('-n, --network [value]', 'Network to deploy to')
   .option('-c, --clean', 'Clean build folders')
   .option('-f, --filename [value]', 'Single file to generate')
   .version('0.1.0');
@@ -24,18 +25,33 @@ console.log('Generate go contract models using truffle generated abis.');
 if (program.filename) {
   console.log('Truffle build filename:', program.filename);
 
-  shell.mkdir('-p', ['abi','gen']);
-
   generate(program.filename);
+  
   process.exit(0);
-} else {
-  console.log("Must provide a filename option.");
-  process.exit(1);
+}
+
+// Do the default thing
+generateDefault();
+
+function generateDefault() {
+  console.log('Do default generate logic...');
+
+  const network = program.network ? program.network : "ganache";
+
+  console.log(`Using network: ${network}`);
+
+  shell.exec(`truffle migrate --network ${network} --reset`);
+  generate('./build/contracts/Plasma.json');
+  generate('./build/contracts/PriorityQueue.json');
+
+  process.exit(0);
 }
 
 function generate(filename) {
+  shell.mkdir('-p', ['abi','gen']);
+
   const parts = filename.split("/");
-  const path = parts.slice(1, parts.length - 1).join("/");
+  const path = parts.slice(2, parts.length - 1).join("/");
 
   shell.mkdir('-p', [`abi/${path}`, `gen/${path}`])
 

@@ -2,14 +2,16 @@ package plasma
 
 import (
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/db"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
-	"log"
-	"os"
 )
 
+// TODO: migrate to root userclient.
 func PrintUTXOs(c *cli.Context) {
 	db, level, err := db.CreateLevelDatabase(c.GlobalString("db"))
 

@@ -2,6 +2,10 @@ package db
 
 import (
 	"bytes"
+	"fmt"
+	"log"
+	"strconv"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
@@ -49,4 +53,20 @@ func prefixKey(prefix string, parts ...string) []byte {
 	}
 
 	return buf.Bytes()
+}
+
+func uint64ToBytes(i uint64) []byte {
+	return []byte(fmt.Sprintf("%X", i))
+}
+
+func bytesToUint64(b []byte) uint64 {
+	s := string(b)
+
+	n, err := strconv.ParseUint(s, 16, 32)
+
+	if err != nil {
+		log.Fatalf("Failed to parse string as hex: %v", err)
+	}
+
+	return uint64(n)
 }

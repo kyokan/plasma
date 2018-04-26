@@ -63,12 +63,24 @@ contract Plasma {
         SubmitBlock(msg.sender, root);
     }
 
+    function getBlock(uint256 blocknum)
+        public
+        view
+        returns (bytes32, uint256)
+    {
+        var block = childChain[blocknum];
+
+        return (block.root, block.created_at);
+    }
+
     function deposit(bytes txBytes) public payable {
         var txItem = txBytes.toRLPItem();
         var txList = txItem.toList();
 
         var newOwnerIdx = 6;
+        var amountIdx = 7;
         require(msg.sender == txList[newOwnerIdx].toAddress());
+        require(msg.value == txList[amountIdx].toUint());
 
         bytes32 root = createSimpleMerkleRoot(txBytes);
 
@@ -110,7 +122,6 @@ contract Plasma {
         require(msg.sender == txList[baseIndex].toAddress());
 
         var amount = txList[baseIndex + 1].toUint();
-
         // Simplify contract by only allowing exits > 0
         require(amount > 0);
 
@@ -136,6 +147,16 @@ contract Plasma {
         });
 
         ExitStarted(msg.sender, priority);
+    }
+
+    function getExit(uint256 exitId)
+        public
+        view
+        returns (address, uint256, uint256, uint256, uint256, uint256)
+    {
+        var exit = exits[exitId];
+
+        return (exit.owner, exit.amount, exit.blocknum, exit.txindex, exit.oindex, exit.started_at);
     }
 
     function challengeExit(
@@ -227,6 +248,9 @@ contract Plasma {
     }
 
     // TODO: passively finalize.
+    // If root node doesn't finalize, and validators finalize,
+    // validators have to pay.
+    // Finalizing is an expensive operation if the queue is large.
     function finalize() {
         if (!shouldFinalize()) {
             return;
@@ -243,6 +267,7 @@ contract Plasma {
                 currExit.amount > 0
             ) {
                 currExit.owner.send(currExit.amount);
+                
                 exits[exitId] = exit({
                     owner: address(0),
                     amount: 0,
@@ -260,11 +285,15 @@ contract Plasma {
 
     // Periodically monitor if we should finalize
     function shouldFinalize() constant returns (bool) {
-        return block.timestamp > lastFinalizedTime + 2 days;
+        // Not used for testing
+        // return block.timestamp > lastFinalizedTime + 2 days;
+        return true;
     }
 
     function isFinalizableTime(uint256 timestamp) constant returns (bool) {
-        return block.timestamp > timestamp + 14 days;
+        // Not used for testing
+        // return block.timestamp > timestamp + 14 days;
+        return true;
     }
 
     function calcPriority(

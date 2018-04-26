@@ -1,10 +1,11 @@
 package db
 
 import (
+	"strconv"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/syndtr/goleveldb/leveldb"
-	"strconv"
 )
 
 const blockKeyPrefix = "blk"
