@@ -42,7 +42,7 @@ Every hour, the root node puts the last hour's worth of transactions into a Merk
 ## Prerequisites
 
 1. [Golang](https://golang.org/doc/install): This is primarily a golang development environment.
-2. [Glide](https://github.com/Masterminds/glide#install): We use glide for our dependency management.
+2. [dep](https://github.com/golang/dep): We use ```dep``` for our dependency management.
 3. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used to migrate Plasma contracts to the Ethereum root chain.
 4. [Ganache](https://github.com/trufflesuite/ganache): Currently we use Ganache to test against a root chain.
 5. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
@@ -55,7 +55,7 @@ Every hour, the root node puts the last hour's worth of transactions into a Merk
 mkdir -p $GOPATH/src/github.com/kyokan
 git clone https://github.com/kyokan/plasma.git
 cd plasma
-glide install
+dep ensure
 make
 ```
 
