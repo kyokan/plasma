@@ -43,7 +43,7 @@
 
 [[constraint]]
   name = "github.com/ethereum/go-ethereum"
-  version = "1.8.2"
+  version = "1.8.10"
 
 [[constraint]]
   name = "github.com/keybase/go-codec"
@@ -59,4 +59,3 @@
 
 [prune]
   go-tests = true
-  unused-packages = true
