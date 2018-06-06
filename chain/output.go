@@ -10,7 +10,7 @@ import (
 
 type Output struct {
 	NewOwner common.Address
-	Amount   *big.Int
+	Amount   *big.Int       `rlp:"nil"`
 }
 
 func ZeroOutput() *Output {

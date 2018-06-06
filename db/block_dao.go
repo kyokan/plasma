@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const blockKeyPrefix = "blk"
@@ -29,7 +30,7 @@ type guardedDb struct {
 }
 
 func (dao *LevelBlockDao) Save(blk *chain.Block) error {
-	cbor, err := blk.ToCbor()
+	enc, err := rlp.EncodeToBytes(blk)
 
 	if err != nil {
 		return err
@@ -38,7 +39,7 @@ func (dao *LevelBlockDao) Save(blk *chain.Block) error {
 	key := blockPrefixKey(common.ToHex(blk.BlockHash))
 
 	gd := &GuardedDb{db: dao.db}
-	gd.Put(key, cbor, nil)
+	gd.Put(key, enc, nil)
 	gd.Put(blockPrefixKey(latestKey), key, nil)
 	gd.Put(blockNumKey(blk.Header.Number), key, nil)
 
@@ -72,13 +73,14 @@ func (dao *LevelBlockDao) Latest() (*chain.Block, error) {
 		return nil, err
 	}
 
-	blk, err := chain.BlockFromCbor(data)
+	var blk chain.Block
+	err = rlp.DecodeBytes(data, &blk)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return blk, nil
+	return &blk, nil
 }
 
 func (dao *LevelBlockDao) BlockAtHeight(num uint64) (*chain.Block, error) {
@@ -90,13 +92,14 @@ func (dao *LevelBlockDao) BlockAtHeight(num uint64) (*chain.Block, error) {
 		return nil, gd.err
 	}
 
-	blk, err := chain.BlockFromCbor(data)
+	var blk chain.Block
+	err := rlp.DecodeBytes(data, &blk)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return blk, nil
+	return &blk, nil
 }
 
 func (dao *LevelBlockDao) blockHeight() (uint64, error) {

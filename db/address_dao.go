@@ -7,6 +7,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	levelutil "github.com/syndtr/goleveldb/leveldb/util"
 	"math/big"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type AddressDao interface {
@@ -43,20 +44,22 @@ func (dao *LevelAddressDao) SpendableTxs(addr *common.Address) ([]chain.Transact
 	earnedMap := make(map[string]*chain.Flow)
 
 	for iter.Next() {
-		flow, err := chain.FlowFromCbor(iter.Value())
+		var flow chain.Flow
+		err := rlp.DecodeBytes(iter.Value(), &flow)
 
 		if err != nil {
 			return nil, err
 		}
 
-		earnedMap[common.ToHex(flow.Hash)] = flow
+		earnedMap[common.ToHex(flow.Hash)] = &flow
 	}
 
 	prefix = spendKey(addr)
 	iter = dao.db.NewIterator(levelutil.BytesPrefix(prefix), nil)
 
 	for iter.Next() {
-		flow, err := chain.FlowFromCbor(iter.Value())
+		var flow chain.Flow
+		err := rlp.DecodeBytes(iter.Value(), &flow)
 
 		if err != nil {
 			return nil, err

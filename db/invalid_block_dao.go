@@ -5,6 +5,7 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const invalidKeyPrefix = "invalid"
@@ -19,7 +20,7 @@ type LevelInvalidBlockDao struct {
 }
 
 func (dao *LevelInvalidBlockDao) Save(blk *chain.Block) error {
-	cbor, err := blk.ToCbor()
+	enc, err := rlp.EncodeToBytes(blk)
 
 	if err != nil {
 		return err
@@ -28,7 +29,7 @@ func (dao *LevelInvalidBlockDao) Save(blk *chain.Block) error {
 	key := invalidPrefixKey(common.ToHex(blk.BlockHash))
 
 	gd := &GuardedDb{db: dao.db}
-	gd.Put(key, cbor, nil)
+	gd.Put(key, enc, nil)
 
 	if gd.err != nil {
 		return err
@@ -46,13 +47,14 @@ func (dao *LevelInvalidBlockDao) Get(blkHash util.Hash) (*chain.Block, error) {
 		return nil, gd.err
 	}
 
-	blk, err := chain.BlockFromCbor(data)
+	var blk chain.Block
+	err := rlp.DecodeBytes(data, &blk)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return blk, nil
+	return &blk, nil
 }
 
 func invalidPrefixKey(parts ...string) []byte {
