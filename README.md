@@ -43,9 +43,14 @@ Every hour, the root node puts the last hour's worth of transactions into a Merk
 
 1. [Golang](https://golang.org/doc/install): This is primarily a golang development environment.
 2. [dep](https://github.com/golang/dep): We use ```dep``` for our dependency management.
-3. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used to migrate Plasma contracts to the Ethereum root chain.
-4. [Ganache](https://github.com/trufflesuite/ganache): Currently we use Ganache to test against a root chain.
-5. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
+3. [Node.js](https://nodejs.org/en/) and [npm](https://www.npmjs.com/get-npm)
+4. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used 
+to migrate Plasma contracts to the Ethereum root chain. 
+**Please make sure that the version of [solc](https://github.com/trufflesuite/truffle/blob/e8c18f36801a7fd2673e96247c13818d18a93b5b/package.json#L9) used by Truffle matches the one used by the contracts. Currently, Truffle [v4.0.5](https://github.com/trufflesuite/truffle/tree/e8c18f36801a7fd2673e96247c13818d18a93b5b) 
+is most recent to support Solidity [v0.4.18](https://github.com/ethereum/solidity/tree/9cf6e910bd2b90d0c9415d9c257f85fe0c518de8)**
+```npm install -g truffle@v4.0.5 ```
+5. [Ganache](https://github.com/trufflesuite/ganache): Currently we use Ganache to test against a root chain.
+6. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
 
 ## Installation and Setup
 
