@@ -1,0 +1,120 @@
+{
+  "latest": {
+    "Header": {
+      "Number": 3
+    }
+  },
+  "blocks": [
+    {
+      "Block": {
+        "Header": {
+          "Number": 0
+        }
+      },
+      "Transactions": [
+        {
+          "Input0": {},
+          "Input1": {},
+          "Sig0": "",
+          "Sig1": "",
+          "Output0": {
+            "NewOwner": "0x84988b89E1C3bca81b4FfE7193Af2B377c56b162",
+            "Amount": 1000
+          },
+          "Output1": {},
+          "BlkNum": 0,
+          "TxIdx": 0
+        }]
+    },
+    {
+      "Block": {
+        "Header": {
+          "Number": 1
+        }
+      },
+      "Transactions": [
+        {
+          "Input0": {
+            "BlkNum": 0,
+            "TxIdx": 0
+          },
+          "Input1": {},
+          "Sig0": "",
+          "Sig1": "",
+          "Output0": {
+            "NewOwner": "0x84988b89E1C3bca81b4FfE7193Af2B377c56b162",
+            "Amount": 500
+          },
+          "Output1": {
+            "NewOwner": "0x227d00410A0BF839ccBBc66c05Cfcaf3E7d398cF",
+            "Amount": 500
+          },
+          "BlkNum": 1,
+          "TxIdx": 0
+        }
+      ]
+    },
+    {
+      "Block": {
+        "Header": {
+          "Number": 2
+        }
+      },
+      "Transactions": [
+        {
+          "Input0": {
+            "BlkNum": 1,
+            "TxIdx": 0
+          },
+          "Input1": {},
+          "Sig0": "",
+          "Sig1": "",
+          "Output0": {
+            "NewOwner": "0x227d00410A0BF839ccBBc66c05Cfcaf3E7d398cF",
+            "Amount": 250
+          },
+          "Output1": {
+            "NewOwner": "0xe09ed4FE561c1F7Ad140467ae292C95E829A4a64",
+            "Amount": 250
+          },
+          "BlkNum": 2,
+          "TxIdx": 0
+        }
+      ]
+    },
+    {
+      "Block": {
+        "Header": {
+          "Number": 3
+        }
+      },
+      "Transactions": [
+        {
+          "Input0": {
+            "BlkNum": 1,
+            "TxIdx": 1
+          },
+          "Input1": {},
+          "Sig0": "",
+          "Sig1": "",
+          "Output0": {
+            "NewOwner": "0x227d00410A0BF839ccBBc66c05Cfcaf3E7d398cF",
+            "Amount": 500
+          },
+          "Output1": {
+          },
+          "BlkNum": 3,
+          "TxIdx": 0
+        }
+      ]
+    }
+  ],
+  "exit": {
+    "Owner": "0x227d00410A0BF839ccBBc66c05Cfcaf3E7d398cF",
+    "Amount": 250,
+    "BlockNum": 2,
+    "TxIndex": 0,
+    "OIndex": 1,
+    "StartedAt": 2
+  }
+}

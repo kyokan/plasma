@@ -7,10 +7,11 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
+// JSON tags needed for test fixtures
 type Input struct {
-	BlkNum uint64
-	TxIdx  uint32
-	OutIdx uint8
+	BlkNum uint64 `json:"BlkNum"`
+	TxIdx  uint32 `json:"TxIdx"`
+	OutIdx uint8  `json:"OutIdx"`
 }
 
 func ZeroInput() *Input {

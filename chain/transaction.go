@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -13,16 +14,33 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
+// JSON tags needed for test fixtures
 type Transaction struct {
-	Input0  *Input   `rlp:"nil"`
-	Input1  *Input   `rlp:"nil"`
-	Sig0    []byte
-	Sig1    []byte
-	Output0 *Output  `rlp:"nil"`
-	Output1 *Output  `rlp:"nil"`
-	Fee     *big.Int `rlp:"nil"`
-	BlkNum  uint64   `rlp:"-"`
-	TxIdx   uint32
+	Input0  *Input   `json:"Input0"`
+	Sig0    []byte   `json:"Sig0"`
+	Input1  *Input   `json:"Input1"`
+	Sig1    []byte   `json:"Sig1"`
+	Output0 *Output  `json:"Output0"`
+	Output1 *Output  `json:"Output1"`
+	Fee     *big.Int `json:"Fee"`
+	BlkNum  uint64   `json:"BlkNum"`
+	TxIdx   uint32   `json:"TxIdx"`
+}
+
+type rlpHelper struct {
+	BlkNum0   uint64
+	TxIdx0    uint32
+	OutIdx0   uint8
+	Sig0      []byte
+	BlkNum1   uint64
+	TxIdx1    uint32
+	OutIdx1   uint8
+	Sig1      []byte
+	NewOwner0 common.Address
+	Amount0   big.Int
+	NewOwner1 common.Address
+	Amount1   big.Int
+	Fee       big.Int
 }
 
 func (tx *Transaction) IsDeposit() bool {
@@ -151,4 +169,58 @@ func (tx *Transaction) RLPHash() util.Hash {
 	}
 
 	return util.DoHash(bytes)
+}
+
+func (tx *Transaction) EncodeRLP(w io.Writer) error {
+	var itf rlpHelper
+	if tx.Input0 != nil {
+		itf.BlkNum0 = tx.Input0.BlkNum
+		itf.TxIdx0  = tx.Input0.TxIdx
+		itf.OutIdx0 = tx.Input0.OutIdx
+		itf.Sig0    = tx.Sig0
+	}
+	if tx.Input1 != nil {
+		itf.BlkNum1 = tx.Input1.BlkNum
+		itf.TxIdx1  = tx.Input1.TxIdx
+		itf.OutIdx1 = tx.Input1.OutIdx
+		itf.Sig1    = tx.Sig1
+	}
+	if tx.Output0 != nil {
+		itf.NewOwner0 = tx.Output0.NewOwner
+		itf.Amount0   = *tx.Output0.Amount
+	}
+	if tx.Output1 != nil {
+		itf.NewOwner1 = tx.Output1.NewOwner
+		itf.Amount1   = *tx.Output1.Amount
+	}
+	if tx.Fee != nil {
+		itf.Fee = *tx.Fee
+	}
+	return rlp.Encode(w, &itf)
+}
+
+func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
+	var itf rlpHelper
+	err := s.Decode(&itf)
+	if err != nil {
+		return err
+	}
+	tx.Input0  = ZeroInput()
+	tx.Input1  = ZeroInput()
+	tx.Output0 = ZeroOutput()
+	tx.Output1 = ZeroOutput()
+	tx.Input0.BlkNum = itf.BlkNum0
+	tx.Input0.TxIdx  = itf.TxIdx0
+	tx.Input0.OutIdx = itf.OutIdx0
+	tx.Input1.BlkNum = itf.BlkNum1
+	tx.Input1.TxIdx  = itf.TxIdx1
+	tx.Input1.OutIdx = itf.OutIdx1
+	tx.Output0.NewOwner = itf.NewOwner0
+	tx.Output0.Amount   = big.NewInt(itf.Amount0.Int64())
+	tx.Output1.NewOwner = itf.NewOwner1
+	tx.Output1.Amount   = big.NewInt(itf.Amount1.Int64())
+	tx.Sig0 = itf.Sig0
+	tx.Sig1 = itf.Sig1
+	tx.Fee  = big.NewInt(itf.Fee.Int64())
+	return nil
 }

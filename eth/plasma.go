@@ -20,7 +20,7 @@ type PlasmaClient struct {
 	plasma      *contracts.Plasma
 	privateKey  *ecdsa.PrivateKey
 	userAddress string
-	ethClient   *Client
+	ethClient   Client
 	useGeth     bool
 }
 

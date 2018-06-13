@@ -17,7 +17,7 @@ import (
 type TransactionSink struct {
 	c      chan chain.Transaction
 	db     *db.Database
-	client *eth.Client
+	client eth.Client
 }
 
 type TransactionRequest struct {
@@ -32,7 +32,7 @@ type TransactionResponse struct {
 	Transaction *chain.Transaction
 }
 
-func NewTransactionSink(db *db.Database, client *eth.Client) *TransactionSink {
+func NewTransactionSink(db *db.Database, client eth.Client) *TransactionSink {
 	return &TransactionSink{c: make(chan chain.Transaction), db: db, client: client}
 }
 

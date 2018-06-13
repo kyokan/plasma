@@ -1,42 +1,42 @@
 package chain
 
 import (
+	"math/big"
+	"math/rand"
 	"testing"
+
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/require"
-	"math/rand"
-	"math/big"
 )
 
 func Test_TransactionFullRLP(t *testing.T) {
 	tx := Transaction{
-		Input0: randomInput(),
-		Input1: randomInput(),
-		Sig0: randomSig(),
-		Sig1: randomSig(),
+		Input0:  randomInput(),
+		Input1:  randomInput(),
+		Sig0:    randomSig(),
+		Sig1:    randomSig(),
 		Output0: randomOutput(),
 		Output1: randomOutput(),
-		Fee: big.NewInt(rand.Int63()),
-		BlkNum: rand.Uint64(),
-		TxIdx: rand.Uint32(),
+		Fee:     big.NewInt(rand.Int63()),
+		BlkNum:  0, // Not encoded in RLP
+		TxIdx:   0, // Not encoded in RLP
 	}
 	encodeAndDecode(t, tx)
 }
 
 func Test_TransactionFirstInputRLP(t *testing.T) {
 	tx := Transaction{
-		Input0: randomInput(),
-		Input1: nil,
-		Sig0: randomSig(),
-		Sig1: []byte{},
+		Input0:  randomInput(),
+		Input1:  ZeroInput(),
+		Sig0:    randomSig(),
+		Sig1:    []byte{},
 		Output0: randomOutput(),
-		Output1: nil,
-		Fee: big.NewInt(rand.Int63()),
-		BlkNum: rand.Uint64(),
-		TxIdx: rand.Uint32(),
+		Output1: ZeroOutput(),
+		Fee:     big.NewInt(rand.Int63()),
+		BlkNum:  0,
+		TxIdx:   0,
 	}
 	encodeAndDecode(t, tx)
-
 }
 
 //Helpers

@@ -23,6 +23,20 @@ type ClientResponse struct {
 	Id     uint64                    `json:"id"`
 }
 
+type client struct {
+	RootURL string
+}
+
+type RootClient interface {
+	GetBlock(height uint64) *plasma_rpc.GetBlocksResponse
+	GetUTXOs(userAddress string) *plasma_rpc.GetUTXOsResponse
+}
+
+func NewRootClient(rootURL string) RootClient {
+	c := client{RootURL: rootURL}
+	return &c
+}
+
 func SendCLI(c *cli.Context) {
 	userAddress := c.GlobalString("user-address")
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
@@ -38,7 +52,7 @@ func SendCLI(c *cli.Context) {
 	}
 	endpoint := "Transaction.Send"
 
-	response := Request(rootUrl, args, endpoint)
+	response := request(rootUrl, args, endpoint)
 
 	if response != nil {
 		var result plasma_rpc.SendResponse
@@ -57,7 +71,8 @@ func GetBlockCLI(c *cli.Context) {
 
 	fmt.Printf("Getting block for height: %d\n", height)
 
-	response := GetBlock(rootUrl, height)
+	rootClient := NewRootClient(rootUrl)
+	response := rootClient.GetBlock(height)
 
 	if response != nil {
 		block := response.Block
@@ -114,13 +129,13 @@ func GetBlockCLI(c *cli.Context) {
 	}
 }
 
-func GetBlock(url string, height uint64) *plasma_rpc.GetBlocksResponse {
+func (c client) GetBlock(height uint64) *plasma_rpc.GetBlocksResponse {
 	args := &plasma_rpc.GetBlocksArgs{
 		Height: height,
 	}
 	endpoint := "Block.GetBlock"
 
-	response := Request(url, args, endpoint)
+	response := request(c.RootURL, args, endpoint)
 
 	if response != nil {
 		var result plasma_rpc.GetBlocksResponse
@@ -133,13 +148,13 @@ func GetBlock(url string, height uint64) *plasma_rpc.GetBlocksResponse {
 	return nil
 }
 
-func GetUTXOs(url string, userAddress string) *plasma_rpc.GetUTXOsResponse {
+func (c client) GetUTXOs(userAddress string) *plasma_rpc.GetUTXOsResponse {
 	args := &plasma_rpc.GetUTXOsArgs{
 		UserAddress: userAddress,
 	}
 	endpoint := "Block.GetUTXOs"
 
-	response := Request(url, args, endpoint)
+	response := request(c.RootURL, args, endpoint)
 
 	if response != nil {
 		var result plasma_rpc.GetUTXOsResponse
@@ -152,7 +167,7 @@ func GetUTXOs(url string, userAddress string) *plasma_rpc.GetUTXOsResponse {
 	return nil
 }
 
-func Request(url string, args interface{}, endpoint string) *encoding_json.RawMessage {
+func request(url string, args interface{}, endpoint string) *encoding_json.RawMessage {
 	message, err := json.EncodeClientRequest(endpoint, args)
 	if err != nil {
 		log.Fatalf("%s", err)

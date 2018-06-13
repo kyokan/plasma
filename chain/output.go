@@ -8,9 +8,10 @@ import (
 	"math/big"
 )
 
+// JSON tags needed for test fixtures
 type Output struct {
-	NewOwner common.Address
-	Amount   *big.Int       `rlp:"nil"`
+	NewOwner common.Address `json:"NewOwner"`
+	Amount   *big.Int       `json:"NewOwner"`
 }
 
 func ZeroOutput() *Output {

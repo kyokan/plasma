@@ -24,6 +24,7 @@ type ClientResponse struct {
 }
 
 func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClient, userAddress string) {
+	rootClient := userclient.NewRootClient(rootUrl)
 	for {
 		log.Println("Watching root node...")
 
@@ -43,7 +44,8 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 
 		log.Printf("Looking for block number: %d\n", blockNum)
 
-		response := userclient.GetBlock(rootUrl, blockNum)
+
+		response := rootClient.GetBlock(blockNum)
 
 		if response != nil {
 			log.Printf("Found block number: %d\n", blockNum)
@@ -76,7 +78,8 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 }
 
 func ExitUTXOs(rootUrl string, plasma *eth.PlasmaClient, userAddress string) {
-	res := userclient.GetUTXOs(rootUrl, userAddress)
+	rootClient := userclient.NewRootClient(rootUrl)
+	res := rootClient.GetUTXOs(userAddress)
 	txs := res.Transactions
 
 	type UTXO struct {
@@ -120,7 +123,7 @@ func ExitUTXOs(rootUrl string, plasma *eth.PlasmaClient, userAddress string) {
 	}
 
 	for blkNum, utxos := range utxosByBlock {
-		res2 := userclient.GetBlock(rootUrl, blkNum)
+		res2 := rootClient.GetBlock(blkNum)
 
 		for _, utxo := range utxos {
 			log.Printf("Exiting block: %d, tx: %d, output: %d\n", utxo.BlkNum, utxo.TxIdx, utxo.OutputIdx)
