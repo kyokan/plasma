@@ -47,8 +47,8 @@
     "rpc",
     "trie"
   ]
-  revision = "eae63c511ceafab14b92e274c1b18bf1700e2d3d"
-  version = "v1.8.10"
+  revision = "dea1ce052a10cd7d401a5c04f83f371a06fe293c"
+  version = "v1.8.11"
 
 [[projects]]
   name = "github.com/go-stack/stack"
@@ -134,8 +134,8 @@
 [[projects]]
   name = "github.com/stretchr/objx"
   packages = ["."]
-  revision = "facf9a85c22f48d2f52f2380e4efce1768749a89"
-  version = "v0.1"
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
 
 [[projects]]
   name = "github.com/stretchr/testify"
@@ -144,8 +144,8 @@
     "mock",
     "require"
   ]
-  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
-  version = "v1.2.1"
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
   branch = "master"
@@ -164,7 +164,7 @@
     "leveldb/table",
     "leveldb/util"
   ]
-  revision = "db3ee9ee8931e51af7158114b9d02bf93d1a7811"
+  revision = "e2150783cd35f5b607daca48afd8c57ec54cc995"
 
 [[projects]]
   name = "github.com/urfave/cli"
@@ -179,19 +179,19 @@
     "pbkdf2",
     "scrypt"
   ]
-  revision = "8ac0e0d97ce45cd83d1d7243c060cb8461dda5e9"
+  revision = "a8fb68e7206f8c78be19b432c58eb52a6aa34462"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["websocket"]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "9527bec2660bd847c050fda93a0f0c6dee0800bb"
+  revision = "8014b7b116a67fea23fbb82cd834c9ad656ea44b"
 
 [[projects]]
   branch = "master"
@@ -201,7 +201,7 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "c65208ee29128450a4a024e3b7710f3a8d14028d"
+  revision = "465e6f399236d0ea2466584539d4eab4d3d83720"
 
 [[projects]]
   name = "gopkg.in/fatih/set.v0"
@@ -224,6 +224,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7248d364f99666791d7d9ab7e614dec83024ea6b4e5f1abc9415f8df6e474729"
+  inputs-digest = "09f2adb30537c474723da617bcb61d43c577a3b845e22b8e63abff4e8717cf90"
   solver-name = "gps-cdcl"
   solver-version = 1
