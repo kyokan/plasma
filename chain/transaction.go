@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/binary"
 	"errors"
@@ -12,33 +11,36 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/keybase/go-codec/codec"
 	"github.com/kyokan/plasma/util"
 )
 
+// JSON tags needed for test fixtures
 type Transaction struct {
-	Input0  *Input
-	Input1  *Input
-	Sig0    []byte
-	Sig1    []byte
-	Output0 *Output
-	Output1 *Output
-	Fee     *big.Int
-	BlkNum  uint64
-	TxIdx   uint32
+	Input0  *Input   `json:"Input0"`
+	Sig0    []byte   `json:"Sig0"`
+	Input1  *Input   `json:"Input1"`
+	Sig1    []byte   `json:"Sig1"`
+	Output0 *Output  `json:"Output0"`
+	Output1 *Output  `json:"Output1"`
+	Fee     *big.Int `json:"Fee"`
+	BlkNum  uint64   `json:"BlkNum"`
+	TxIdx   uint32   `json:"TxIdx"`
 }
 
-func TransactionFromCbor(data []byte) (*Transaction, error) {
-	hdl := util.PatchedCBORHandle()
-	dec := codec.NewDecoderBytes(data, hdl)
-	ptr := &Transaction{}
-	err := dec.Decode(ptr)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return ptr, nil
+type rlpHelper struct {
+	BlkNum0   uint64
+	TxIdx0    uint32
+	OutIdx0   uint8
+	Sig0      []byte
+	BlkNum1   uint64
+	TxIdx1    uint32
+	OutIdx1   uint8
+	Sig1      []byte
+	NewOwner0 common.Address
+	Amount0   big.Int
+	NewOwner1 common.Address
+	Amount1   big.Int
+	Fee       big.Int
 }
 
 func (tx *Transaction) IsDeposit() bool {
@@ -102,22 +104,6 @@ func (tx *Transaction) OutputIndexFor(addr *common.Address) uint8 {
 	}
 
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
-}
-
-func (tx *Transaction) ToCbor() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	bw := bufio.NewWriter(buf)
-	hdl := util.PatchedCBORHandle()
-	enc := codec.NewEncoder(bw, hdl)
-	err := enc.Encode(tx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	bw.Flush()
-
-	return buf.Bytes(), nil
 }
 
 func (tx *Transaction) Hash() util.Hash {
@@ -185,56 +171,46 @@ func (tx *Transaction) RLPHash() util.Hash {
 	return util.DoHash(bytes)
 }
 
-// EncodeRLP writes p as RLP list [a, b] that omits the Name field.
-func (tx *Transaction) EncodeRLP(w io.Writer) (err error) {
-	if tx == nil {
-		err = rlp.Encode(w, []uint{0, 0, 0, 0})
-	} else {
-		var blkNum0 uint64
-		var txIdx0 uint32
-		var outIdx0 uint8
-		var blkNum1 uint64
-		var txIdx1 uint32
-		var outIdx1 uint8
-		var newOwner0 common.Address
-		var amount0 *big.Int
-		var newOwner1 common.Address
-		var amount1 *big.Int
-
-		if tx.Input0 != nil {
-			blkNum0 = tx.Input0.BlkNum
-			txIdx0 = tx.Input0.TxIdx
-			outIdx0 = tx.Input0.OutIdx
-		}
-
-		if tx.Input1 != nil {
-			blkNum1 = tx.Input1.BlkNum
-			txIdx1 = tx.Input1.TxIdx
-			outIdx1 = tx.Input1.OutIdx
-		}
-
-		if tx.Output0 != nil {
-			newOwner0 = tx.Output0.NewOwner
-			amount0 = tx.Output0.Amount
-		}
-
-		if tx.Output1 != nil {
-			newOwner1 = tx.Output1.NewOwner
-			amount1 = tx.Output1.Amount
-		}
-
-		err = rlp.Encode(w, []interface{}{
-			blkNum0,
-			txIdx0,
-			outIdx0,
-			blkNum1,
-			txIdx1,
-			outIdx1,
-			newOwner0,
-			amount0,
-			newOwner1,
-			amount1,
-		})
+func (tx *Transaction) EncodeRLP(w io.Writer) error {
+	var itf rlpHelper
+	if tx.Input0 != nil {
+		itf.BlkNum0 = tx.Input0.BlkNum
+		itf.TxIdx0  = tx.Input0.TxIdx
+		itf.OutIdx0 = tx.Input0.OutIdx
+		itf.Sig0    = tx.Sig0
 	}
-	return err
+	if tx.Input1 != nil {
+		itf.BlkNum1 = tx.Input1.BlkNum
+		itf.TxIdx1  = tx.Input1.TxIdx
+		itf.OutIdx1 = tx.Input1.OutIdx
+		itf.Sig1    = tx.Sig1
+	}
+	if tx.Output0 != nil {
+		itf.NewOwner0 = tx.Output0.NewOwner
+		itf.Amount0   = *tx.Output0.Amount
+	}
+	if tx.Output1 != nil {
+		itf.NewOwner1 = tx.Output1.NewOwner
+		itf.Amount1   = *tx.Output1.Amount
+	}
+	if tx.Fee != nil {
+		itf.Fee = *tx.Fee
+	}
+	return rlp.Encode(w, &itf)
+}
+
+func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
+	var itf rlpHelper
+	err := s.Decode(&itf)
+	if err != nil {
+		return err
+	}
+	tx.Input0  = NewInput(itf.BlkNum0, itf.TxIdx0, itf.OutIdx0)
+	tx.Input1  = NewInput(itf.BlkNum1, itf.TxIdx1, itf.OutIdx1)
+	tx.Output0 = NewOutput(itf.NewOwner0, &itf.Amount0)
+	tx.Output1 = NewOutput(itf.NewOwner1, &itf.Amount1)
+	tx.Sig0 = itf.Sig0
+	tx.Sig1 = itf.Sig1
+	tx.Fee  = big.NewInt(itf.Fee.Int64())
+	return nil
 }

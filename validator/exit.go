@@ -15,6 +15,7 @@ import (
 )
 
 func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClient) {
+	rootClient := userclient.NewRootClient(rootUrl)
 	for {
 		idx, err := level.ExitDao.LastExitEventIdx()
 
@@ -36,7 +37,7 @@ func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaC
 
 				exit := plasma.GetExit(exitId)
 
-				txs, blockId, txId := FindDoubleSpend(rootUrl, level, plasma, exit)
+				txs, blockId, txId := FindDoubleSpend(rootClient, level, plasma, exit)
 
 				if txs != nil && txId != nil {
 					plasma.ChallengeExit(
@@ -86,7 +87,7 @@ func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaC
 	}
 }
 
-func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClient, exit eth.Exit) ([]chain.Transaction, *big.Int, *big.Int) {
+func FindDoubleSpend(rootClient userclient.RootClient, level *db.Database, plasma *eth.PlasmaClient, exit eth.Exit) ([]chain.Transaction, *big.Int, *big.Int) {
 	latestBlock, err := level.BlockDao.Latest()
 
 	if err != nil {
@@ -97,7 +98,7 @@ func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClien
 	lastBlockHeight := latestBlock.Header.Number
 	currBlockHeight := exit.BlockNum.Uint64() + 1
 
-	response := userclient.GetBlock(rootUrl, exit.BlockNum.Uint64())
+	response := rootClient.GetBlock(exit.BlockNum.Uint64())
 
 	if txIdx >= uint64(len(response.Transactions)) {
 		log.Fatalln("The following exit does not exist within this block!")
@@ -112,7 +113,7 @@ func FindDoubleSpend(rootUrl string, level *db.Database, plasma *eth.PlasmaClien
 	// Because root node will never create and submit that block.
 	// Also, how do you protect against exits happenning more than once?
 	for i := currBlockHeight; i <= lastBlockHeight; i++ {
-		response := userclient.GetBlock(rootUrl, i)
+		response := rootClient.GetBlock(i)
 		currTxs := response.Transactions
 		rej := node.FindMatchingInputs(&exitTx, currTxs)
 

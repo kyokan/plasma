@@ -9,6 +9,7 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const txKeyPrefix = "tx"
@@ -65,13 +66,14 @@ func (dao *LevelTransactionDao) FindByBlockNum(blkNum uint64) ([]chain.Transacti
 			return nil, err
 		}
 
-		tx, err := chain.TransactionFromCbor(data)
+		tx := chain.Transaction{}
+		err = rlp.DecodeBytes(data, &tx)
 
 		if err != nil {
 			return nil, err
 		}
 
-		txs = append(txs, *tx)
+		txs = append(txs, tx)
 	}
 
 	return txs, nil
@@ -96,13 +98,14 @@ func (dao *LevelTransactionDao) FindByBlockNumTxIdx(blkNum uint64, txIdx uint32)
 		return nil, gd.err
 	}
 
-	tx, err := chain.TransactionFromCbor(data)
+	tx := chain.Transaction{}
+	err = rlp.DecodeBytes(data, &tx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return tx, nil
+	return &tx, nil
 }
 
 func (dao *LevelTransactionDao) FindPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain.Transaction, error) {
@@ -128,7 +131,7 @@ func (dao *LevelTransactionDao) FindPreviousTx(tx *chain.Transaction, inputIdx u
 }
 
 func (dao *LevelTransactionDao) save(batch *leveldb.Batch, tx *chain.Transaction) error {
-	cbor, err := tx.ToCbor()
+	cbor, err := rlp.EncodeToBytes(tx)
 
 	if err != nil {
 		return err
@@ -144,13 +147,13 @@ func (dao *LevelTransactionDao) save(batch *leveldb.Batch, tx *chain.Transaction
 
 	if tx.IsDeposit() {
 		flow := chain.NewFlow(tx.BlkNum, 0, 0)
-		flowCbor, err := flow.ToCbor()
+		flowEnc, err := rlp.EncodeToBytes(&flow)
 
 		if err != nil {
 			return err
 		}
 
-		batch.Put(earnKey(&tx.Output0.NewOwner), flowCbor)
+		batch.Put(earnKey(&tx.Output0.NewOwner), flowEnc)
 		return nil
 	}
 
@@ -187,14 +190,14 @@ func (dao *LevelTransactionDao) recordEarns(batch *leveldb.Batch, tx *chain.Tran
 
 func (dao *LevelTransactionDao) recordEarn(batch *leveldb.Batch, tx *chain.Transaction, outIdx uint8) error {
 	flow := chain.NewFlow(tx.BlkNum, tx.TxIdx, outIdx)
-	flowCbor, err := flow.ToCbor()
+	flowEnc, err := rlp.EncodeToBytes(&flow)
 
 	if err != nil {
 		return err
 	}
 
 	output := tx.OutputAt(outIdx)
-	batch.Put(earnKey(&output.NewOwner), flowCbor)
+	batch.Put(earnKey(&output.NewOwner), flowEnc)
 	return nil
 }
 
@@ -232,13 +235,13 @@ func (dao *LevelTransactionDao) recordSpend(batch *leveldb.Batch, tx *chain.Tran
 	input := tx.InputAt(inputIdx)
 	log.Printf("%d %d %d", input.BlkNum, input.TxIdx, input.OutIdx)
 	flow := chain.NewFlow(input.BlkNum, input.TxIdx, input.OutIdx)
-	flowCbor, err := flow.ToCbor()
+	flowEnc, err := rlp.EncodeToBytes(&flow)
 
 	if err != nil {
 		return err
 	}
 
-	batch.Put(spendKey(&prevTx.OutputAt(input.OutIdx).NewOwner), flowCbor)
+	batch.Put(spendKey(&prevTx.OutputAt(input.OutIdx).NewOwner), flowEnc)
 
 	return nil
 }

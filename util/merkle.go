@@ -1,13 +1,10 @@
 package util
 
 import (
-	"bufio"
-	"bytes"
 	"math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/crypto/sha3"
-	"github.com/keybase/go-codec/codec"
 )
 
 type MerkleTree struct {
@@ -15,25 +12,9 @@ type MerkleTree struct {
 }
 
 type MerkleNode struct {
-	Right *MerkleNode
-	Left  *MerkleNode
+	Right *MerkleNode `rlp:"nil"`
+	Left  *MerkleNode `rlp:"nil"`
 	Hash  Hash
-}
-
-func (n MerkleNode) ToCbor() ([]byte, error) {
-	buf := new(bytes.Buffer)
-	bw := bufio.NewWriter(buf)
-	hdl := new(codec.CborHandle)
-	enc := codec.NewEncoder(bw, hdl)
-	err := enc.Encode(n)
-
-	if err != nil {
-		return nil, err
-	}
-
-	bw.Flush()
-
-	return buf.Bytes(), nil
 }
 
 func CreateMerkleProof(merkle MerkleTree, index *big.Int) []byte {

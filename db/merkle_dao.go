@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const merkleKeyPrefix = "merkle"
@@ -25,13 +26,13 @@ func (dao *LevelMerkleDao) SaveMany(ns []util.MerkleNode) error {
 	batch := new(leveldb.Batch)
 
 	for _, n := range ns {
-		cbor, err := n.ToCbor()
+		enc, err := rlp.EncodeToBytes(&n)
 
 		if err != nil {
 			return err
 		}
 
-		batch.Put(merklePrefixKey(common.ToHex(n.Hash)), cbor)
+		batch.Put(merklePrefixKey(common.ToHex(n.Hash)), enc)
 	}
 
 	return dao.db.Write(batch, nil)

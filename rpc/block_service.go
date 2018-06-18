@@ -15,8 +15,8 @@ type GetBlocksArgs struct {
 }
 
 type GetBlocksResponse struct {
-	Block        *chain.Block
-	Transactions []chain.Transaction
+	Block        *chain.Block        `json:"Block"`
+	Transactions []chain.Transaction `json:"Transactions"`
 }
 
 type GetUTXOsArgs struct {

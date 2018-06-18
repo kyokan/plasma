@@ -24,28 +24,34 @@ type DepositEvent struct {
 	Value  *big.Int
 }
 
-type Client struct {
+type clientState struct {
 	typedClient *ethclient.Client
 	rpcClient   *rpc.Client
 }
 
-func NewClient(url string) (*Client, error) {
+type Client interface {
+	GetBalance(addr common.Address) (*big.Int, error)
+	SignData(addr *common.Address, data []byte) ([]byte, error)
+	NewGethTransactor(keyAddr common.Address) *bind.TransactOpts
+}
+
+func NewClient(url string) (Client, error) {
 	c, err := rpc.Dial(url)
 
 	if err != nil {
 		return nil, err
 	}
-
-	return &Client{typedClient: ethclient.NewClient(c), rpcClient: c}, nil
+	state := clientState{typedClient: ethclient.NewClient(c), rpcClient: c}
+	return &state, nil
 }
 
-func (c *Client) GetBalance(addr common.Address) (*big.Int, error) {
+func (c *clientState) GetBalance(addr common.Address) (*big.Int, error) {
 	log.Printf("Attempting to get balance for %s", util.AddressToHex(&addr))
 
 	return c.typedClient.BalanceAt(context.Background(), addr, nil)
 }
 
-func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
+func (c *clientState) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	log.Printf("Attempting to sign data on behalf of %s", util.AddressToHex(addr))
 	var res []byte
 	err := c.rpcClient.Call(&res, "eth_sign", util.AddressToHex(addr), common.ToHex(data))
@@ -60,7 +66,7 @@ func (c *Client) SignData(addr *common.Address, data []byte) ([]byte, error) {
 
 // Can be used by plasma client to send a sign transaction request to a remote geth node.
 // TODO: needs to be tested.
-func (c *Client) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
+func (c *clientState) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
 	return &bind.TransactOpts{
 		From: keyAddr,
 		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
@@ -74,7 +80,7 @@ func (c *Client) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
 	}
 }
 
-func (c *Client) SubscribeDeposits(address common.Address, resChan chan<- DepositEvent) error {
+func (c *clientState) SubscribeDeposits(address common.Address, resChan chan<- DepositEvent) error {
 	query := ethereum.FilterQuery{
 		FromBlock: nil,
 		ToBlock:   nil,

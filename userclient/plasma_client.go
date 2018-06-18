@@ -28,7 +28,8 @@ func StartExit(c *cli.Context) {
 
 	fmt.Printf("Exit starting for blocknum: %d, txindex: %d, oindex: %d\n", blocknum, txindex, oindex)
 
-	res := GetBlock(rootUrl, uint64(blocknum))
+	rootClient := NewRootClient(rootUrl)
+	res := rootClient.GetBlock(uint64(blocknum))
 
 	if res == nil {
 		log.Fatalln("Block does not exist!")
