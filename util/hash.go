@@ -19,7 +19,7 @@ type RLPHashable interface {
 
 // Custom JSON unmarshal needed for test fixtures
 func (h *Hash) UnmarshalJSON(data []byte) error {
-	s := string(data[1:len(data)-1])
+	s := string(data[1:len(data)-1]) // Quotes are included in the input
 	l := len(s)
 	if l != len(*h) {
 		*h = make([]byte, l)

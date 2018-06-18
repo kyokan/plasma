@@ -11,7 +11,14 @@ import (
 // JSON tags needed for test fixtures
 type Output struct {
 	NewOwner common.Address `json:"NewOwner"`
-	Amount   *big.Int       `json:"NewOwner"`
+	Amount   *big.Int       `json:"Amount"`
+}
+
+func NewOutput(newOwner common.Address, amount *big.Int) *Output {
+	return &Output{
+		NewOwner: common.BytesToAddress(newOwner.Bytes()),
+		Amount  : big.NewInt(amount.Int64()),
+	}
 }
 
 func ZeroOutput() *Output {

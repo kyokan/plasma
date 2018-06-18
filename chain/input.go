@@ -14,12 +14,16 @@ type Input struct {
 	OutIdx uint8  `json:"OutIdx"`
 }
 
-func ZeroInput() *Input {
+func NewInput(blkNum uint64, txIdx uint32, outIdx uint8) *Input {
 	return &Input{
-		BlkNum: 0,
-		TxIdx:  0,
-		OutIdx: 0,
+		BlkNum: blkNum,
+		TxIdx:  txIdx,
+		OutIdx: outIdx,
 	}
+}
+
+func ZeroInput() *Input {
+	return NewInput(0, 0, 0)
 }
 
 func (in *Input) IsZeroInput() bool {

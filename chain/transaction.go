@@ -205,20 +205,10 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	if err != nil {
 		return err
 	}
-	tx.Input0  = ZeroInput()
-	tx.Input1  = ZeroInput()
-	tx.Output0 = ZeroOutput()
-	tx.Output1 = ZeroOutput()
-	tx.Input0.BlkNum = itf.BlkNum0
-	tx.Input0.TxIdx  = itf.TxIdx0
-	tx.Input0.OutIdx = itf.OutIdx0
-	tx.Input1.BlkNum = itf.BlkNum1
-	tx.Input1.TxIdx  = itf.TxIdx1
-	tx.Input1.OutIdx = itf.OutIdx1
-	tx.Output0.NewOwner = itf.NewOwner0
-	tx.Output0.Amount   = big.NewInt(itf.Amount0.Int64())
-	tx.Output1.NewOwner = itf.NewOwner1
-	tx.Output1.Amount   = big.NewInt(itf.Amount1.Int64())
+	tx.Input0  = NewInput(itf.BlkNum0, itf.TxIdx0, itf.OutIdx0)
+	tx.Input1  = NewInput(itf.BlkNum1, itf.TxIdx1, itf.OutIdx1)
+	tx.Output0 = NewOutput(itf.NewOwner0, &itf.Amount0)
+	tx.Output1 = NewOutput(itf.NewOwner1, &itf.Amount1)
 	tx.Sig0 = itf.Sig0
 	tx.Sig1 = itf.Sig1
 	tx.Fee  = big.NewInt(itf.Fee.Int64())
