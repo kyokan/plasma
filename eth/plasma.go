@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -278,6 +278,7 @@ func (p *PlasmaClient) GetExit(exitId *big.Int) Exit {
 func (p *PlasmaClient) GetBlock(blocknum *big.Int) Block {
 	opts := util.CreateCallOpts(p.userAddress)
 
+	log.Printf("GetBlock for address 0x%x\n", opts.From)
 	root, startedAt, err := p.plasma.GetBlock(opts, blocknum)
 
 	if err != nil {

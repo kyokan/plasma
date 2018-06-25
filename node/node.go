@@ -40,17 +40,17 @@ func (node *PlasmaNode) Start() {
 		lastBlock = node.createGenesisBlock()
 	}
 
-	ticker := time.NewTicker(time.Second * 10)
 	blockChan := make(chan *chain.Block)
-	go node.awaitTxs(blockChan, ticker.C)
+	go node.awaitTxs(blockChan, time.Second * 10)
 	blockChan <- lastBlock
 }
 
-func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
+func (node PlasmaNode) awaitTxs(blks chan *chain.Block, interval time.Duration) {
 	log.Print("Awaiting transactions.")
 
 	var lastBlock *chain.Block
 	var mempool []chain.Transaction
+	tick := time.NewTicker(interval)
 
 	for {
 		select {
@@ -58,14 +58,17 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, tick <-chan time.Time) {
 			// TODO: this needs to be synchronized.
 			if tx.IsDeposit() {
 				log.Print("Received deposit transaction. Packaging into block.")
+				// Reset ticker, making sure it won't signal while packaging the block
+				tick.Stop()
 				go node.packageBlock(*lastBlock, []chain.Transaction{tx}, blks)
+				tick = time.NewTicker(interval)
 			} else {
 				log.Print("Received regular transaction. Appending to mempool.")
 				mempool = append(mempool, tx)
 			}
 		case block := <-blks:
 			lastBlock = block
-		case <-tick:
+		case <-tick.C:
 			go node.packageBlock(*lastBlock, mempool, blks)
 			mempool = nil
 		}

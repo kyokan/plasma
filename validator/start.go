@@ -7,7 +7,7 @@ import (
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func Start(c *cli.Context) {

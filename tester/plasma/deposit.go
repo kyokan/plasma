@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/kyokan/plasma/util"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func DepositIntegrationTest(c *cli.Context) {

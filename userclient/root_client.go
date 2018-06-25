@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/rpc/json"
 	plasma_rpc "github.com/kyokan/plasma/rpc"
 	"github.com/olekukonko/tablewriter"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // clientResponse represents a JSON-RPC response returned to a client.
