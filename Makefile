@@ -1,8 +1,10 @@
 compile:
+	$(MAKE) -C ./contracts abigen
 	go install ./...
 
 start: compile
-	${GOPATH}/bin/plasma --node-url ${GETH_WS_URL} start
+	@echo "Starting..."
+	@./bin/shoreman
 
 clean:
 	rm -rf ~/.plasma

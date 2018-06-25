@@ -6,3 +6,4 @@ contracts/node_modules
 package-lock.json
 .DS_Store
 local-config.yaml
+database

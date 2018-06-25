@@ -9,8 +9,6 @@ contract PriorityQueue {
     uint256[] public priorities;
     uint256 public max = 2**256-1;
 
-    function PriorityQueue() {}
-
     function add(uint256 priority) {
         assert(priority != SafeMath.max());
         // TODO: Throws an invalid opcode for some reason.
