@@ -6,7 +6,7 @@ import (
 
 	"github.com/kyokan/plasma/contracts/gen/contracts"
 	"github.com/kyokan/plasma/util"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func IntegrationTest(c *cli.Context) {

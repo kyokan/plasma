@@ -10,7 +10,7 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/util"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 func Finalize(c *cli.Context) {
