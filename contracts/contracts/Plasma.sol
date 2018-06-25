@@ -1,4 +1,4 @@
-pragma solidity ^0.4.17;
+pragma solidity 0.4.24;
 
 import './libraries/ByteUtils.sol';
 import './PriorityQueue.sol';
@@ -24,19 +24,19 @@ contract Plasma {
     event DebugBool(address sender, bool item);
 
     address public authority;
-    mapping(uint256 => childBlock) public childChain;
-    mapping(uint256 => exit) public exits;
+    mapping(uint256 => ChildBlock) public childChain;
+    mapping(uint256 => Exit) public exits;
     uint256 public currentChildBlock;
     PriorityQueue public exitQueue;
     uint256 public lastExitId;
     uint256 public lastFinalizedTime;
 
-    struct childBlock {
+    struct ChildBlock {
         bytes32 root;
         uint256 created_at;
     }
 
-    struct exit {
+    struct Exit {
         address owner;
         uint256 amount;
         uint256 blocknum;
@@ -45,7 +45,7 @@ contract Plasma {
         uint256 started_at;
     }
 
-    function Plasma() {
+    constructor() {
         authority = msg.sender;
         currentChildBlock = 1;
         lastFinalizedTime = block.timestamp;
@@ -54,7 +54,7 @@ contract Plasma {
 
     function submitBlock(bytes32 root) public {
         require(msg.sender == authority);
-        childChain[currentChildBlock] = childBlock({
+        childChain[currentChildBlock] = ChildBlock({
             root: root,
             created_at: block.timestamp
         });
@@ -68,23 +68,22 @@ contract Plasma {
         view
         returns (bytes32, uint256)
     {
-        var block = childChain[blocknum];
-
-        return (block.root, block.created_at);
+        ChildBlock memory blk = childChain[blocknum];
+        return (blk.root, blk.created_at);
     }
 
     function deposit(bytes txBytes) public payable {
-        var txItem = txBytes.toRLPItem();
-        var txList = txItem.toList();
+        RLP.RLPItem memory txItem = txBytes.toRLPItem();
+        RLP.RLPItem[] memory txList = txItem.toList();
 
-        var newOwnerIdx = 6;
-        var amountIdx = 7;
+        uint newOwnerIdx = 6;
+        uint amountIdx = 7;
         require(msg.sender == txList[newOwnerIdx].toAddress());
         require(msg.value == txList[amountIdx].toUint());
 
         bytes32 root = createSimpleMerkleRoot(txBytes);
 
-        childChain[currentChildBlock] = childBlock({
+        childChain[currentChildBlock] = ChildBlock({
             root: root,
             created_at: block.timestamp
         });
@@ -114,18 +113,18 @@ contract Plasma {
         bytes proof
     ) public
     {
-        var txItem = txBytes.toRLPItem();
-        var txList = txItem.toList();
+        RLP.RLPItem memory txItem = txBytes.toRLPItem();
+        RLP.RLPItem[] memory txList = txItem.toList();
 
-        var baseIndex = 6 + (oindex * 2);
+        uint baseIndex = 6 + (oindex * 2);
 
         require(msg.sender == txList[baseIndex].toAddress());
 
-        var amount = txList[baseIndex + 1].toUint();
+        uint amount = txList[baseIndex + 1].toUint();
         // Simplify contract by only allowing exits > 0
         require(amount > 0);
 
-        var exists = checkProof(blocknum, txindex, txBytes, proof);
+        bool exists = checkProof(blocknum, txindex, txBytes, proof);
 
         require(exists);
 
@@ -136,7 +135,7 @@ contract Plasma {
         lastExitId = priority; // For convenience and debugging.
         exitQueue.add(priority);
         
-        exits[priority] = exit({
+        exits[priority] = Exit({
             owner: msg.sender,
             amount: amount,
             // These are necessary for challenges.
@@ -154,7 +153,7 @@ contract Plasma {
         view
         returns (address, uint256, uint256, uint256, uint256, uint256)
     {
-        var exit = exits[exitId];
+        Exit memory exit = exits[exitId];
 
         return (exit.owner, exit.amount, exit.blocknum, exit.txindex, exit.oindex, exit.started_at);
     }
@@ -167,19 +166,19 @@ contract Plasma {
         bytes proof
     ) public
     {
-        var currExit = exits[exitId];
-        var txItem = txBytes.toRLPItem();
-        var txList = txItem.toList();
+        Exit memory currExit = exits[exitId];
+        RLP.RLPItem memory txItem = txBytes.toRLPItem();
+        RLP.RLPItem[] memory txList = txItem.toList();
 
-        var firstInput = txList[0].toUint() == currExit.blocknum && txList[1].toUint() == currExit.txindex && txList[2].toUint() == currExit.oindex;
-        var secondInput = txList[3].toUint() == currExit.blocknum && txList[4].toUint() == currExit.txindex && txList[5].toUint() == currExit.oindex;
+        bool firstInput = txList[0].toUint() == currExit.blocknum && txList[1].toUint() == currExit.txindex && txList[2].toUint() == currExit.oindex;
+        bool secondInput = txList[3].toUint() == currExit.blocknum && txList[4].toUint() == currExit.txindex && txList[5].toUint() == currExit.oindex;
 
         if(!firstInput && !secondInput) {
             ChallengeFailure(msg.sender, exitId);
             return;
         }
 
-        var exists = checkProof(blocknum, txindex, txBytes, proof);
+        bool exists = checkProof(blocknum, txindex, txBytes, proof);
 
         if (exists) {
             require(currExit.amount > 0);
@@ -193,7 +192,7 @@ contract Plasma {
 
             currExit.owner.send(-burn);
 
-            exits[exitId] = exit({
+            exits[exitId] = Exit({
                 owner: address(0),
                 amount: 0,
                 blocknum: 0,
@@ -221,9 +220,9 @@ contract Plasma {
         // TODO: might need to adjust depth
         require(proof.length == 15 * 32);
 
-        var root = childChain[blocknum].root;
+        bytes32 root = childChain[blocknum].root;
 
-        var otherRoot = keccak256(txBytes);
+        bytes32 otherRoot = keccak256(txBytes);
 
         // Offset for bytes assembly starts at 32
         uint j = 32;
@@ -259,7 +258,7 @@ contract Plasma {
         lastFinalizedTime = block.timestamp;
         uint256 exitId = exitQueue.pop();
         while(exitId != SafeMath.max()) {
-            var currExit = exits[exitId];
+            Exit memory currExit = exits[exitId];
 
             if (
                 isFinalizableTime(currExit.started_at) &&
@@ -268,7 +267,7 @@ contract Plasma {
             ) {
                 currExit.owner.send(currExit.amount);
                 
-                exits[exitId] = exit({
+                exits[exitId] = Exit({
                     owner: address(0),
                     amount: 0,
                     blocknum: 0,
