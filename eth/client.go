@@ -53,7 +53,7 @@ func (c *clientState) GetBalance(addr common.Address) (*big.Int, error) {
 
 func (c *clientState) SignData(addr *common.Address, data []byte) ([]byte, error) {
 	log.Printf("Attempting to sign data on behalf of %s", util.AddressToHex(addr))
-	var res []byte
+	var res string
 	err := c.rpcClient.Call(&res, "eth_sign", util.AddressToHex(addr), common.ToHex(data))
 	log.Printf("Received signature on behalf of %s.", util.AddressToHex(addr))
 
@@ -61,7 +61,9 @@ func (c *clientState) SignData(addr *common.Address, data []byte) ([]byte, error
 		return nil, err
 	}
 
-	return res, nil
+	resBytes := common.Hex2Bytes(strings.Replace(res, "0x", "", 1))
+
+	return resBytes, nil
 }
 
 // Can be used by plasma client to send a sign transaction request to a remote geth node.
@@ -77,6 +79,7 @@ func (c *clientState) NewGethTransactor(keyAddr common.Address) *bind.TransactOp
 			}
 			return tx.WithSignature(signer, signature)
 		},
+		Nonce: big.NewInt(0),
 	}
 }
 

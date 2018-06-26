@@ -3,10 +3,10 @@ compile:
 	go install ./...
 
 start: compile
-	@echo "Starting..."
-	@./bin/shoreman
+	@./bin/start
 
 clean:
+	$(MAKE) -C ./contracts clean
 	rm -rf ~/.plasma
 
 fresh-start: clean start

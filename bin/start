@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -E
+
+trap "kill 0" SIGINT
+
+NETWORK=${NETWORK:-development}
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+cyan=6; green=2; yellow=3; blue=4; pink=5;
+
+prefix_cmd () {
+    {
+        eval "$3" || kill 0
+    } 2>&1 | sed -e "s/\(.*\)/$(tput setaf $2)[$1] \1$(tput sgr0)/"
+}
+
+echo "Starting Ganache..."
+
+(
+    cd $DIR/../contracts
+    prefix_cmd 'truffle' ${cyan} "truffle develop --log --verbose-rpc --network ${NETWORK}"
+) &
+
+sleep 2
+
+echo "Migrating..."
+
+cd $DIR/../contracts
+prefix_cmd 'migrate' ${pink} 'truffle migrate --reset'
+
+echo "Starting Plasma..."
+
+(
+    cd $DIR/..
+    prefix_cmd 'plasma' ${green} "${GOPATH}/bin/plasma --config ./local-config.yaml start"
+) &
+
+wait

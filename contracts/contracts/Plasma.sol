@@ -76,8 +76,8 @@ contract Plasma {
         RLP.RLPItem memory txItem = txBytes.toRLPItem();
         RLP.RLPItem[] memory txList = txItem.toList();
 
-        uint newOwnerIdx = 6;
-        uint amountIdx = 7;
+        uint newOwnerIdx = 8;
+        uint amountIdx = 9;
         require(msg.sender == txList[newOwnerIdx].toAddress());
         require(msg.value == txList[amountIdx].toUint());
 

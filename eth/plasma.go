@@ -149,7 +149,7 @@ func (p *PlasmaClient) Deposit(
 	tx, err := p.plasma.Deposit(opts, bytes)
 
 	if err != nil {
-		log.Fatalf("Failed to deposit: %v", err)
+		log.Fatalf("Failed to deposit (in eth): %v", err)
 	}
 
 	log.Printf("Deposit pending: 0x%x\n", tx.Hash())
