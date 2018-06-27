@@ -19,6 +19,10 @@ import (
 const depositFilter = "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"
 const depositDescription = `[{"anonymous":false,"inputs":[{"indexed":false,"name":"sender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Deposit","type":"event"}]`
 
+const GWEI = 1000000000
+
+var nonce int64 = 0
+
 type DepositEvent struct {
 	Sender common.Address
 	Value  *big.Int
@@ -69,6 +73,9 @@ func (c *clientState) SignData(addr *common.Address, data []byte) ([]byte, error
 // Can be used by plasma client to send a sign transaction request to a remote geth node.
 // TODO: needs to be tested.
 func (c *clientState) NewGethTransactor(keyAddr common.Address) *bind.TransactOpts {
+	gweiPrice := big.NewInt(10)
+	nonce++
+
 	return &bind.TransactOpts{
 		From: keyAddr,
 		Signer: func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
@@ -79,7 +86,8 @@ func (c *clientState) NewGethTransactor(keyAddr common.Address) *bind.TransactOp
 			}
 			return tx.WithSignature(signer, signature)
 		},
-		Nonce: big.NewInt(0),
+		Nonce:    big.NewInt(nonce),
+		GasPrice: gweiPrice.Mul(gweiPrice, big.NewInt(GWEI)),
 	}
 }
 
