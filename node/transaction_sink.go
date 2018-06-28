@@ -128,8 +128,12 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan Transact
 
 			// TODO: Optionally use local private key for testing
 			tx.Sig0, err = sink.client.SignData(&req.From, tx.SignatureHash())
-			tx.Sig1, err = sink.client.SignData(&req.From, tx.SignatureHash())
+			if err != nil {
+				sendErrorResponse(ch, &req, err)
+				return
+			}
 
+			tx.Sig1, err = sink.client.SignData(&req.From, tx.SignatureHash())
 			if err != nil {
 				sendErrorResponse(ch, &req, err)
 				return

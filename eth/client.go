@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -31,6 +32,7 @@ type DepositEvent struct {
 type clientState struct {
 	typedClient *ethclient.Client
 	rpcClient   *rpc.Client
+	useGeth     bool
 }
 
 type Client interface {
@@ -56,18 +58,18 @@ func (c *clientState) GetBalance(addr common.Address) (*big.Int, error) {
 }
 
 func (c *clientState) SignData(addr *common.Address, data []byte) ([]byte, error) {
-	log.Printf("Attempting to sign data on behalf of %s", util.AddressToHex(addr))
+	encoded := hexutil.Encode(data)
+	hexAddress := util.AddressToHex(addr)
+	log.Printf("Attempting to sign data (%s) on behalf of %s", encoded, hexAddress)
 	var res string
-	err := c.rpcClient.Call(&res, "eth_sign", util.AddressToHex(addr), common.ToHex(data))
-	log.Printf("Received signature on behalf of %s.", util.AddressToHex(addr))
+	err := c.rpcClient.Call(&res, "eth_sign", hexAddress, encoded)
+	log.Printf("Received signature (%s) on behalf of %s.", res, hexAddress)
 
 	if err != nil {
 		return nil, err
 	}
 
-	resBytes := common.Hex2Bytes(strings.Replace(res, "0x", "", 1))
-
-	return resBytes, nil
+	return hexutil.Decode(res)
 }
 
 // Can be used by plasma client to send a sign transaction request to a remote geth node.
@@ -86,7 +88,7 @@ func (c *clientState) NewGethTransactor(keyAddr common.Address) *bind.TransactOp
 			}
 			return tx.WithSignature(signer, signature)
 		},
-		Nonce:    big.NewInt(nonce),
+		// Nonce:    big.NewInt(nonce),
 		GasPrice: gweiPrice.Mul(gweiPrice, big.NewInt(GWEI)),
 	}
 }
