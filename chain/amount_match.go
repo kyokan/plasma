@@ -153,10 +153,9 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
     if err != nil {
         return nil, err
     }
-
-    tx.Sig1, err = client.SignData(&from, tx.SignatureHash())
-    if err != nil {
-        return nil, err
+    if tx.Input1.IsZeroInput() == true {
+        //Input1 is valid, set the signature (note that signature is the same)
+        tx.Sig1 = tx.Sig0
     }
     return &tx, nil
 }
