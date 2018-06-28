@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
+	plasma_common "github.com/kyokan/plasma/common"
 )
 
 const depositFilter = "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"
@@ -35,13 +36,8 @@ type clientState struct {
 	useGeth     bool
 }
 
-type Client interface {
-	GetBalance(addr common.Address) (*big.Int, error)
-	SignData(addr *common.Address, data []byte) ([]byte, error)
-	NewGethTransactor(keyAddr common.Address) *bind.TransactOpts
-}
 
-func NewClient(url string) (Client, error) {
+func NewClient(url string) (plasma_common.Client, error) {
 	c, err := rpc.Dial(url)
 
 	if err != nil {
