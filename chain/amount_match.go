@@ -10,6 +10,9 @@ import (
 )
 
 func FindBestUTXOs(from, to common.Address, amount *big.Int, txs []Transaction, client plasma_common.Client) (*Transaction, error) {
+    if len(txs) == 0 {
+        return nil, errors.New("no suitable UTXOs found")
+    }
 
     // similar algo to the one Bitcoin uses: https://bitcoin.stackexchange.com/questions/1077/what-is-the-coin-selection-algorithm
 
