@@ -6,10 +6,10 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const txKeyPrefix = "tx"
@@ -104,6 +104,10 @@ func (dao *LevelTransactionDao) FindByBlockNumTxIdx(blkNum uint64, txIdx uint32)
 	if err != nil {
 		return nil, err
 	}
+
+	// We need to set these as the RLP encoding is ignoring them
+	tx.BlkNum = blkNum
+	tx.TxIdx = txIdx
 
 	return &tx, nil
 }

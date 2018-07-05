@@ -50,6 +50,13 @@ func (tx *Transaction) IsDeposit() bool {
 		tx.Output1.IsZeroOutput()
 }
 
+func (tx *Transaction) IsZeroTransaction() bool {
+	return tx.Input0.IsZeroInput() &&
+		tx.Input1.IsZeroInput() &&
+		tx.Output0.IsZeroOutput() &&
+		tx.Output1.IsZeroOutput()
+}
+
 func (tx *Transaction) InputAt(idx uint8) *Input {
 	if idx != 0 && idx != 1 {
 		panic(fmt.Sprint("Invalid input index: ", idx))

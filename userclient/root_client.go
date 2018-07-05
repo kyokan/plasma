@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 
@@ -11,7 +12,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gorilla/rpc/json"
+	"github.com/kyokan/plasma/eth"
 	plasma_rpc "github.com/kyokan/plasma/rpc"
+	"github.com/kyokan/plasma/chain"
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -40,26 +43,56 @@ func NewRootClient(rootURL string) RootClient {
 func SendCLI(c *cli.Context) {
 	userAddress := c.GlobalString("user-address")
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
-	toAddr := c.String("to")
-	amount := uint64(c.Int("amount"))
+	nodeUrl := c.GlobalString("node-url")
+	toAddr  := c.String("to")
+	amount  := int64(c.Int("amount"))
 
-	fmt.Printf("Sending amount: %d to: %s\n", amount, toAddr)
+	log.Printf("Sending amount: %d to: %s\n", amount, toAddr)
 
-	args := &plasma_rpc.SendArgs{
+	client, err := eth.NewClient(nodeUrl)
+
+	utxosEndpoint := "Block.GetUTXOs"
+	utxosArgs := &plasma_rpc.GetUTXOsArgs{
+		UserAddress: userAddress,
+	}
+	utxosResponse := request(rootUrl, utxosArgs, utxosEndpoint)
+	if utxosResponse == nil {
+		log.Printf("Failed to get UTXOs for %s", userAddress)
+		return
+	}
+	var utxos plasma_rpc.GetUTXOsResponse
+	err = encoding_json.Unmarshal(*utxosResponse, &utxos)
+	if err != nil {
+		log.Printf("Failed to unmarshal UTXO response: %s", err.Error())
+		return
+	}
+	tx, err := chain.FindBestUTXOs(common.HexToAddress(userAddress), common.HexToAddress(toAddr), big.NewInt(amount), utxos.Transactions, client)
+	if err != nil {
+		log.Printf("Could not find a suitable input for send: %s", err.Error())
+		return
+	}
+
+
+	sendArgs := &plasma_rpc.SendArgs{
+		Transaction: *tx,
 		From:   userAddress,
 		To:     toAddr,
 		Amount: fmt.Sprintf("%d", amount),
 	}
-	endpoint := "Transaction.Send"
+	sendEndpoint  := "Transaction.Send"
 
-	response := request(rootUrl, args, endpoint)
+	sendResponse := request(rootUrl, sendArgs, sendEndpoint)
 
-	if response != nil {
+	if sendResponse != nil {
 		var result plasma_rpc.SendResponse
 
-		encoding_json.Unmarshal(*response, &result)
+		err = encoding_json.Unmarshal(*sendResponse, &result)
+		if err != nil {
+			log.Printf("Failed to unmarshal response after sending transaction: %s", err.Error())
+			return
+		}
 
-		fmt.Printf("Transction sent with hash: %v\n", result.Transaction.Hash)
+		log.Printf("Transaction sent with hash: %v\n", result.Transaction.Hash)
 	} else {
 		fmt.Println("Transction failed no repsonse given\n")
 	}
@@ -69,7 +102,7 @@ func GetBlockCLI(c *cli.Context) {
 	rootUrl := fmt.Sprintf("http://localhost:%d/rpc", c.Int("root-port"))
 	height := uint64(c.Int("height"))
 
-	fmt.Printf("Getting block for height: %d\n", height)
+	log.Printf("Getting block for height: %d\n", height)
 
 	rootClient := NewRootClient(rootUrl)
 	response := rootClient.GetBlock(height)
@@ -79,11 +112,12 @@ func GetBlockCLI(c *cli.Context) {
 		txs := response.Transactions
 
 		table1 := tablewriter.NewWriter(os.Stdout)
-		table1.SetHeader([]string{"Number", "BlockHash", "Merkle Root", "Prev Hash"})
+		table1.SetHeader([]string{"Number", "BlockHash", "Merkle Root", "RLP Merkle Root", "Prev Hash"})
 		table1.Append([]string{
 			fmt.Sprint(block.Header.Number),
 			common.ToHex(block.BlockHash),
 			common.ToHex(block.Header.MerkleRoot),
+			common.ToHex(block.Header.RLPMerkleRoot),
 			common.ToHex(block.Header.PrevHash),
 		})
 

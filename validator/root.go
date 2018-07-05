@@ -36,7 +36,7 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 
 		var blockNum uint64
 
-		if block == nil {
+		if block == nil { // first block in the plasma chain is genesis
 			blockNum = 1
 		} else {
 			blockNum = block.Header.Number + 1
@@ -44,15 +44,16 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 
 		log.Printf("Looking for block number: %d\n", blockNum)
 
-
 		response := rootClient.GetBlock(blockNum)
 
 		if response != nil {
 			log.Printf("Found block number: %d\n", blockNum)
+			plasmaBlock := response.Block
 
-			plasmaBlock := plasma.GetBlock(util.NewUint64(blockNum))
+			// Block number for the contract is off by one
+			contractBlock := plasma.GetBlock(util.NewUint64(blockNum))
 
-			if IsValidBlock(response.Block, plasmaBlock) {
+			if IsValidBlock(plasmaBlock, contractBlock) {
 				log.Println("Block is valid, saving locally.")
 				level.BlockDao.Save(response.Block)
 			} else {

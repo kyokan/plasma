@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -126,4 +127,10 @@ func randomOutput() *Output {
 		result.NewOwner[i] = buf[i]
 	}
 	return &result
+}
+
+func randomAddress() common.Address {
+	buf := make([]byte, 20)
+	rand.Read(buf)
+	return common.BytesToAddress(buf)
 }

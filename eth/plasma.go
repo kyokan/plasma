@@ -14,13 +14,14 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/contracts/gen/contracts"
 	"github.com/kyokan/plasma/util"
+	plasma_common "github.com/kyokan/plasma/common"
 )
 
 type PlasmaClient struct {
 	plasma      *contracts.Plasma
 	privateKey  *ecdsa.PrivateKey
 	userAddress string
-	ethClient   Client
+	ethClient   plasma_common.Client
 	useGeth     bool
 }
 
