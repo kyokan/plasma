@@ -116,7 +116,7 @@ contract Plasma {
         RLP.RLPItem memory txItem = txBytes.toRLPItem();
         RLP.RLPItem[] memory txList = txItem.toList();
 
-        uint baseIndex = 6 + (oindex * 2);
+        uint baseIndex = 8 + (oindex * 2);
 
         require(msg.sender == txList[baseIndex].toAddress());
 

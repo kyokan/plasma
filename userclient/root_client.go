@@ -67,6 +67,10 @@ func SendCLI(c *cli.Context) {
 		return
 	}
 	tx, err := chain.FindBestUTXOs(common.HexToAddress(userAddress), common.HexToAddress(toAddr), big.NewInt(amount), utxos.Transactions, client)
+	if err != nil {
+		log.Printf("Could not find a suitable input for send: %s", err.Error())
+		return
+	}
 
 
 	sendArgs := &plasma_rpc.SendArgs{
@@ -108,11 +112,12 @@ func GetBlockCLI(c *cli.Context) {
 		txs := response.Transactions
 
 		table1 := tablewriter.NewWriter(os.Stdout)
-		table1.SetHeader([]string{"Number", "BlockHash", "Merkle Root", "Prev Hash"})
+		table1.SetHeader([]string{"Number", "BlockHash", "Merkle Root", "RLP Merkle Root", "Prev Hash"})
 		table1.Append([]string{
 			fmt.Sprint(block.Header.Number),
 			common.ToHex(block.BlockHash),
 			common.ToHex(block.Header.MerkleRoot),
+			common.ToHex(block.Header.RLPMerkleRoot),
 			common.ToHex(block.Header.PrevHash),
 		})
 

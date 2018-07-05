@@ -2,106 +2,80 @@ package chain
 
 import (
     "math/big"
-    "math/rand"
+    "sort"
 
     "github.com/ethereum/go-ethereum/common"
     plasma_common "github.com/kyokan/plasma/common"
     "github.com/pkg/errors"
 )
 
+type OutputSortHelper struct {
+    Position  int
+    Amount    *big.Int
+}
+
+// FindBestUTXOs Finds (at most two) UXTOs to match an amount.
 func FindBestUTXOs(from, to common.Address, amount *big.Int, txs []Transaction, client plasma_common.Client) (*Transaction, error) {
-
-    // similar algo to the one Bitcoin uses: https://bitcoin.stackexchange.com/questions/1077/what-is-the-coin-selection-algorithm
-
-    candidates := make([]Transaction, 0, 2)
-    // pass 1: find UTXOs that exactly match amount
-    for _, tx := range txs {
-        utxo := tx.OutputFor(&from)
-
-        if utxo.Amount.Cmp(amount) == 0 {
-            candidates = append(candidates, tx)
+    if len(txs) == 0 {
+        return nil, errors.New("no suitable UTXOs found")
+    }
+    outputs := make([]OutputSortHelper, 0, len(txs))
+    for pos, tx := range txs {
+        output := tx.OutputFor(&from) // this call may panic
+        if amount.Cmp(output.Amount) == 0 {
+            // Found exact match
+            return PrepareSendTransaction(from, to, amount, []Transaction{txs[pos]}, client)
+        }
+        outputs = append(outputs, OutputSortHelper{Position: pos, Amount: output.Amount})
+    }
+    less := func(i, j int) bool { // return outputs[i] < outputs[j]
+        lhs := outputs[i].Amount
+        rhs := outputs[j].Amount
+        return lhs.Cmp(rhs) == -1
+    }
+    sort.Slice(outputs, less)
+    // Amount is less the minimum element, no need to do anything else
+    min := outputs[0]
+    if min.Amount.Cmp(amount) == 1 { // min > amount
+        return PrepareSendTransaction(from, to, amount, []Transaction{txs[min.Position]}, client)
+    }
+    leftBound := int(0)
+    rightBound := len(outputs) - 1
+    lhs := -1
+    rhs := -1
+    for ; leftBound < rightBound;  {
+        sum := big.NewInt(0)
+        sum.Add(outputs[leftBound].Amount, outputs[rightBound].Amount)
+        cmp := sum.Cmp(amount)
+        if cmp == 0 { // sum == amount
             break
         }
-    }
-    if len(candidates) > 0 {
-        return PrepareSendTransaction(from, to, amount, candidates, client)
-    }
-    // pass 2: sum of any two UTXOs exactly matches amount
-    for i, ltx := range txs {
-        for _, rtx := range txs[i:] {
-            total := big.NewInt(0)
-            total = total.Add(ltx.OutputFor(&from).Amount, rtx.OutputFor(&from).Amount)
-
-            if total.Cmp(amount) == 0 {
-                candidates = append(candidates, ltx)
-                candidates = append(candidates, rtx)
-                break
-            }
-        }
-        if len(candidates) > 0 {
-            break
-        }
-    }
-    if len(candidates) > 0 {
-        return PrepareSendTransaction(from, to, amount, candidates, client)
-    }
-
-    // pass 3: find smallest UTXO larger than amount
-    var ret *Transaction
-    var closestAmount *big.Int
-
-    for _, tx := range txs {
-        utxo := tx.OutputFor(&from)
-
-        if utxo.Amount.Cmp(amount) == -1 {
+        if cmp == -1 { // sum < amount
+            leftBound++
             continue
         }
-
-        if closestAmount == nil {
-            closestAmount = utxo.Amount
-            ret = &tx
-        }
-
-        if closestAmount.Cmp(utxo.Amount) == -1 {
-            continue
-        }
-
-        closestAmount = utxo.Amount
-        ret = &tx
+        // keep track of last sum greater than amount
+        lhs = leftBound
+        rhs = rightBound
+        rightBound-- // sum > amount
     }
-
-    if ret != nil {
-        candidates = append(candidates, *ret)
-        return PrepareSendTransaction(from, to, amount, candidates, client)
+    if leftBound < rightBound { // Found two outputs that sum up to amount
+        first := outputs[leftBound].Position
+        second := outputs[rightBound].Position
+        return PrepareSendTransaction(from, to, amount, []Transaction{txs[first], txs[second]}, client)
     }
-
-    // pass 4: randomly permute utxos until sum is greater than amount or cap is reached
-    for i := 0; i < 1000; i++ {
-        lIdx := rand.Intn(len(txs))
-        rIdx := lIdx
-
-        for lIdx == rIdx {
-            rIdx = rand.Intn(len(txs))
-        }
-
-        ltx := txs[lIdx]
-        rtx := txs[rIdx]
-
-        total := big.NewInt(0).Add(ltx.OutputFor(&from).Amount, rtx.OutputFor(&from).Amount)
-
-        if total.Cmp(amount) == 1 {
-            candidates = append(candidates, ltx)
-            candidates = append(candidates, rtx)
-            return PrepareSendTransaction(from, to, amount, candidates, client)
-        }
+    if lhs >= 0 && rhs >= 0 { // smallest sum that's greater than amount
+        first := outputs[lhs].Position
+        second := outputs[rhs].Position
+        return PrepareSendTransaction(from, to, amount, []Transaction{txs[first], txs[second]}, client)
     }
-
     return nil, errors.New("no suitable UTXOs found")
 }
 
 func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []Transaction, client plasma_common.Client) (*Transaction, error) {
     var input1 *Input
     var output1 *Output
+    totalAmount := big.NewInt(0)
 
     if len(utxoTxs) == 1 {
         input1 = ZeroInput()
@@ -112,12 +86,7 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
             return nil, errors.New("expected a UTXO")
         }
 
-        totalAmount := utxo.Amount
-
-        output1 = &Output{
-            NewOwner: from,
-            Amount:   big.NewInt(0).Sub(totalAmount, amount),
-        }
+        totalAmount.Set(utxo.Amount)
     } else {
         input1 = &Input{
             BlkNum: utxoTxs[1].BlkNum,
@@ -125,13 +94,15 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
             OutIdx: utxoTxs[1].OutputIndexFor(&from),
         }
 
-        totalAmount := big.NewInt(0)
         totalAmount = totalAmount.Add(utxoTxs[0].OutputFor(&from).Amount, utxoTxs[1].OutputFor(&from).Amount)
-
+    }
+    if totalAmount.Cmp(amount) == 1 { // totalAmount > amount
         output1 = &Output{
             NewOwner: from,
             Amount:   big.NewInt(0).Sub(totalAmount, amount),
         }
+    } else {
+        output1 = ZeroOutput()
     }
 
     tx := Transaction{
@@ -153,7 +124,7 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
     if err != nil {
         return nil, err
     }
-    if tx.Input1.IsZeroInput() == true {
+    if tx.Input1.IsZeroInput() == false {
         //Input1 is valid, set the signature (note that signature is the same)
         tx.Sig1 = tx.Sig0
     }

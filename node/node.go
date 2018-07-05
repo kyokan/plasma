@@ -55,7 +55,6 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, interval time.Duration) 
 	for {
 		select {
 		case tx := <-node.TxSink.c:
-			// TODO: this needs to be synchronized.
 			if tx.IsDeposit() {
 				log.Print("Received deposit transaction. Packaging into block.")
 				// Reset ticker, making sure it won't signal while packaging the block
@@ -69,7 +68,9 @@ func (node PlasmaNode) awaitTxs(blks chan *chain.Block, interval time.Duration) 
 		case block := <-blks:
 			lastBlock = block
 		case <-tick.C:
-			go node.packageBlock(*lastBlock, mempool, blks)
+			buffer := make([]chain.Transaction, len(mempool))
+			copy(buffer, mempool)
+			go node.packageBlock(*lastBlock, buffer, blks)
 			mempool = nil
 		}
 	}
