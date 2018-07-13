@@ -13,7 +13,7 @@ import (
 
 // TODO: migrate to root userclient.
 func PrintUTXOs(c *cli.Context) {
-	db, level, err := db.CreateLevelDatabase(c.GlobalString("db"))
+	db, storage, err := db.CreateStorage(c.GlobalString("db"), nil)
 
 	if err != nil {
 		log.Panic("Failed to establish connection with database:", err)
@@ -28,7 +28,7 @@ func PrintUTXOs(c *cli.Context) {
 	}
 
 	addr := common.HexToAddress(c.String("addr"))
-	txs, err := level.AddressDao.UTXOs(&addr)
+	txs, err := storage.UTXOs(&addr)
 
 	if err != nil {
 		log.Panic("Failed to get UTXOs: ", err)

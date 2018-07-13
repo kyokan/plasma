@@ -28,7 +28,7 @@ type GetUTXOsResponse struct {
 }
 
 type BlockService struct {
-	DB *db.Database
+	Storage db.PlasmaStorage
 }
 
 func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *GetBlocksResponse) error {
@@ -36,13 +36,13 @@ func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *Get
 
 	height := args.Height
 
-	block, err := t.DB.BlockDao.BlockAtHeight(height)
+	block, err := t.Storage.BlockAtHeight(height)
 
 	if err != nil {
 		return err
 	}
 
-	txs, err := t.DB.TxDao.FindByBlockNum(height)
+	txs, err := t.Storage.FindTransactionByBlockNum(height)
 
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (t *BlockService) GetUTXOs(r *http.Request, args *GetUTXOsArgs, reply *GetU
 
 	userAddress := common.HexToAddress(args.UserAddress)
 
-	txs, err := t.DB.AddressDao.UTXOs(&userAddress)
+	txs, err := t.Storage.UTXOs(&userAddress)
 
 	if err != nil {
 		return err

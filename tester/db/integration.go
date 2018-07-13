@@ -15,7 +15,7 @@ import (
 func IntegrationTest(c *cli.Context) {
 	dburl := c.GlobalString("db")
 
-	db, level, err := db.CreateLevelDatabase(dburl)
+	db, storage, err := db.CreateStorage(dburl, nil)
 
 	if err != nil {
 		log.Panic(err)
@@ -23,23 +23,19 @@ func IntegrationTest(c *cli.Context) {
 
 	defer db.Close()
 
-	blockTest(level)
-	txTest(level)
+	blockTest(storage)
+	txTest(storage)
 }
 
-func blockTest(level *db.Database) {
-	genesisBlock := createGenesis(level)
-	res, err := level.BlockDao.BlockAtHeight(1)
+func blockTest(storage db.PlasmaStorage) {
+	_, err := storage.BlockAtHeight(1)
 
 	if err != nil {
 		panic(err)
 	}
-
-	assertEquals(res.Header, genesisBlock.Header)
-	assertEquals(res.BlockHash, genesisBlock.Header.Hash())
 }
 
-func txTest(level *db.Database) {
+func txTest(storage db.PlasmaStorage) {
 	userAddress := common.HexToAddress("2263dd78-b1de-4d26-a644-a8fa9448e51d")
 
 	txs := []chain.Transaction{
@@ -68,39 +64,20 @@ func txTest(level *db.Database) {
 	}
 
 	for _, tx := range txs {
-		err := level.TxDao.Save(&tx)
+		err := storage.StoreTransaction(tx)
 
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	resTxs, err := level.TxDao.FindByBlockNum(1)
+	resTxs, err := storage.FindTransactionByBlockNum(1)
 
 	if err != nil {
 		panic(err)
 	}
 
 	assert(len(resTxs) == 2)
-}
-
-func createGenesis(level *db.Database) *chain.Block {
-	header := &chain.BlockHeader{
-		Number: 1,
-	}
-
-	lastBlock := &chain.Block{
-		Header:    header,
-		BlockHash: header.Hash(),
-	}
-
-	err := level.BlockDao.Save(lastBlock)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return lastBlock
 }
 
 func createTestTransaction(

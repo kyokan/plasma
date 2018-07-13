@@ -86,7 +86,7 @@ func txToKeys(tx *chain.Transaction) []string {
 		return nil
 	}
 
-	keys := make([]string, 2)
+	keys := make([]string, 0, 2)
 	keys = append(keys, fmt.Sprintf("%d::%d::%d", tx.Input0.BlkNum, tx.Input0.TxIdx, tx.Input0.OutIdx))
 
 	if !tx.Input1.IsZeroInput() {

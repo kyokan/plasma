@@ -18,30 +18,28 @@ func Start(c *cli.Context) {
 
 	plasma := eth.CreatePlasmaClientCLI(c)
 
-	db, level, err := db.CreateLevelDatabase(dburl)
+	db, storage, err := db.CreateStorage(dburl, plasma)
 
 	if err != nil {
 		log.Panic(err)
 	}
-
 	defer db.Close()
 
 	client, err := eth.NewClient(nodeURL)
-
 	if err != nil {
 		log.Panic("Failed to start ETH client: ", err)
 	}
 
-	sink := node.NewTransactionSink(level, client)
+	sink := node.NewTransactionSink(storage, client)
 
-	p := node.NewPlasmaNode(level, sink, plasma)
+	p := node.NewPlasmaNode(storage, sink, plasma)
 
 	go p.Start()
 
-	go rpc.Start(c.Int("rpc-port"), level, sink)
+	go rpc.Start(c.Int("rpc-port"), storage, sink)
 
 	// TODO: ensure that 1 deposit tx is always 1 block
-	go node.StartDepositListener(level, sink, plasma)
+	go node.StartDepositListener(storage, sink, plasma)
 
 	// TODO: add an exit listener to make sure to add an exit transaction to root node.
 	// Also add an exit block to the plasma contract.
@@ -66,7 +64,7 @@ func ForceSubmitBlock(c *cli.Context) {
 
 	dburl := c.GlobalString("db")
 
-	db, level, err := db.CreateLevelDatabase(dburl)
+	db, storage, err := db.CreateStorage(dburl, nil)
 
 	if err != nil {
 		log.Panic(err)
@@ -88,7 +86,7 @@ func ForceSubmitBlock(c *cli.Context) {
 		BlockHash: header.Hash(),
 	}
 
-	if err := level.BlockDao.Save(&block); err != nil {
+	if err := storage.SaveBlock(&block); err != nil {
 		log.Fatalf("Failed to create genesis block:%v\n", err)
 	}
 

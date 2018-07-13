@@ -21,7 +21,7 @@ func Start(c *cli.Context) {
 
 	plasma := eth.CreatePlasmaClientCLI(c)
 
-	db, level, err := db.CreateLevelDatabase(path.Join(dburl, "validator", userAddress))
+	db, storage, err := db.CreateStorage(path.Join(dburl, "validator", userAddress), plasma)
 
 	if err != nil {
 		log.Panic(err)
@@ -29,9 +29,9 @@ func Start(c *cli.Context) {
 
 	defer db.Close()
 
-	go RootNodeListener(rootUrl, level, plasma, userAddress)
+	go RootNodeListener(rootUrl, storage, plasma, userAddress)
 
-	go ExitStartedListener(rootUrl, level, plasma)
+	go ExitStartedListener(rootUrl, storage, plasma)
 
 	go Run(validatorPort)
 

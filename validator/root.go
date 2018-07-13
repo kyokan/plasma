@@ -23,12 +23,12 @@ type ClientResponse struct {
 	Id     uint64                    `json:"id"`
 }
 
-func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClient, userAddress string) {
+func RootNodeListener(rootUrl string, storage db.PlasmaStorage, plasma *eth.PlasmaClient, userAddress string) {
 	rootClient := userclient.NewRootClient(rootUrl)
 	for {
 		log.Println("Watching root node...")
 
-		block, err := level.BlockDao.Latest()
+		block, err := storage.LatestBlock()
 
 		if err != nil {
 			log.Fatalf("Failed to get latest block: %v", err)
@@ -54,9 +54,9 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 
 			if IsValidBlock(response.Block, plasmaBlock) {
 				log.Println("Block is valid, saving locally.")
-				level.BlockDao.Save(response.Block)
+				storage.SaveBlock(response.Block)
 			} else {
-				_, err := level.InvalidBlockDao.Get(response.Block.BlockHash)
+				_, err := storage.GetInvalidBlock(response.Block.BlockHash)
 
 				if err != nil && err.Error() == "leveldb: not found" {
 					log.Println("Block is not valid, starting exit of utxos.")
@@ -65,7 +65,7 @@ func RootNodeListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClie
 
 					log.Println("Saving invalid block...")
 
-					level.InvalidBlockDao.Save(response.Block)
+					storage.SaveInvalidBlock(response.Block)
 				} else {
 					log.Println("We already invalidated this block")
 				}

@@ -14,10 +14,10 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaClient) {
+func ExitStartedListener(rootUrl string, storage db.PlasmaStorage, plasma *eth.PlasmaClient) {
 	rootClient := userclient.NewRootClient(rootUrl)
 	for {
-		idx, err := level.ExitDao.LastExitEventIdx()
+		idx, err := storage.LastExitEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
 			log.Fatalf("Failed to get last exit event idx: %v", err)
@@ -37,7 +37,7 @@ func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaC
 
 				exit := plasma.GetExit(exitId)
 
-				txs, blockId, txId := FindDoubleSpend(rootClient, level, plasma, exit)
+				txs, blockId, txId := FindDoubleSpend(rootClient, storage, plasma, exit)
 
 				if txs != nil && txId != nil {
 					plasma.ChallengeExit(
@@ -78,7 +78,7 @@ func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaC
 
 			log.Printf("Found %d exit events at from blocks %d to %d.\n", count, idx, lastIdx)
 
-			level.ExitDao.SaveExitEventIdx(lastIdx + 1)
+			storage.SaveExitEventIdx(lastIdx + 1)
 		} else {
 			log.Printf("No exit events at block %d.\n", idx)
 		}
@@ -87,8 +87,8 @@ func ExitStartedListener(rootUrl string, level *db.Database, plasma *eth.PlasmaC
 	}
 }
 
-func FindDoubleSpend(rootClient userclient.RootClient, level *db.Database, plasma *eth.PlasmaClient, exit eth.Exit) ([]chain.Transaction, *big.Int, *big.Int) {
-	latestBlock, err := level.BlockDao.Latest()
+func FindDoubleSpend(rootClient userclient.RootClient, storage db.PlasmaStorage, plasma *eth.PlasmaClient, exit eth.Exit) ([]chain.Transaction, *big.Int, *big.Int) {
+	latestBlock, err := storage.LatestBlock()
 
 	if err != nil {
 		log.Fatalf("Failed to get latest block: %v", err)

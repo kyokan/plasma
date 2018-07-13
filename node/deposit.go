@@ -8,12 +8,12 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-func StartDepositListener(level *db.Database, sink *TransactionSink, plasma *eth.PlasmaClient) {
+func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasma *eth.PlasmaClient) {
 	ch := make(chan eth.DepositEvent)
 	sink.AcceptDepositEvents(ch)
 
 	for {
-		idx, err := level.DepositDao.LastDepositEventIdx()
+		idx, err := storage.LastDepositEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
 			log.Fatalf("Failed to get last deposit event idx: %v", err)
@@ -40,7 +40,7 @@ func StartDepositListener(level *db.Database, sink *TransactionSink, plasma *eth
 
 			log.Printf("Found %d deposit events at from blocks %d to %d.\n", count, idx, lastIdx)
 
-			level.DepositDao.SaveDepositEventIdx(lastIdx + 1)
+			storage.SaveDepositEventIdx(lastIdx + 1)
 		} else {
 			log.Printf("No deposit events at block %d.\n", idx)
 		}

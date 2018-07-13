@@ -15,9 +15,9 @@ import (
 )
 
 type TransactionSink struct {
-	c      chan chain.Transaction
-	db     *db.Database
-	client eth.Client
+	c       chan chain.Transaction
+	storage db.PlasmaStorage
+	client  eth.Client
 }
 
 type TransactionRequest struct {
@@ -32,8 +32,8 @@ type TransactionResponse struct {
 	Transaction *chain.Transaction
 }
 
-func NewTransactionSink(db *db.Database, client eth.Client) *TransactionSink {
-	return &TransactionSink{c: make(chan chain.Transaction), db: db, client: client}
+func NewTransactionSink(storage db.PlasmaStorage, client eth.Client) *TransactionSink {
+	return &TransactionSink{c: make(chan chain.Transaction), storage: storage, client: client}
 }
 
 func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.Transaction) {
@@ -58,7 +58,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan Transact
 		for {
 			ch := <-chch
 			req := <-ch
-			balance, err := sink.db.AddressDao.Balance(&req.From)
+			balance, err := sink.storage.Balance(&req.From)
 
 			if err != nil {
 				sendErrorResponse(ch, &req, err)
@@ -171,7 +171,7 @@ func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 }
 
 func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, error) {
-	inputTx1, err := sink.db.TxDao.FindByBlockNumTxIdx(tx.Input0.BlkNum, tx.Input0.TxIdx)
+	inputTx1, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Input0.BlkNum, tx.Input0.TxIdx)
 
 	if err != nil {
 		return false, err
@@ -181,7 +181,7 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 		return false, errors.New("input 1 not found")
 	}
 
-	inputTx2, err := sink.db.TxDao.FindByBlockNumTxIdx(tx.Input1.BlkNum, tx.Input1.TxIdx)
+	inputTx2, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Input1.BlkNum, tx.Input1.TxIdx)
 
 	if err != nil {
 		return false, err
@@ -238,7 +238,7 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 }
 
 func (sink *TransactionSink) FindBestUTXOs(addr common.Address, amount *big.Int) ([]chain.Transaction, error) {
-	txs, err := sink.db.AddressDao.SpendableTxs(&addr)
+	txs, err := sink.storage.SpendableTxs(&addr)
 
 	if err != nil {
 		return nil, err

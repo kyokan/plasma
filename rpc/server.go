@@ -14,7 +14,7 @@ import (
 
 func Start(
 	port int,
-	level *db.Database,
+	storage db.PlasmaStorage,
 	sink *node.TransactionSink,
 ) {
 	log.Printf("Starting RPC server on port %d.\n", port)
@@ -26,7 +26,7 @@ func Start(
 	}
 
 	blockService := &BlockService{
-		DB: level,
+		Storage: storage,
 	}
 
 	sink.AcceptTransactionRequests(chch)
