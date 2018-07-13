@@ -11,6 +11,7 @@ import (
 )
 
 type SendArgs struct {
+	chain.Transaction
 	From   string
 	To     string
 	Amount string
@@ -33,9 +34,10 @@ func (t *TransactionService) Send(r *http.Request, args *SendArgs, reply *SendRe
 	amount.SetString(args.Amount, 0)
 
 	req := node.TransactionRequest{
-		From:   from,
-		To:     to,
-		Amount: amount,
+		Transaction: args.Transaction,
+		From:        from,
+		To:          to,
+		Amount:      amount,
 	}
 
 	ch := make(chan node.TransactionRequest)
