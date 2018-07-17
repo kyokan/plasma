@@ -42,7 +42,7 @@ func (t *BlockService) GetBlock(r *http.Request, args *GetBlocksArgs, reply *Get
 		return err
 	}
 
-	txs, err := t.Storage.FindTransactionByBlockNum(height)
+	txs, err := t.Storage.FindTransactionsByBlockNum(height)
 
 	if err != nil {
 		return err

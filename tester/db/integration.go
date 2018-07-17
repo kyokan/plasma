@@ -71,7 +71,7 @@ func txTest(storage db.PlasmaStorage) {
 		}
 	}
 
-	resTxs, err := storage.FindTransactionByBlockNum(1)
+	resTxs, err := storage.FindTransactionsByBlockNum(1)
 
 	if err != nil {
 		panic(err)

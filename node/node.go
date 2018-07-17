@@ -37,8 +37,7 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 			if tx.IsDeposit() {
 				log.Print("Received deposit transaction. Packaging into block.")
 				tick.Stop()
-				prev, _, _ := node.Storage.ProcessDeposit(tx)
-				node.PlasmaClient.SubmitBlock(*prev)
+				go node.Storage.ProcessDeposit(tx)
 				tick = time.NewTicker(interval)
 			} else {
 				node.Storage.StoreTransaction(tx)
@@ -51,6 +50,12 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 }
 
 func (node PlasmaNode) packageBlock() {
-	rlpMerkle, _ := node.Storage.PackageCurrentBlock()
-	node.PlasmaClient.SubmitBlock(*rlpMerkle)
+	rlpMerkle, err := node.Storage.PackageCurrentBlock()
+	if err != nil {
+		log.Printf("Error packaging block: %s", err.Error())
+		return
+	}
+	if rlpMerkle != nil {
+		node.PlasmaClient.SubmitBlock(*rlpMerkle)
+	}
 }
