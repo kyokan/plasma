@@ -1,4 +1,12 @@
-compile:
+deps:
+	@$(MAKE) -C ./contracts deps
+	@echo "--> Installing Go dependencies..."
+	@dep ensure -v
+
+migrate:
+	$(MAKE) -C ./contracts migrate
+
+build:
 	$(MAKE) -C ./contracts abigen
 	go install ./...
 
