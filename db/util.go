@@ -8,12 +8,14 @@ import (
 
 )
 
+const keyPartsSeparator = "::"
+
 func prefixKey(prefix string, parts ...string) []byte {
 	buf := new(bytes.Buffer)
 	buf.Write([]byte(prefix))
 
 	for _, part := range parts {
-		buf.Write([]byte("::"))
+		buf.Write([]byte(keyPartsSeparator))
 		buf.Write([]byte(part))
 	}
 

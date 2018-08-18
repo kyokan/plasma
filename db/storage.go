@@ -23,7 +23,7 @@ import (
 
 type PlasmaStorage interface {
 
-    IsTransactionValid(tx chain.Transaction) (*chain.Transaction, error)
+    isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error)
     StoreTransaction(tx chain.Transaction) error
     ProcessDeposit(tx chain.Transaction) (prev, deposit *util.MerkleTree, err error)
     FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
@@ -132,7 +132,7 @@ func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain
 }
 
 func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) error {
-    prevTx, err := ps.IsTransactionValid(tx)
+    prevTxs, err := ps.isTransactionValid(tx)
     if err != nil {
         return err
     }
@@ -158,52 +158,30 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) er
     batch.Put(blkNumHashkey(tx.BlkNum, hexHash), txEnc)
     batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), txEnc)
 
+    empty := []byte{}
+
     // Recording spends
     if tx.Input0.IsZeroInput() == false {
         input := tx.InputAt(0)
-        flow := chain.NewFlow(input.BlkNum, input.TxIdx, input.OutIdx)
-        flowEnc, err := rlp.EncodeToBytes(&flow)
-
-        if err != nil {
-            return err
-        }
-
-        batch.Put(spendKey(&prevTx.OutputAt(input.OutIdx).NewOwner), flowEnc)
+        outputOwner := prevTxs[0].OutputAt(input.OutIdx).NewOwner
+        // TODO: Validate that signature matches
+        batch.Put(spend(&outputOwner, tx.Input0), empty)
     }
     if tx.Input1.IsZeroInput() == false {
         input := tx.InputAt(0)
-        flow := chain.NewFlow(input.BlkNum, input.TxIdx, input.OutIdx)
-        flowEnc, err := rlp.EncodeToBytes(&flow)
-
-        if err != nil {
-            return err
-        }
-
-        batch.Put(spendKey(&prevTx.OutputAt(input.OutIdx).NewOwner), flowEnc)
+        outputOwner := prevTxs[1].OutputAt(input.OutIdx).NewOwner
+        // TODO: Validate that signature matches
+        batch.Put(spend(&outputOwner, tx.Input1), empty)
     }
 
     // Recording earns
     if tx.Output0.IsZeroOutput() == false {
-        flow := chain.NewFlow(tx.BlkNum, tx.TxIdx, 0)
-        flowEnc, err := rlp.EncodeToBytes(&flow)
-
-        if err != nil {
-            return err
-        }
-
         output := tx.OutputAt(0)
-        batch.Put(earnKey(&output.NewOwner), flowEnc)
+        batch.Put(earn(&output.NewOwner, tx, 0), empty)
     }
     if tx.Output1.IsZeroOutput() == false {
-        flow := chain.NewFlow(tx.BlkNum, tx.TxIdx, 1)
-        flowEnc, err := rlp.EncodeToBytes(&flow)
-
-        if err != nil {
-            return err
-        }
-
         output := tx.OutputAt(1)
-        batch.Put(earnKey(&output.NewOwner), flowEnc)
+        batch.Put(earn(&output.NewOwner, tx, 1), empty)
     }
 
     batch.Replay(ps)
@@ -278,17 +256,21 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.Merk
     return &rlpMerkle, ps.DB.Write(batch, nil)
 }
 
-func (ps *Storage) IsTransactionValid(tx chain.Transaction) (*chain.Transaction, error) {
+// TODO: return array for previous transactions
+func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error) {
+    if tx.IsDeposit() {
+        return []*chain.Transaction{chain.ZeroTransaction()}, nil
+    }
+
     if tx.IsZeroTransaction() { // This may be genesis
-        ps.RLock()
-        defer ps.RUnlock()
         if ps.CurrentBlock == 1 && ps.CurrentTxIdx == 0 {
-            return &tx, nil
+            return []*chain.Transaction{&tx}, nil
         } else {
             return nil, errors.New("Failed to add an empty transaction")
         }
     }
 
+    result := make([]*chain.Transaction, 0, 2)
     spendKeys := make([][]byte, 0, 2)
     prevTx, err := ps.findPreviousTx(&tx, 0)
     if err != nil {
@@ -297,7 +279,8 @@ func (ps *Storage) IsTransactionValid(tx chain.Transaction) (*chain.Transaction,
     if prevTx == nil {
         return nil, errors.New("Couldn't find previous transaction")
     }
-    spendKeys = append(spendKeys, spendKey(&prevTx.OutputAt(tx.Input0.OutIdx).NewOwner))
+    result = append(result, prevTx)
+    spendKeys = append(spendKeys, spend(&prevTx.OutputAt(tx.Input0.OutIdx).NewOwner, tx.Input0))
     if tx.Input1.IsZeroInput() == false {
         prevTx, err := ps.findPreviousTx(&tx, 1)
         if err != nil {
@@ -306,7 +289,8 @@ func (ps *Storage) IsTransactionValid(tx chain.Transaction) (*chain.Transaction,
         if prevTx == nil {
             return nil, errors.New("Couldn't find previous transaction")
         }
-        spendKeys = append(spendKeys, spendKey(&prevTx.OutputAt(tx.Input1.OutIdx).NewOwner))
+        result = append(result, prevTx)
+        spendKeys = append(spendKeys, spend(&prevTx.OutputAt(tx.Input1.OutIdx).NewOwner, tx.Input1))
     }
     for i, spendKey := range spendKeys {
         if ps.MemoryDB != nil {
@@ -325,7 +309,7 @@ func (ps *Storage) IsTransactionValid(tx chain.Transaction) (*chain.Transaction,
     }
     // TODO: Validate amount
     // TODO: Validate signatures
-    return prevTx, nil
+    return result, nil
 }
 
 func (ps *Storage) StoreTransaction(tx chain.Transaction) error {
@@ -336,13 +320,12 @@ func (ps *Storage) ProcessDeposit(tx chain.Transaction) (prev, deposit *util.Mer
     ps.Lock()
     defer ps.Unlock()
 
-    height := ps.CurrentBlock
-    prevBlk, err := ps.doPackageBlock(height, noopLock{})
+    prevBlk, err := ps.doPackageBlock(ps.CurrentBlock, noopLock{})
     if err != nil {
         return nil, nil, err
     }
     ps.doStoreTransaction(tx, noopLock{})
-    depositBlk, err := ps.doPackageBlock(height + 1, noopLock{})
+    depositBlk, err := ps.doPackageBlock(ps.CurrentBlock, noopLock{})
     return prevBlk, depositBlk, err
 }
 
@@ -446,55 +429,39 @@ func (ps *Storage) Balance(addr *common.Address) (*big.Int, error) {
 }
 
 func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, error) {
-    earnPrefix := earnKey(addr)
-    earnedMap := make(map[string]*chain.Flow)
-    spendPrefix := spendKey(addr)
-    spendMap := make(map[string]*chain.Flow)
+    earnPrefix := earnPrefixKey(addr)
+    spendPrefix := spendPrefixKey(addr)
+
+    earnMap := make(map[string]uint8)
+    spendMap := make(map[string]uint8)
 
     ps.RLock()
 
     memEarnIterator := ps.MemoryDB.NewIterator(levelutil.BytesPrefix(earnPrefix))
     defer memEarnIterator.Release()
     for memEarnIterator.Next() {
-        var flow chain.Flow
-        err := rlp.DecodeBytes(memEarnIterator.Value(), &flow)
-
-        if err != nil {
-            ps.RUnlock()
-            return nil, err
-        }
-
-        earnedMap[common.ToHex(flow.Hash)] = &flow
+        earnKey := memEarnIterator.Key()
+        lookupKey := string(earnKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        earnMap[lookupKey] = 1
     }
 
     memSpendIter := ps.MemoryDB.NewIterator(levelutil.BytesPrefix(spendPrefix))
     defer memSpendIter.Release()
     for memSpendIter.Next() {
-        var flow chain.Flow
-        err := rlp.DecodeBytes(memSpendIter.Value(), &flow)
-
-        if err != nil {
-            ps.RUnlock()
-            return nil, err
-        }
-
-        spendMap[common.ToHex(flow.Hash)] = &flow
+        spendKey := memEarnIterator.Key()
+        lookupKey := string(spendKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        spendMap[lookupKey] = 1
     }
-    ps.RUnlock()
 
+    ps.RUnlock()
 
     earnIter := ps.DB.NewIterator(levelutil.BytesPrefix(earnPrefix), nil)
     defer earnIter.Release()
 
     for earnIter.Next() {
-        var flow chain.Flow
-        err := rlp.DecodeBytes(earnIter.Value(), &flow)
-
-        if err != nil {
-            return nil, err
-        }
-
-        earnedMap[common.ToHex(flow.Hash)] = &flow
+        earnKey := earnIter.Key()
+        lookupKey := string(earnKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        earnMap[lookupKey] = 1
     }
 
 
@@ -502,28 +469,22 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
     defer spendIter.Release()
 
     for spendIter.Next() {
-        var flow chain.Flow
-        err := rlp.DecodeBytes(spendIter.Value(), &flow)
-
-        if err != nil {
-            return nil, err
-        }
-
-        hash := common.ToHex(flow.Hash)
-        if _, exists := earnedMap[hash]; exists {
-            delete(earnedMap, hash)
-        }
+        spendKey := spendIter.Key()
+        lookupKey := string(spendKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        spendMap[lookupKey] = 1
     }
-    for _, flow := range(spendMap) {
-        hash := common.ToHex(flow.Hash)
-        if _, exists := earnedMap[hash]; exists {
-            delete(earnedMap, hash)
-        }
+
+    for k, _ := range spendMap {
+        delete(earnMap, k)
     }
 
     var ret []chain.Transaction
-    for _, flow := range earnedMap {
-        tx, err := ps.FindTransactionByBlockNumTxIdx(flow.BlkNum, flow.TxIdx)
+    for key, _ := range earnMap {
+        _, blkNum, txIdx, _, err := parseSuffix([]byte(key))
+        if err != nil {
+            return nil, err
+        }
+        tx, err := ps.FindTransactionByBlockNumTxIdx(blkNum, txIdx)
 
         if err != nil {
             return nil, err
@@ -595,10 +556,6 @@ func (ps *Storage) LatestBlock() (*chain.Block, error) {
         return nil, err
     }
     data, err := ps.DB.Get(topKey, nil)
-    if err != nil {
-        return nil, err
-    }
-
     if err != nil {
         return nil, err
     }
