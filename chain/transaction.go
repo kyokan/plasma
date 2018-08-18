@@ -43,6 +43,16 @@ type rlpHelper struct {
 	Fee       big.Int
 }
 
+func ZeroTransaction() *Transaction {
+	return &Transaction{
+		Input0: ZeroInput(),
+		Input1: ZeroInput(),
+		Output0: ZeroOutput(),
+		Output1: ZeroOutput(),
+		Fee: big.NewInt(0),
+	}
+}
+
 func (tx *Transaction) IsDeposit() bool {
 	return tx.Input0.IsZeroInput() &&
 		tx.Input1.IsZeroInput() &&

@@ -1,12 +1,15 @@
 package db
 
 import (
+    "fmt"
     "math/big"
     "strconv"
+    "strings"
 
     "github.com/ethereum/go-ethereum/common"
     "github.com/kyokan/plasma/chain"
     "github.com/kyokan/plasma/util"
+    "github.com/pkg/errors"
 )
 
 const txKeyPrefix         = "tx"
@@ -37,11 +40,11 @@ func extractAmount(tx *chain.Transaction, addr *common.Address) *big.Int {
     return tx.OutputFor(addr).Amount
 }
 
-func earnKey(addr *common.Address) []byte {
+func earnPrefixKey(addr *common.Address) []byte {
     return prefixKey(earnKeyPrefix, util.AddressToHex(addr))
 }
 
-func spendKey(addr *common.Address) []byte {
+func spendPrefixKey(addr *common.Address) []byte {
     return prefixKey(spendKeyPrefix, util.AddressToHex(addr))
 }
 
@@ -71,4 +74,44 @@ func rlpMerkleTree(accepted []chain.Transaction) util.MerkleTree {
 
     merkle := util.TreeFromRLPItems(hashables)
     return merkle
+}
+
+func spend(addr *common.Address, input *chain.Input) []byte {
+    blkNum := fmt.Sprintf("%d", input.BlkNum)
+    txIdx  := fmt.Sprintf("%d", input.TxIdx)
+    outIdx := fmt.Sprintf("%d", input.OutIdx)
+    return prefixKey(spendKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx)
+}
+
+func earn(addr *common.Address, tx chain.Transaction, outputIdx uint8) []byte {
+    blkNum := fmt.Sprintf("%d", tx.BlkNum)
+    txIdx  := fmt.Sprintf("%d", tx.TxIdx)
+    outIdx := fmt.Sprintf("%d", outputIdx)
+    return prefixKey(earnKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx)
+}
+
+func parseSuffix(key []byte) (*common.Address, uint64, uint32, uint8, error) {
+    parts := strings.Split(string(key), "::")
+    if len(parts) != 4 {
+        return nil, 0, 0, 0, errors.New("Invalid format key")
+    }
+
+    addr := common.BytesToAddress([]byte(parts[1]))
+
+    blkNum, err := strconv.ParseUint(parts[2], 10, 64)
+    if err != nil {
+        return nil, 0, 0, 0, err
+    }
+
+    txIdx, err := strconv.ParseUint(parts[3], 10, 32)
+    if err != nil {
+        return nil, 0, 0, 0, err
+    }
+
+    outIdx, err := strconv.ParseUint(parts[4], 10, 32)
+    if err != nil {
+        return nil, 0, 0, 0, err
+    }
+
+    return &addr, blkNum, uint32(txIdx), uint8(outIdx), nil
 }

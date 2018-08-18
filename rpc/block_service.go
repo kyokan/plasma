@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"log"
+	"math/big"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,6 +26,15 @@ type GetUTXOsArgs struct {
 
 type GetUTXOsResponse struct {
 	Transactions []chain.Transaction
+}
+
+
+type GetBalanceArgs struct {
+	UserAddress string
+}
+
+type GetBalanceResponse struct {
+	Amount *big.Int
 }
 
 type BlockService struct {
@@ -69,6 +79,24 @@ func (t *BlockService) GetUTXOs(r *http.Request, args *GetUTXOsArgs, reply *GetU
 
 	*reply = GetUTXOsResponse{
 		Transactions: txs,
+	}
+
+	return nil
+}
+
+func (t *BlockService) GetBalance(r *http.Request, args *GetBalanceArgs, reply *GetBalanceResponse) error {
+	log.Println("Received Block.GetBalance request.")
+
+	userAddress := common.HexToAddress(args.UserAddress)
+
+	amount, err := t.Storage.Balance(&userAddress)
+
+	if err != nil {
+		return err
+	}
+
+	*reply = GetBalanceResponse{
+		Amount: amount,
 	}
 
 	return nil
