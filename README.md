@@ -1,4 +1,4 @@
-# Plasma
+# [Plasma](http://plasma.kyokan.io/)
 
 This project is a golang implementation and extension of the [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. Our goals are the following:
 
