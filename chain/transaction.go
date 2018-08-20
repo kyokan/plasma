@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-)
+	)
 
 // JSON tags needed for test fixtures
 type Transaction struct {

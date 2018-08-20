@@ -11,7 +11,7 @@ type Client struct {
 	mock.Mock
 }
 
-// GetBalance provides a mock function with given fields: addr
+// Balance provides a mock function with given fields: addr
 func (_m *Client) GetBalance(addr common.Address) (*big.Int, error) {
 	ret := _m.Called(addr)
 

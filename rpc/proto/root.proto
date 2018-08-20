@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package pb;
+
+service Root {
+    rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {}
+    rpc GetUTXOs (GetUTXOsRequest) returns (GetUTXOsResponse) {}
+    rpc GetBlock (GetBlockRequest) returns (GetBlockResponse) {}
+    rpc Send (SendRequest) returns (SendResponse) {}
+}
+
+message BigInt {
+    bytes values = 1;
+}
+
+message Input {
+    BigInt blockNum = 1;
+    uint32 txIdx = 2;
+    uint32 outIdx = 3;
+}
+
+message Output {
+    bytes newOwner = 1;
+    BigInt amount = 2;
+}
+
+message BlockHeader {
+    bytes merkleRoot = 1;
+    bytes rlpMerkleRoot = 2;
+    bytes prevHash = 3;
+    BigInt number = 4;
+}
+
+message Block {
+    BlockHeader header = 1;
+    bytes hash = 2;
+}
+
+message Transaction {
+    Input input0 = 1;
+    bytes sig0 = 2;
+    Input input1 = 3;
+    bytes sig1 = 4;
+    Output output0 = 5;
+    Output output1 = 6;
+    BigInt fee = 7;
+    BigInt BlockNum = 8;
+    uint32 TxIdx = 9;
+}
+
+message GetBalanceRequest {
+    bytes address = 1;
+}
+
+message GetBalanceResponse {
+    BigInt balance = 1;
+}
+
+message GetUTXOsRequest {
+    bytes address = 1;
+}
+
+message GetUTXOsResponse {
+    repeated Transaction transactions = 1;
+}
+
+message GetBlockRequest {
+    BigInt number = 1;
+}
+
+message GetBlockResponse {
+    Block block = 1;
+    repeated Transaction transactions = 2;
+}
+
+message SendRequest {
+    Transaction transaction = 1;
+    bytes from = 2;
+    bytes to = 3;
+    BigInt amount = 4;
+}
+
+message SendResponse {
+    Transaction transaction = 1;
+}

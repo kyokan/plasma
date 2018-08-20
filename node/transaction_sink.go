@@ -8,33 +8,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/chain"
-	plasma_common "github.com/kyokan/plasma/common"
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/util"
+	"github.com/kyokan/plasma/txdag"
+	"github.com/kyokan/plasma/types"
 )
 
 type TransactionSink struct {
 	c       chan chain.Transaction
 	storage db.PlasmaStorage
-	client  plasma_common.Client
 }
 
-type TransactionRequest struct {
-	chain.Transaction
-	From     common.Address
-	To       common.Address
-	Amount   *big.Int
-	Response *TransactionResponse
-}
-
-type TransactionResponse struct {
-	Error       error
-	Transaction *chain.Transaction
-}
-
-func NewTransactionSink(storage db.PlasmaStorage, client plasma_common.Client) *TransactionSink {
-	return &TransactionSink{c: make(chan chain.Transaction), storage: storage, client: client}
+func NewTransactionSink(storage db.PlasmaStorage) *TransactionSink {
+	return &TransactionSink{c: make(chan chain.Transaction), storage: storage}
 }
 
 func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.Transaction) {
@@ -54,7 +41,7 @@ func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.Transaction) {
 	}()
 }
 
-func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan TransactionRequest) {
+func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.TransactionRequest) {
 	go func() {
 		for {
 			ch := <-chch
@@ -79,7 +66,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan Transact
 			}
 			var tx *chain.Transaction
 			if req.Transaction.IsZeroTransaction() {
-				tx, err = chain.FindBestUTXOs(req.From, req.To, req.Amount, txs, sink.client)
+				tx, err = txdag.FindBestUTXOs(req.From, req.To, req.Amount, txs)
 
 				if err != nil {
 					sendErrorResponse(ch, &req, err)
@@ -91,7 +78,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan Transact
 
 			sink.c <- *tx
 
-			req.Response = &TransactionResponse{
+			req.Response = &types.TransactionResponse{
 				Transaction: tx,
 			}
 
@@ -187,8 +174,8 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 	return true, nil
 }
 
-func sendErrorResponse(ch chan<- TransactionRequest, req *TransactionRequest, err error) {
-	req.Response = &TransactionResponse{
+func sendErrorResponse(ch chan<- types.TransactionRequest, req *types.TransactionRequest, err error) {
+	req.Response = &types.TransactionResponse{
 		Error: err,
 	}
 

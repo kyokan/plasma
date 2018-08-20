@@ -8,7 +8,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func CreateStorage(location string, client *eth.PlasmaClient) (*leveldb.DB, PlasmaStorage, error) {
+func CreateStorage(location string, client eth.Client) (*leveldb.DB, PlasmaStorage, error) {
 	loc := path.Join(location, "db")
 	log.Printf("Creating database in %s.", loc)
 	level, err := leveldb.OpenFile(loc, nil)

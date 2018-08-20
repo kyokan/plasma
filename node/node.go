@@ -9,16 +9,16 @@ import (
 )
 
 type PlasmaNode struct {
-	Storage      db.PlasmaStorage
-	TxSink       *TransactionSink
-	PlasmaClient *eth.PlasmaClient
+	Storage db.PlasmaStorage
+	TxSink  *TransactionSink
+	Client  eth.Client
 }
 
-func NewPlasmaNode(storage db.PlasmaStorage, sink *TransactionSink, plasmaClient *eth.PlasmaClient) *PlasmaNode {
+func NewPlasmaNode(storage db.PlasmaStorage, sink *TransactionSink, client eth.Client) *PlasmaNode {
 	return &PlasmaNode{
-		Storage:      storage,
-		TxSink:       sink,
-		PlasmaClient: plasmaClient,
+		Storage: storage,
+		TxSink:  sink,
+		Client:  client,
 	}
 }
 
@@ -56,6 +56,6 @@ func (node PlasmaNode) packageBlock() {
 		return
 	}
 	if rlpMerkle != nil {
-		node.PlasmaClient.SubmitBlock(*rlpMerkle)
+		node.Client.SubmitBlock(rlpMerkle)
 	}
 }
