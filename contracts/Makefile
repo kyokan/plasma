@@ -21,4 +21,4 @@ testnet:
 	@ganache-cli -m "candy maple cake sugar pudding cream honey rich smooth crumble sweet treat" -d -b 1 -v -p 9545 --db ~/.plasma/ganache
 
 clean:
-	rm -rf ./buildl
+	rm -rf ./build
