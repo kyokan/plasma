@@ -8,6 +8,9 @@ migrate:
 
 build:
 	go build -o ./build/plasma ./cmd/plasma/main.go
+	
+install:
+	go install ./cmd/plasma
 
 abigen:
 	$(MAKE) -C ./contracts abigen
