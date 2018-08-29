@@ -96,19 +96,19 @@ func parseSuffix(key []byte) (*common.Address, uint64, uint32, uint8, error) {
         return nil, 0, 0, 0, errors.New("Invalid format key")
     }
 
-    addr := common.BytesToAddress([]byte(parts[1]))
+    addr := common.BytesToAddress([]byte(parts[0]))
 
-    blkNum, err := strconv.ParseUint(parts[2], 10, 64)
+    blkNum, err := strconv.ParseUint(parts[1], 10, 64)
     if err != nil {
         return nil, 0, 0, 0, err
     }
 
-    txIdx, err := strconv.ParseUint(parts[3], 10, 32)
+    txIdx, err := strconv.ParseUint(parts[2], 10, 32)
     if err != nil {
         return nil, 0, 0, 0, err
     }
 
-    outIdx, err := strconv.ParseUint(parts[4], 10, 32)
+    outIdx, err := strconv.ParseUint(parts[3], 10, 32)
     if err != nil {
         return nil, 0, 0, 0, err
     }

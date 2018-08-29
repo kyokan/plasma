@@ -95,7 +95,7 @@ func NewStorage(db *leveldb.DB, plasmaClient *eth.PlasmaClient) PlasmaStorage {
         }
     } else {
         result.PrevBlockHash = lastBlock.BlockHash
-        result.CurrentBlock  = lastBlock.Header.Number
+        result.CurrentBlock  = 1 + lastBlock.Header.Number
     }
 
     return &result
