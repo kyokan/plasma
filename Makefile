@@ -10,7 +10,7 @@ build:
 	$(MAKE) -C ./contracts abigen
 	go install ./...
 
-start: compile
+start: build
 	@./bin/start
 
 clean:
