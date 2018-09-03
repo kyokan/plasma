@@ -19,7 +19,7 @@ echo "Starting Ganache..."
 
 (
     cd $DIR/../contracts
-    prefix_cmd 'truffle' ${cyan} "truffle develop --log --verbose-rpc --network ${NETWORK}"
+    prefix_cmd 'ganache' ${cyan} "ganache-cli -m 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat' -p 9545 --log --verbose-rpc --network ${NETWORK}"
 ) &
 
 sleep 2
