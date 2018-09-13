@@ -448,7 +448,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
     memSpendIter := ps.MemoryDB.NewIterator(levelutil.BytesPrefix(spendPrefix))
     defer memSpendIter.Release()
     for memSpendIter.Next() {
-        spendKey := memEarnIterator.Key()
+        spendKey := memSpendIter.Key()
         lookupKey := string(spendKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
         spendMap[lookupKey] = 1
     }
