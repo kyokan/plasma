@@ -1,10 +1,8 @@
 package cmd
 
 import (
+	"github.com/kyokan/plasma/cli"
 	"github.com/spf13/cobra"
-			"github.com/kyokan/plasma/cli"
-	"math/big"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -25,24 +23,19 @@ var exitCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		blockNumStr, err := cmd.Flags().GetString(FlagBlockNum)
+		blockNum, err := cmd.Flags().GetUint64(FlagBlockNum)
 		if err != nil {
 			return err
 		}
-		blockNumBig, ok := new(big.Int).SetString(blockNumStr, 10)
-		if !ok {
-			return errors.New("invalid block number")
-		}
-
-		txIndex, err := cmd.Flags().GetUint(FlagTxIndex)
+		txIndex, err := cmd.Flags().GetUint32(FlagTxIndex)
 		if err != nil {
 			return err
 		}
-		oIndex, err := cmd.Flags().GetUint(FlagOIndex)
+		oIndex, err := cmd.Flags().GetUint8(FlagOIndex)
 		if err != nil {
 			return err
 		}
-		return cli.Exit(NewGlobalConfig(), privateKey, rootHost, blockNumBig, txIndex, oIndex)
+		return cli.Exit(NewGlobalConfig(), privateKey, rootHost, blockNum, txIndex, oIndex)
 	},
 }
 

@@ -54,7 +54,7 @@ func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 		Output0:  SerializeOutput(tx.Output0),
 		Output1:  SerializeOutput(tx.Output1),
 		Fee:      SerializeBig(tx.Fee),
-		BlockNum: SerializeUintBig(tx.BlkNum),
+		BlockNum: tx.BlkNum,
 		TxIdx:    tx.TxIdx,
 	}
 }
@@ -68,14 +68,14 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 		Output0: DeserializeOutput(tx.Output0),
 		Output1: DeserializeOutput(tx.Output1),
 		Fee: DeserializeBig(tx.Fee),
-		BlkNum: uint64(DeserializeUintBig(tx.BlockNum)),
+		BlkNum: tx.BlockNum,
 		TxIdx: tx.TxIdx,
 	}
 }
 
 func SerializeInput(in *chain.Input) (*pb.Input) {
 	return &pb.Input{
-		BlockNum: SerializeUintBig(in.BlkNum),
+		BlockNum: in.BlkNum,
 		TxIdx:    in.TxIdx,
 		OutIdx:   uint32(in.OutIdx),
 	}
@@ -83,7 +83,7 @@ func SerializeInput(in *chain.Input) (*pb.Input) {
 
 func DeserializeInput(in *pb.Input) (*chain.Input) {
 	return &chain.Input{
-		BlkNum: uint64(DeserializeUintBig(in.BlockNum)),
+		BlkNum: in.BlockNum,
 		TxIdx: in.TxIdx,
 		OutIdx: uint8(in.TxIdx),
 	}
@@ -109,7 +109,7 @@ func DeserializeBlock(block *pb.Block) (*chain.Block) {
 			MerkleRoot:block.Header.MerkleRoot,
 			RLPMerkleRoot:block.Header.RlpMerkleRoot,
 			PrevHash:block.Header.PrevHash,
-			Number: uint64(DeserializeUintBig(block.Header.Number)),
+			Number: block.Header.Number,
 		},
 		BlockHash: block.Hash,
 	}

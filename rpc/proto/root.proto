@@ -14,7 +14,7 @@ message BigInt {
 }
 
 message Input {
-    BigInt blockNum = 1;
+    uint64 blockNum = 1;
     uint32 txIdx = 2;
     uint32 outIdx = 3;
 }
@@ -28,7 +28,7 @@ message BlockHeader {
     bytes merkleRoot = 1;
     bytes rlpMerkleRoot = 2;
     bytes prevHash = 3;
-    BigInt number = 4;
+    uint64 number = 4;
 }
 
 message Block {
@@ -44,7 +44,7 @@ message Transaction {
     Output output0 = 5;
     Output output1 = 6;
     BigInt fee = 7;
-    BigInt BlockNum = 8;
+    uint64 BlockNum = 8;
     uint32 TxIdx = 9;
 }
 
@@ -65,7 +65,7 @@ message GetUTXOsResponse {
 }
 
 message GetBlockRequest {
-    BigInt number = 1;
+    uint64 number = 1;
 }
 
 message GetBlockResponse {

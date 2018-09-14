@@ -2,18 +2,15 @@ package validator
 
 import (
 	"log"
-	"math/big"
 	"time"
 
+	"context"
 	"github.com/kyokan/plasma/chain"
-	"github.com/kyokan/plasma/node"
-	"github.com/kyokan/plasma/util"
-
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-	"github.com/kyokan/plasma/rpc/pb"
-	"context"
+	"github.com/kyokan/plasma/node"
 	"github.com/kyokan/plasma/rpc"
+	"github.com/kyokan/plasma/rpc/pb"
 )
 
 func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClient eth.Client, rootClient pb.RootClient) {
@@ -52,8 +49,8 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 					opts := &eth.ChallengeExitOpts{
 						ExitId:   exitId,
 						Txs:      txs,
-						BlockNum: blockId,
-						TxIndex:  uint(txId.Uint64()),
+						BlockNum: *blockId,
+						TxIndex:  *txId,
 					}
 
 					ethClient.ChallengeExit(opts)
@@ -97,28 +94,28 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 	}
 }
 
-func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.Transaction, *big.Int, *big.Int, error) {
+func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.Transaction, *uint64, *uint32, error) {
 	latestBlock, err := storage.LatestBlock()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	txIdx := exit.TxIndex.Uint64()
+	txIdx := exit.TxIndex
 	lastBlockHeight := latestBlock.Header.Number
-	currBlockHeight := exit.BlockNum.Uint64() + 1
+	currBlockHeight := exit.BlockNum + 1
 
 	response, err := rootClient.GetBlock(ctx, &pb.GetBlockRequest{
-		Number: rpc.SerializeBig(exit.BlockNum),
+		Number: exit.BlockNum,
 	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	if txIdx >= uint64(len(response.Transactions)) {
+	if txIdx >= uint32(len(response.Transactions)) {
 		log.Fatalln("The following exit does not exist within this block!")
 	}
 
-	exitTx := rpc.DeserializeTx(response.Transactions[exit.TxIndex.Uint64()])
+	exitTx := rpc.DeserializeTx(response.Transactions[exit.TxIndex])
 	log.Printf("Finding spends from blocks %d to %d\n", currBlockHeight, lastBlockHeight)
 
 	// Find possible double spends in every block
@@ -127,7 +124,7 @@ func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.P
 	// Also, how do you protect against exits happening more than once?
 	for i := currBlockHeight; i <= lastBlockHeight; i++ {
 		response, err := rootClient.GetBlock(ctx, &pb.GetBlockRequest{
-			Number: rpc.SerializeBig(util.NewUint64(i)),
+			Number: i,
 		})
 		if err != nil {
 			return nil, nil, nil, err
@@ -138,7 +135,7 @@ func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.P
 		if len(rej) > 0 {
 			log.Printf("Found %d double spends at block %d\n", len(rej), i)
 			// Always return the first one for now
-			return currTxs, util.NewUint64(i), util.NewUint32(rej[0].TxIdx), nil
+			return currTxs, &i, &rej[0].TxIdx, nil
 		} else {
 			log.Printf("Found no double spends for block %d\n", i)
 		}

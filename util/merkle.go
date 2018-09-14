@@ -1,10 +1,8 @@
 package util
 
 import (
-	"math"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"math"
 )
 
 type MerkleTree struct {
@@ -17,14 +15,14 @@ type MerkleNode struct {
 	Hash  Hash
 }
 
-func CreateMerkleProof(merkle MerkleTree, index *big.Int) []byte {
+func CreateMerkleProof(merkle MerkleTree, index uint32) []byte {
 	proofs := FindProofs(&merkle.Root, [][]byte{}, 1)
 
-	if index.Int64() >= int64(len(proofs)) {
+	if index >= uint32(len(proofs)) {
 		panic("Transaction index must be within set of proofs")
 	}
 
-	return proofs[index.Int64()]
+	return proofs[index]
 }
 
 // TODO: we could optimize this with an index.

@@ -304,6 +304,7 @@
     "assert",
     "mock",
     "require",
+    "suite",
   ]
   pruneopts = "T"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -494,13 +495,16 @@
     "github.com/ethereum/go-ethereum/accounts/abi/bind",
     "github.com/ethereum/go-ethereum/accounts/keystore",
     "github.com/ethereum/go-ethereum/common",
+    "github.com/ethereum/go-ethereum/common/hexutil",
     "github.com/ethereum/go-ethereum/core/types",
     "github.com/ethereum/go-ethereum/crypto",
     "github.com/ethereum/go-ethereum/crypto/sha3",
     "github.com/ethereum/go-ethereum/ethclient",
     "github.com/ethereum/go-ethereum/event",
+    "github.com/ethereum/go-ethereum/log",
     "github.com/ethereum/go-ethereum/rlp",
     "github.com/ethereum/go-ethereum/rpc",
+    "github.com/golang/protobuf/proto",
     "github.com/gorilla/mux",
     "github.com/gorilla/rpc",
     "github.com/gorilla/rpc/json",
@@ -512,10 +516,12 @@
     "github.com/spf13/viper",
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
+    "github.com/stretchr/testify/suite",
     "github.com/syndtr/goleveldb/leveldb",
     "github.com/syndtr/goleveldb/leveldb/comparer",
     "github.com/syndtr/goleveldb/leveldb/memdb",
     "github.com/syndtr/goleveldb/leveldb/util",
+    "golang.org/x/net/context",
     "google.golang.org/grpc",
     "gopkg.in/urfave/cli.v1",
   ]
