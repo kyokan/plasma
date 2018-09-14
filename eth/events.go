@@ -8,48 +8,45 @@ import (
 	"github.com/kyokan/plasma/contracts/gen/contracts"
 )
 
-func (p *PlasmaClient) DepositFilter(
-	start uint64,
-) ([]contracts.PlasmaDeposit, uint64) {
+func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error) {
+	header, err := c.client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	end := header.Number.Uint64()
+
 	opts := bind.FilterOpts{
 		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
+		End:     &end, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterDeposit(&opts)
-
+	itr, err := c.contract.FilterDeposit(&opts)
 	if err != nil {
 		log.Fatalf("Failed to filter deposit events: %v", err)
 	}
 
 	next := true
-
 	var events []contracts.PlasmaDeposit
-
-	var lastBlockNumber uint64
-
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (p *PlasmaClient) ExitStartedFilter(
-	start uint64,
-) ([]contracts.PlasmaExitStarted, uint64) {
+func (c *clientState) ExitStartedFilter(start uint64) ([]contracts.PlasmaExitStarted, uint64) {
 	opts := bind.FilterOpts{
 		Start:   start,
 		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterExitStarted(&opts)
+	itr, err := c.contract.FilterExitStarted(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter exit started events: %v", err)
@@ -72,16 +69,14 @@ func (p *PlasmaClient) ExitStartedFilter(
 	return events, lastBlockNumber
 }
 
-func (p *PlasmaClient) DebugAddressFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugAddress, uint64) {
+func (c *clientState) DebugAddressFilter(start uint64) ([]contracts.PlasmaDebugAddress, uint64) {
 	opts := bind.FilterOpts{
 		Start:   start,
 		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterDebugAddress(&opts)
+	itr, err := c.contract.FilterDebugAddress(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter debug address events: %v", err)
@@ -104,16 +99,14 @@ func (p *PlasmaClient) DebugAddressFilter(
 	return events, lastBlockNumber
 }
 
-func (p *PlasmaClient) DebugUintFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugUint, uint64) {
+func (c *clientState) DebugUintFilter(start uint64) ([]contracts.PlasmaDebugUint, uint64) {
 	opts := bind.FilterOpts{
 		Start:   start,
 		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterDebugUint(&opts)
+	itr, err := c.contract.FilterDebugUint(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter debug uint events: %v", err)
@@ -136,16 +129,14 @@ func (p *PlasmaClient) DebugUintFilter(
 	return events, lastBlockNumber
 }
 
-func (p *PlasmaClient) DebugBoolFilter(
-	start uint64,
-) ([]contracts.PlasmaDebugBool, uint64) {
+func (c *clientState) DebugBoolFilter(start uint64) ([]contracts.PlasmaDebugBool, uint64) {
 	opts := bind.FilterOpts{
 		Start:   start,
 		End:     nil, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterDebugBool(&opts)
+	itr, err := c.contract.FilterDebugBool(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter debug bool events: %v", err)
@@ -168,7 +159,7 @@ func (p *PlasmaClient) DebugBoolFilter(
 	return events, lastBlockNumber
 }
 
-func (p *PlasmaClient) ChallengeSuccessFilter(
+func (c *clientState) ChallengeSuccessFilter(
 	start uint64,
 ) ([]contracts.PlasmaChallengeSuccess, uint64) {
 	opts := bind.FilterOpts{
@@ -177,7 +168,7 @@ func (p *PlasmaClient) ChallengeSuccessFilter(
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterChallengeSuccess(&opts)
+	itr, err := c.contract.FilterChallengeSuccess(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter challenge success events: %v", err)
@@ -200,7 +191,7 @@ func (p *PlasmaClient) ChallengeSuccessFilter(
 	return events, lastBlockNumber
 }
 
-func (p *PlasmaClient) ChallengeFailureFilter(
+func (c *clientState) ChallengeFailureFilter(
 	start uint64,
 ) ([]contracts.PlasmaChallengeFailure, uint64) {
 	opts := bind.FilterOpts{
@@ -209,7 +200,7 @@ func (p *PlasmaClient) ChallengeFailureFilter(
 		Context: context.Background(),
 	}
 
-	itr, err := p.plasma.FilterChallengeFailure(&opts)
+	itr, err := c.contract.FilterChallengeFailure(&opts)
 
 	if err != nil {
 		log.Fatalf("Failed to filter challenge failure events: %v", err)

@@ -8,20 +8,27 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasma *eth.PlasmaClient) {
+func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasma eth.Client) {
 	ch := make(chan eth.DepositEvent)
 	sink.AcceptDepositEvents(ch)
 
 	for {
-		idx, err := storage.LastDepositEventIdx()
+		lastPolledIdx, err := storage.LastDepositEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
 			log.Fatalf("Failed to get last deposit event idx: %v", err)
 		}
 
-		log.Printf("Looking for deposit events at block number: %d\n", idx)
+		if lastPolledIdx == 0 {
+			lastPolledIdx = 1
+		}
 
-		events, lastIdx := plasma.DepositFilter(idx)
+		log.Printf("Looking for deposit events at block number: %d\n", lastPolledIdx)
+
+		events, topBlockIdx, err := plasma.DepositFilter(lastPolledIdx)
+		if err != nil {
+			log.Println("caught error filtering deposits:", err)
+		}
 
 		if len(events) > 0 {
 			count := uint64(0)
@@ -38,11 +45,16 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 				time.Sleep(time.Second * 3)
 			}
 
-			log.Printf("Found %d deposit events at from blocks %d to %d.\n", count, idx, lastIdx)
+			log.Printf("Found %d deposit events at from blocks %d to %d.\n", count, lastPolledIdx, topBlockIdx)
 
-			storage.SaveDepositEventIdx(lastIdx + 1)
+			if err = storage.SaveDepositEventIdx(topBlockIdx + 1); err != nil {
+				log.Printf("failed to save deposit idx: %s", err)
+			}
 		} else {
-			log.Printf("No deposit events at block %d.\n", idx)
+			if err = storage.SaveDepositEventIdx(topBlockIdx + 1); err != nil {
+				log.Printf("failed to save deposit idx: %s", err)
+			}
+			log.Printf("No deposit events at block %d.\n", lastPolledIdx)
 		}
 
 		// Every 10 seconds look for deposits

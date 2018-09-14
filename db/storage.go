@@ -71,7 +71,7 @@ type Storage struct {
     Transactions  []chain.Transaction
 }
 
-func NewStorage(db *leveldb.DB, plasmaClient *eth.PlasmaClient) PlasmaStorage {
+func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
     result := Storage{
         DB: db,
         MemoryDB: memdb.New(comparer.DefaultComparer, int(9 * blockSize)),
@@ -90,8 +90,8 @@ func NewStorage(db *leveldb.DB, plasmaClient *eth.PlasmaClient) PlasmaStorage {
         if err != nil {
             log.Panic("Failed to get last block:", err)
         }
-        if plasmaClient != nil {
-            plasmaClient.SubmitBlock(*merkle)
+        if client != nil {
+            client.SubmitBlock(merkle)
         }
     } else {
         result.PrevBlockHash = lastBlock.BlockHash
@@ -479,7 +479,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
     }
 
     var ret []chain.Transaction
-    for key, _ := range earnMap {
+    for key := range earnMap {
         _, blkNum, txIdx, _, err := parseSuffix([]byte(key))
         if err != nil {
             return nil, err
