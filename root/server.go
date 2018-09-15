@@ -75,8 +75,7 @@ func (r *Server) GetUTXOs(ctx context.Context, req *pb.GetUTXOsRequest) (*pb.Get
 }
 
 func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.GetBlockResponse, error) {
-	num := rpc.DeserializeBig(req.Number)
-	block, err := r.storage.BlockAtHeight(num.Uint64())
+	block, err := r.storage.BlockAtHeight(req.Number)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +91,7 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 				MerkleRoot:    block.Header.MerkleRoot,
 				RlpMerkleRoot: block.Header.RLPMerkleRoot,
 				PrevHash:      block.Header.PrevHash,
-				Number:        rpc.SerializeBig(num),
+				Number:        req.Number,
 			},
 			Hash: block.BlockHash,
 		},

@@ -55,7 +55,7 @@ func Finalize(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	return client.Finalize()
 }
 
-func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost string, blockNum *big.Int, txIndex uint, oIndex uint) error {
+func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost string, blockNum uint64, txIndex uint32, oIndex uint8) error {
 	ctx := context.Background()
 	cancel, client, _, err := initHandler(config, privateKey, ctx)
 	defer cancel()
@@ -73,7 +73,7 @@ func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost st
 
 	rc := pb.NewRootClient(conn)
 	res, err := rc.GetBlock(ctx, &pb.GetBlockRequest{
-		Number: rpc.SerializeBig(blockNum),
+		Number: blockNum,
 	})
 	if err != nil {
 		return err
@@ -134,7 +134,7 @@ func Balance(rootHost string, address common.Address) error {
 	return nil
 }
 
-func Block(rootHost string, blockNum *big.Int) error {
+func Block(rootHost string, blockNum uint64) error {
 	log.Info("Received Block request.")
 
 	conn, err := grpc.Dial(rootHost, grpc.WithInsecure())
@@ -145,7 +145,7 @@ func Block(rootHost string, blockNum *big.Int) error {
 
 	rc := pb.NewRootClient(conn)
 	res, err := rc.GetBlock(context.Background(), &pb.GetBlockRequest{
-		Number: rpc.SerializeBig(blockNum),
+		Number: blockNum,
 	})
 	if err != nil {
 		return err

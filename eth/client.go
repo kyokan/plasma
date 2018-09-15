@@ -27,16 +27,16 @@ const depositDescription = `[{"anonymous":false,"inputs":[{"indexed":false,"name
 type StartExitOpts struct {
 	Block    *chain.Block
 	Txs      []chain.Transaction
-	BlockNum *big.Int
-	TxIndex  uint
-	OutIndex uint
+	BlockNum uint64
+	TxIndex  uint32
+	OutIndex uint8
 }
 
 type ChallengeExitOpts struct {
-	ExitId   *big.Int
+	ExitId   uint64
 	Txs      []chain.Transaction
-	BlockNum *big.Int
-	TxIndex  uint
+	BlockNum uint64
+	TxIndex  uint32
 }
 
 type Client interface {
@@ -49,9 +49,9 @@ type Client interface {
 	StartExit(opts *StartExitOpts) error
 	ChallengeExit(opts *ChallengeExitOpts) error
 	Finalize() error
-	Exit(exitId *big.Int) (*Exit, error)
-	Block(blockNum *big.Int) (*Block, error)
-	CurrentChildBlock() (*big.Int, error)
+	Exit(exitId uint64) (*Exit, error)
+	Block(blockNum uint64) (*Block, error)
+	CurrentChildBlock() (uint64, error)
 
 	DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error)
 	ExitStartedFilter(start uint64) ([]contracts.PlasmaExitStarted, uint64)

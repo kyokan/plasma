@@ -20,9 +20,9 @@ type PlasmaClient struct {
 type Exit struct {
 	Owner     common.Address
 	Amount    *big.Int
-	BlockNum  *big.Int
-	TxIndex   *big.Int
-	OIndex    *big.Int
+	BlockNum  uint64
+	TxIndex   uint32
+	OIndex    uint8
 	StartedAt *big.Int
 }
 
@@ -71,14 +71,12 @@ func (c *clientState) StartExit(opts *StartExitOpts) error {
 	}
 
 	merkle := CreateMerkleTree(opts.Txs)
-	bigTxIdx := new(big.Int).SetUint64(uint64(opts.TxIndex))
-	bigOutIdx := new(big.Int).SetUint64(uint64(opts.OutIndex))
-	proof := util.CreateMerkleProof(merkle, bigTxIdx)
+	proof := util.CreateMerkleProof(merkle, opts.TxIndex)
 	res, err := c.contract.StartExit(
 		auth,
 		opts.BlockNum,
-		bigTxIdx,
-		bigOutIdx,
+		opts.TxIndex,
+		opts.OutIndex,
 		bytes,
 		proof,
 	)
@@ -99,13 +97,12 @@ func (c *clientState) ChallengeExit(opts *ChallengeExitOpts) error {
 	}
 
 	merkle := CreateMerkleTree(opts.Txs)
-	bigIdx := new(big.Int).SetUint64(uint64(opts.TxIndex))
-	proof := util.CreateMerkleProof(merkle, bigIdx)
+	proof := util.CreateMerkleProof(merkle, opts.TxIndex)
 	res, err := c.contract.ChallengeExit(
 		auth,
 		opts.ExitId,
 		opts.BlockNum,
-		bigIdx,
+		opts.TxIndex,
 		bytes,
 		proof,
 	)
@@ -128,7 +125,7 @@ func (c *clientState) Finalize() error {
 	return nil
 }
 
-func (c *clientState) Exit(exitId *big.Int) (*Exit, error) {
+func (c *clientState) Exit(exitId uint64) (*Exit, error) {
 	opts := CreateCallOpts(c.UserAddress())
 	owner, amount, blocknum, txindex, oindex, startedAt, err := c.contract.GetExit(opts, exitId)
 	if err != nil {
@@ -145,7 +142,7 @@ func (c *clientState) Exit(exitId *big.Int) (*Exit, error) {
 	}, nil
 }
 
-func (c *clientState) Block(blocknum *big.Int) (*Block, error) {
+func (c *clientState) Block(blocknum uint64) (*Block, error) {
 	opts := CreateCallOpts(c.UserAddress())
 
 	log.Printf("Block for address 0x%x\n", opts.From)
@@ -160,7 +157,7 @@ func (c *clientState) Block(blocknum *big.Int) (*Block, error) {
 	}, nil
 }
 
-func (c *clientState) CurrentChildBlock() (*big.Int, error) {
+func (c *clientState) CurrentChildBlock() (uint64, error) {
 	opts := CreateCallOpts(c.UserAddress())
 	return c.contract.CurrentChildBlock(opts)
 }

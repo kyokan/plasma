@@ -6,17 +6,17 @@ import './libraries/RLP.sol';
 import './libraries/SafeMath.sol';
 
 contract Plasma {
-    using SafeMath for uint256;
+    using SafeMath for uint64;
     using RLP for bytes;
     using RLP for RLP.RLPItem;
     using RLP for RLP.Iterator;
 
     event Deposit(address sender, uint value);
     event SubmitBlock(address sender, bytes32 root);
-    event ExitStarted(address sender, uint exitId);
-    event ChallengeSuccess(address sender, uint exitId);
-    event ChallengeFailure(address sender, uint exitId);
-    event FinalizeExit(address sender, uint exitId);
+    event ExitStarted(address sender, uint64 exitId);
+    event ChallengeSuccess(address sender, uint64 exitId);
+    event ChallengeFailure(address sender, uint64 exitId);
+    event FinalizeExit(address sender, uint64 exitId);
     event DebugBytes32(address sender, bytes32 item);
     event DebugBytes(address sender, bytes item);
     event DebugAddress(address sender, address item);
@@ -24,11 +24,10 @@ contract Plasma {
     event DebugBool(address sender, bool item);
 
     address public authority;
-    mapping(uint256 => ChildBlock) public childChain;
+    mapping(uint64  => ChildBlock) public childChain;
     mapping(uint256 => Exit) public exits;
-    uint256 public currentChildBlock;
+    uint64 public currentChildBlock;
     PriorityQueue public exitQueue;
-    uint256 public lastExitId;
     uint256 public lastFinalizedTime;
 
     struct ChildBlock {
@@ -39,9 +38,9 @@ contract Plasma {
     struct Exit {
         address owner;
         uint256 amount;
-        uint256 blocknum;
-        uint256 txindex;
-        uint256 oindex;
+        uint64  blocknum;
+        uint32  txindex;
+        uint8   oindex;
         uint256 started_at;
     }
 
@@ -58,12 +57,12 @@ contract Plasma {
             root: root,
             created_at: block.timestamp
         });
-        currentChildBlock = currentChildBlock.add(1);
+        currentChildBlock = currentChildBlock + 1;
 
         SubmitBlock(msg.sender, root);
     }
 
-    function getBlock(uint256 blocknum)
+    function getBlock(uint64 blocknum)
         public
         view
         returns (bytes32, uint256)
@@ -88,7 +87,7 @@ contract Plasma {
             created_at: block.timestamp
         });
 
-        currentChildBlock = currentChildBlock.add(1);
+        currentChildBlock = currentChildBlock + 1;
 
         Deposit(msg.sender, msg.value);
     }
@@ -106,11 +105,11 @@ contract Plasma {
     }
 
     function startExit(
-        uint256 blocknum,
-        uint256 txindex,
-        uint256 oindex,
-        bytes txBytes,
-        bytes proof
+        uint64 blocknum,
+        uint32 txindex,
+        uint8  oindex,
+        bytes  txBytes,
+        bytes  proof
     ) public
     {
         RLP.RLPItem memory txItem = txBytes.toRLPItem();
@@ -132,7 +131,6 @@ contract Plasma {
         // are legit from the side chain.
 
         uint256 priority = calcPriority(blocknum, txindex, oindex);
-        lastExitId = priority; // For convenience and debugging.
         exitQueue.add(priority);
         
         exits[priority] = Exit({
@@ -145,13 +143,13 @@ contract Plasma {
             started_at: block.timestamp
         });
 
-        ExitStarted(msg.sender, priority);
+        ExitStarted(msg.sender, uint64(priority));
     }
 
-    function getExit(uint256 exitId)
+    function getExit(uint64 exitId)
         public
         view
-        returns (address, uint256, uint256, uint256, uint256, uint256)
+        returns (address, uint256, uint64, uint32, uint8, uint256)
     {
         Exit memory exit = exits[exitId];
 
@@ -159,11 +157,11 @@ contract Plasma {
     }
 
     function challengeExit(
-        uint256 exitId,
-        uint256 blocknum,
-        uint256 txindex,
-        bytes txBytes,
-        bytes proof
+        uint64 exitId,
+        uint64 blocknum,
+        uint32 txindex,
+        bytes  txBytes,
+        bytes  proof
     ) public
     {
         Exit memory currExit = exits[exitId];
@@ -211,8 +209,8 @@ contract Plasma {
 
     // TODO: move into merkle file.
     function checkProof(
-        uint256 blocknum,
-        uint256 txindex,
+        uint64 blocknum,
+        uint32 txindex,
         bytes txBytes,
         bytes proof
     ) returns (bool)
@@ -275,7 +273,7 @@ contract Plasma {
                     oindex: 0,
                     started_at: 0
                 });
-                FinalizeExit(msg.sender, exitId);
+                FinalizeExit(msg.sender, uint64(exitId));
             }
 
             exitId = exitQueue.pop();
@@ -296,9 +294,9 @@ contract Plasma {
     }
 
     function calcPriority(
-        uint256 blocknum,
-        uint256 txindex,
-        uint256 oindex
+        uint64 blocknum,
+        uint32 txindex,
+        uint8  oindex
     ) constant returns (uint256) {
         // For now always allow the earliest block to be in the front
         // of the queue.  Don't care about 7 day cliff.

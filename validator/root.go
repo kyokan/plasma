@@ -9,14 +9,13 @@ import (
 
 	"encoding/json"
 
+	"context"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-	"github.com/kyokan/plasma/util"
-	"github.com/kyokan/plasma/rpc/pb"
 	"github.com/kyokan/plasma/rpc"
-	"context"
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/kyokan/plasma/rpc/pb"
 )
 
 // clientResponse represents a JSON-RPC response returned to a client.
@@ -47,7 +46,7 @@ func RootNodeListener(ctx context.Context, storage db.PlasmaStorage, ethClient e
 		log.Printf("Looking for block number: %d\n", blockNum)
 
 		response, err := rootClient.GetBlock(ctx, &pb.GetBlockRequest{
-			Number: rpc.SerializeBig(util.NewUint64(blockNum)),
+			Number: blockNum,
 		})
 		if err != nil {
 			log.Println("caught error getting block", err)
@@ -59,7 +58,7 @@ func RootNodeListener(ctx context.Context, storage db.PlasmaStorage, ethClient e
 			plasmaBlock := rpc.DeserializeBlock(response.Block)
 
 			// Block number for the contract is off by one
-			contractBlock, err := ethClient.Block(util.NewUint64(blockNum))
+			contractBlock, err := ethClient.Block(blockNum)
 			if err != nil {
 				log.Println("caught error getting block", err)
 			}
@@ -106,7 +105,7 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 	type UTXO struct {
 		BlkNum    uint64
 		TxIdx     uint32
-		OutputIdx int
+		OutputIdx uint8
 	}
 
 	utxosByBlock := make(map[uint64][]UTXO)
@@ -135,7 +134,7 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 				UTXO{
 					tx.BlkNum,
 					tx.TxIdx,
-					outputIdx,
+					uint8(outputIdx),
 				},
 			)
 		}
@@ -145,7 +144,7 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 
 	for blkNum, utxos := range utxosByBlock {
 		res2, err := rootClient.GetBlock(ctx, &pb.GetBlockRequest{
-			Number: rpc.SerializeBig(util.NewUint64(blkNum)),
+			Number: blkNum,
 		})
 		if err != nil {
 			return err
@@ -157,9 +156,9 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 			ethClient.StartExit(&eth.StartExitOpts{
 				Block:    rpc.DeserializeBlock(res2.Block),
 				Txs:      rpc.DeserializeTxs(res2.Transactions),
-				BlockNum: util.NewUint64(utxo.BlkNum),
-				TxIndex:  uint(utxo.TxIdx),
-				OutIndex: uint(utxo.OutputIdx),
+				BlockNum: utxo.BlkNum,
+				TxIndex:  utxo.TxIdx,
+				OutIndex: utxo.OutputIdx,
 			})
 
 			time.Sleep(3 * time.Second)

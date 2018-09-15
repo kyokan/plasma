@@ -1,10 +1,8 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/kyokan/plasma/cli"
-	"math/big"
-	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 var blockCmd = &cobra.Command{
@@ -15,17 +13,12 @@ var blockCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		blockNum, err := cmd.Flags().GetString(FlagBlockNum)
+		blockNum, err := cmd.Flags().GetUint64(FlagBlockNum)
 		if err != nil {
 			return err
 		}
 
-		blockNumBig, ok := new(big.Int).SetString(blockNum, 10)
-		if !ok {
-			return errors.New("invalid block number")
-		}
-
-		return cli.Block(rootHost, blockNumBig)
+		return cli.Block(rootHost, blockNum)
 	},
 }
 
