@@ -19,7 +19,7 @@ echo "Starting Ganache..."
 
 (
     cd $DIR/../contracts
-    prefix_cmd 'ganache' ${cyan} "ganache-cli -m 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat' -p 9545 --log --verbose-rpc --network ${NETWORK}"
+    prefix_cmd 'ganache' ${cyan} "ganache-cli -m 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat' -p 9545 --deterministic --verbose-rpc --networkId ${NETWORK} --db ../test/storage/ganache"
 ) &
 
 sleep 2
@@ -33,7 +33,16 @@ echo "Starting Plasma..."
 
 (
     cd $DIR/..
-    prefix_cmd 'plasma' ${green} "${GOPATH}/bin/plasma --config ./local-config.yaml start"
+    prefix_cmd 'plasma' ${green} "./build/plasma --config $DIR/../test/test-config.yaml start-root"
 ) &
+
+sleep 3
+
+echo "Running tests..."
+
+(
+    cd $DIR/../rpc-test-client
+    prefix_cmd 'test' ${yellow} "./node_modules/.bin/mocha  -g 'should load client'"
+)
 
 wait
