@@ -1,7 +1,7 @@
 
-let plasma = require('../index');
-let _ = require('lodash');
-let BigNumber = require('bignumber.js');
+const plasma = require('../index');
+const _ = require('lodash');
+const BigNumber = require('bignumber.js');
 
 
 it('should load client', (done) => {

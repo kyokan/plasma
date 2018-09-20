@@ -9,10 +9,8 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/eth"
 	"context"
-	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/config"
 	"crypto/ecdsa"
-	"path"
 	"google.golang.org/grpc"
 	"github.com/kyokan/plasma/rpc/pb"
 	"github.com/kyokan/plasma/rpc"
@@ -25,29 +23,17 @@ import (
 	"strconv"
 )
 
-func initHandler(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, pCtx context.Context) (context.CancelFunc, eth.Client, db.PlasmaStorage, error) {
-	ctx, cancel := context.WithCancel(pCtx)
+func initHandler(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, pCtx context.Context) (eth.Client, error) {
 	client, err := eth.NewClient(config.NodeURL, config.ContractAddr, privateKey)
 	if err != nil {
-		return cancel, nil, nil, err
+		return nil, err
 	}
 
-	ldb, storage, err := db.CreateStorage(path.Join(config.DBPath, "root"), client)
-	if err != nil {
-		return cancel, nil, nil, err
-	}
-
-	go func() {
-		<-ctx.Done()
-		ldb.Close()
-	}()
-
-	return cancel, client, storage, nil
+	return client, nil
 }
 
 func Finalize(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
-	cancel, client, _, err := initHandler(config, privateKey, context.Background())
-	defer cancel()
+	client, err := initHandler(config, privateKey, context.Background())
 	if err != nil {
 		return err
 	}
@@ -57,8 +43,7 @@ func Finalize(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 
 func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost string, blockNum uint64, txIndex uint32, oIndex uint8) error {
 	ctx := context.Background()
-	cancel, client, _, err := initHandler(config, privateKey, ctx)
-	defer cancel()
+	client, err := initHandler(config, privateKey, ctx)
 	if err != nil {
 		return err
 	}
@@ -93,8 +78,7 @@ func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost st
 
 func Deposit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, amount *big.Int) error {
 	ctx := context.Background()
-	cancel, client, _, err := initHandler(config, privateKey, ctx)
-	defer cancel()
+	client, err := initHandler(config, privateKey, ctx)
 	if err != nil {
 		return err
 	}

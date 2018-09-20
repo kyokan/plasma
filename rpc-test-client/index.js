@@ -1,7 +1,8 @@
-
-let protoLoader = require('@grpc/proto-loader');
-let grpc = require('grpc');
-let _ = require('lodash');
+const async = require('async');
+const protoLoader = require('@grpc/proto-loader');
+const grpc = require('grpc');
+const _ = require('lodash');
+const ejs = require('ethereumjs-util');
 
 class PlasmaClient {
     constructor(protoFile, url) {
@@ -62,6 +63,131 @@ class PlasmaClient {
     }
 }
 
-module.exports = {
-    PlasmaClient: PlasmaClient
+class Account {
+    constructor(client, web3, contract, address, key) {
+        this.client = client;
+        this.web3 = web3;
+        this.contract = contract;
+        this.key = new Buffer.from(key, 'hex');
+        this.address = address;
+
+    }
+
+    GetBalance(cb) {
+        this.client.GetBalance(this.address, cb);
+    }
+
+    GetBlock(number, cb) {
+        this.contract.methods.getBlock(number).call(cb);
+    }
+
+    Deposit(amount, cb) {
+        let self = this;
+        async.parallel([
+            (asyncCB) => {
+                self.web3.eth.estimateGas({ from: self.address }, asyncCB);
+            },
+            (asyncCB) => {
+                self.web3.eth.getGasPrice(asyncCB);
+            },
+            (asyncCB) => {
+                self.web3.eth.getTransactionCount(self.address, asyncCB)
+            }
+        ], (err, results) => {
+            if (err != null) {
+                return cb(err, null);
+            }
+
+            let tx = new Transaction(
+                null, // input0
+                null, // input1
+                {NewOwner: self.address, Amount: amount}, //output0
+                null, // output1
+                0); // fee
+            const rlpEncoded = tx.RLPEncode();
+            let nonce = results[2];
+            // Retrying as sometimes the call fails with invalid RPC response error
+            let depositFn = function (callback) {
+                let params = {
+                    nonce:    self.web3.utils.toHex(nonce),
+                    chainId:  15,
+                    to:       self.contract.options.address,
+                    value:    amount,
+                    gasPrice: self.web3.utils.toHex(results[1]),
+                    gas:      self.web3.utils.toHex(2 * results[0]), // just to be safe
+                    from:     self.address
+                };
+                self.contract.methods.deposit(rlpEncoded).send(params, (error, receipt) => {
+                    if (error != null) {
+                        if (error.message !== 'Invalid JSON RPC response') {
+                            nonce++;
+                        }
+                    }
+                    callback(error, receipt);
+                });
+            };
+            async.retry({times: 3}, depositFn, (error, receipt) => {
+                return cb(error, receipt);
+            });
+        });
+    }
 }
+
+class Transaction {
+    constructor(input0, input1, output0, output1, fee) {
+        if (!_.isEmpty(input0)) {
+            this.BlkNum0 = input0.BlkNum;
+            this.TxIdx0  = input0.TxIdx;
+            this.OutIdx0 = input0.OutIdx;
+            this.Sig0    = input0.Sig;
+        } else {
+            this.BlkNum0 = '';
+            this.TxIdx0  = '';
+            this.OutIdx0 = '';
+            this.Sig0    = '';
+        }
+        if (!_.isEmpty(input1)) {
+            this.BlkNum1 = input1.BlkNum;
+            this.TxIdx1  = input1.TxIdx;
+            this.OutIdx1 = input1.OutIdx;
+            this.Sig1    = input1.Sig;
+        } else {
+            this.BlkNum1 = '';
+            this.TxIdx1  = '';
+            this.OutIdx1 = '';
+            this.Sig1    = '';
+        }
+        if (!_.isEmpty(output0)) {
+            this.NewOwner0 = output0.NewOwner;
+            this.Amount0   = output0.Amount;
+        } else {
+            this.NewOwner0 = Buffer.from(new Uint8Array(20));
+            this.Amount0   = '';
+        }
+        if (!_.isEmpty(output1)) {
+            this.NewOwner1 = output1.NewOwner;
+            this.Amount1   = output1.Amount;
+        }else {
+            this.NewOwner1 = Buffer.from(new Uint8Array(20));
+            this.Amount1   = '';
+        }
+        this.Fee = '';
+    }
+
+    RLPEncode() {
+        const a = [
+                this.BlkNum0, this.TxIdx0, this.OutIdx0, this.Sig0,
+                this.BlkNum1, this.TxIdx1, this.OutIdx1, this.Sig1,
+                this.NewOwner0, this.Amount0,
+                this.NewOwner1, this.Amount1,
+                this.Fee
+            ];
+        return ejs.rlp.encode(a);
+    }
+}
+
+module.exports = {
+    Account: Account,
+    PlasmaClient: PlasmaClient,
+    Transaction: Transaction
+};
