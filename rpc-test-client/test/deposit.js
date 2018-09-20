@@ -21,19 +21,6 @@ before(async () => {
 });
 
 describe('Deposit', () => {
-
-    it('checks contract address', async () => {
-        accounts = _.mapValues(await web3.eth.getAccounts(), _.method('toLowerCase'));
-        expect(accounts[0]).to.equal(accountAddress);
-    });
-
-    it('gets the contract genesis block', async() => {
-        let account = new plasma.Account(client, web3, contract, accountAddress, accountKey);
-        account.GetBlock(1, (err, result) => {
-            expect(err).to.equal(null);
-        });
-    });
-
     it('deposits funds from first account', function (done) {
         let account = new plasma.Account(client, web3, contract, accountAddress, accountKey);
         const amount = web3.utils.toBN(web3.utils.toWei('1', 'ether'));
