@@ -2,7 +2,6 @@ const W3 = require("web3");
 const plasma = require('../index');
 const _ = require('lodash');
 const expect = require('chai').expect;
-const BigNumber = require('bignumber.js');
 
 const plasmaJson = require('../../contracts/build/contracts/Plasma');
 const contractItf = plasmaJson['abi'];
@@ -42,22 +41,13 @@ describe('Setup', () => {
             return done(err)
         }
         // Get balance for non-existent account (should return zero.)
-        client.GetBalance('0x0000000000000000000000000000000000000000', function(err, result) {
+        client.GetBalance(web3.utils.hexToBytes('0x0000000000000000000000000000000000000000'), function(err, result) {
             if (err !== null) {
                 console.log('Error getting the balance');
                 return done(err);
             }
-            let chars = "";
-            let buffer = result.balance.values;
-            for (let i = 0; i < buffer.length; i++) {
-                let v = buffer[i];
-                chars = chars.concat(v.toString(16).padStart(2, 0));
-            }
-            if (_.isEmpty(chars)) {
-                chars = chars.concat("0");
-            }
-            let balance = new BigNumber(chars, 16);
-            let zero = new BigNumber("0");
+            let balance = plasma.toBN(result.balance.values);
+            let zero = web3.utils.toBN("0");
             if (!balance.eq(zero)) {
                 return done(new Error(`Expected zero balance, got ${balance}`));
             }

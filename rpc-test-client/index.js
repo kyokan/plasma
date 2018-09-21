@@ -3,6 +3,7 @@ const protoLoader = require('@grpc/proto-loader');
 const grpc = require('grpc');
 const _ = require('lodash');
 const ejs = require('ethereumjs-util');
+const web3 = require('web3');
 
 class PlasmaClient {
     constructor(protoFile, url) {
@@ -68,13 +69,18 @@ class Account {
         this.client = client;
         this.web3 = web3;
         this.contract = contract;
-        this.key = new Buffer.from(key, 'hex');
         this.address = address;
 
     }
 
-    GetBalance(cb) {
-        this.client.GetBalance(this.address, cb);
+    GetPlasmaBalance(cb) {
+        this.client.GetBalance(this.web3.utils.hexToBytes(this.address), (err, result) => {
+            if (err !== null) {
+                return cb(err);
+            }
+            const balance = toBN(result.balance.values);
+            return cb(null, balance);
+        });
     }
 
     GetBlock(number, cb) {
@@ -186,8 +192,22 @@ class Transaction {
     }
 }
 
+function toBN(buffer) {
+    if (buffer.length == 0) {
+        return web3.utils.toBN("0");
+    }
+    let chars = [];
+    for (let i = 0; i < buffer.length; i++) {
+        let v = buffer[i];
+        chars = chars.concat(v.toString(16).padStart(2, 0));
+    }
+    const s = web3.utils.bytesToHex(buffer);
+    return web3.utils.toBN(s);
+}
+
 module.exports = {
     Account: Account,
     PlasmaClient: PlasmaClient,
-    Transaction: Transaction
+    Transaction: Transaction,
+    toBN: toBN
 };

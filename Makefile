@@ -24,6 +24,9 @@ build-all: abigen build
 start: deps build
 	@./bin/start
 
+setup: deps build
+	@./bin/setup
+
 clean:
 	$(MAKE) -C ./contracts clean
 	rm -rf ~/.plasma
