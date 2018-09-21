@@ -82,6 +82,15 @@ class Account {
             return cb(null, balance);
         });
     }
+    GetPlasmaUTXOs(cb) {
+        this.client.GetUTXOs(this.web3.utils.hexToBytes(this.address), (err, utxos) => {
+            cb(err, utxos);
+        });
+    }
+
+    GetPlasmaBlock(number, cb) {
+        this.client.GetBlock(number, cb);
+    }
 
     GetBlock(number, cb) {
         this.contract.methods.getBlock(number).call(cb);
@@ -136,6 +145,11 @@ class Account {
                 return cb(error, receipt);
             });
         });
+    }
+
+    Send(to, amount, cb) {
+        let self = this;
+
     }
 }
 
