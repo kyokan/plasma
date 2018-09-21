@@ -1,0 +1,24 @@
+{
+  "name": "plasma-test-client",
+  "version": "0.0.1",
+  "description": "Test client for interacting with the Plasma node through gRPC.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "Kyokan",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.3.0",
+    "@types/google-protobuf": "^3.2.7",
+    "async": "^2.6.1",
+    "chai": "^4.1.2",
+    "ethereumjs-util": "^5.2.0",
+    "google-protobuf": "^3.6.1",
+    "grpc": "^1.15.0",
+    "lodash": "^4.17.11",
+    "web3": "^1.0.0-beta.36"
+  },
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  }
+}

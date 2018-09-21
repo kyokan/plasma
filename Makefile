@@ -1,5 +1,6 @@
 deps:
 	@$(MAKE) -C ./contracts deps
+	@$(MAKE) -C ./rpc-test-client deps
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
@@ -20,12 +21,17 @@ protogen:
 
 build-all: abigen build
 
-start: build
+start: deps build
 	@./bin/start
+
+setup: deps build
+	@./bin/setup
 
 clean:
 	$(MAKE) -C ./contracts clean
 	rm -rf ~/.plasma
+	rm -r ./test/storage/ganache/*
+	rm -rf ./test/storage/root
 
 test:
 	@go test ./...

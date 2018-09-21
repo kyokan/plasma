@@ -29,20 +29,4 @@ echo "Migrating..."
 cd $DIR/../contracts
 prefix_cmd 'migrate' ${pink} 'truffle migrate --reset'
 
-echo "Starting Plasma..."
-
-(
-    cd $DIR/..
-    prefix_cmd 'plasma' ${green} "./build/plasma --config $DIR/../test/test-config.yaml start-root"
-) &
-
-sleep 3
-
-echo "Running tests..."
-
-(
-    cd $DIR/../rpc-test-client
-    prefix_cmd 'test' ${yellow} "./node_modules/.bin/mocha  -g 'should load client'"
-)
-
 wait

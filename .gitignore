@@ -3,8 +3,10 @@
 vendor
 contracts/build
 contracts/node_modules
+rpc-test-client/node-modules
+rpc-test-client/package-lock.json
 package-lock.json
 .DS_Store
-*.yaml
+./*.yaml
 database*
 build/
