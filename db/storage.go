@@ -25,7 +25,7 @@ type PlasmaStorage interface {
 
     isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error)
     StoreTransaction(tx chain.Transaction) error
-    ProcessDeposit(tx chain.Transaction) (prev, deposit *util.MerkleTree, err error)
+    ProcessDeposits(<-chan eth.DepositEvent) ()
     FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
     FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error)
 
@@ -95,7 +95,7 @@ func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
         }
     } else {
         result.PrevBlockHash = lastBlock.BlockHash
-        result.CurrentBlock  = 1 + lastBlock.Header.Number
+        result.CurrentBlock  = 1000 + lastBlock.Header.Number
     }
 
     return &result
@@ -188,6 +188,70 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) er
     return nil
 }
 
+func (ps *Storage) ProcessDeposits(ch <-chan eth.DepositEvent) {
+	go func() {
+		for {
+			deposit := <-ch
+
+			tx := chain.Transaction{
+				Input0: chain.ZeroInput(),
+				Input1: chain.ZeroInput(),
+				Output0: &chain.Output{
+					NewOwner: deposit.Sender,
+					Amount:   deposit.Value,
+				},
+				Output1: chain.ZeroOutput(),
+				Fee:     big.NewInt(0),
+			}
+			err := ps.doStoreDepositTransaction(tx, deposit.Height.Uint64(), noopLock{})
+			if err != nil {
+				log.Panic(err)
+			}
+			err = ps.doPackageDepositBlock(deposit.Height.Uint64(), tx, noopLock{})
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+	}()
+}
+
+func (ps *Storage) doStoreDepositTransaction(tx chain.Transaction, depositBlkn uint64,  lock sync.Locker) error {
+    tx.TxIdx = 0
+    tx.BlkNum = depositBlkn
+
+
+    txEnc, err := rlp.EncodeToBytes(&tx)
+
+    if err != nil {
+        return err
+    }
+
+    hash := tx.Hash()
+    hexHash := common.ToHex(hash)
+    hashKey := txPrefixKey("hash", hexHash)
+
+    batch := new(leveldb.Batch)
+    batch.Put(hashKey, txEnc)
+    batch.Put(blkNumHashkey(tx.BlkNum, hexHash), txEnc)
+    batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), txEnc)
+
+    empty := []byte{}
+
+
+    // Recording earns
+    if tx.Output0.IsZeroOutput() == false {
+        output := tx.OutputAt(0)
+        batch.Put(earn(&output.NewOwner, tx, 0), empty)
+    }
+    if tx.Output1.IsZeroOutput() == false {
+        output := tx.OutputAt(1)
+        batch.Put(earn(&output.NewOwner, tx, 1), empty)
+    }
+
+    batch.Replay(ps)
+    return nil
+}
+
 func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.MerkleTree, error) {
     // Lock for writing
     locker.Lock()
@@ -202,7 +266,7 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.Merk
     // The batch will act as in-memory buffer
     batch := new(leveldb.Batch)
     blkNum := ps.CurrentBlock
-    ps.CurrentBlock = blkNum + 1
+    ps.CurrentBlock = blkNum + 1000
     transactions := ps.Transactions[0:ps.CurrentTxIdx]
     ps.CurrentTxIdx = 0
     ps.Transactions = make([]chain.Transaction, blockSize)
@@ -247,13 +311,66 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.Merk
     batch.Put(blockPrefixKey(latestKey), key)
     batch.Put(blockNumKey(block.Header.Number), key)
 
-    memIter := ps.MemoryDB.NewIterator(nil)
-    for memIter.Next() {
-        batch.Put(memIter.Key(), memIter.Value())
-    }
-    ps.MemoryDB.Reset()
+
     locker.Unlock()
     return &rlpMerkle, ps.DB.Write(batch, nil)
+}
+
+func (ps *Storage) doPackageDepositBlock(blkNum uint64, tx chain.Transaction, locker sync.Locker) ( error) {
+	// Lock for writing
+	locker.Lock()
+
+	// The batch will act as in-memory buffer
+	batch := new(leveldb.Batch)
+	transactions := make([]chain.Transaction, 1)
+	transactions = append(transactions, tx)
+
+	hashables := make([]util.Hashable, 0, len(transactions))
+
+	for _, tx := range transactions {
+		hashables = append(hashables, &tx)
+	}
+
+	merkle := util.TreeFromItems(hashables)
+
+	rlpMerkle := rlpMerkleTree(transactions)
+
+	header := chain.BlockHeader{
+		MerkleRoot:    merkle.Root.Hash,
+		RLPMerkleRoot: rlpMerkle.Root.Hash,
+		PrevHash:      ps.PrevBlockHash,
+		Number:        blkNum,
+	}
+
+	block := chain.Block{
+		Header:    &header,
+		BlockHash: header.Hash(),
+	}
+
+	enc, err := rlp.EncodeToBytes(merkle.Root)
+	if err != nil {
+		locker.Unlock()
+		return  err
+	}
+	batch.Put(merklePrefixKey(common.ToHex(merkle.Root.Hash)), enc)
+
+	enc, err = rlp.EncodeToBytes(block)
+	if err != nil {
+		locker.Unlock()
+		return  err
+	}
+	key := blockPrefixKey(common.ToHex(block.BlockHash))
+	batch.Put(key, enc)
+	batch.Put(blockPrefixKey(latestKey), key)
+	batch.Put(blockNumKey(block.Header.Number), key)
+
+	memIter := ps.MemoryDB.NewIterator(nil)
+	for memIter.Next() {
+		batch.Put(memIter.Key(), memIter.Value())
+	}
+	ps.MemoryDB.Reset()
+	locker.Unlock()
+	return  ps.DB.Write(batch, nil)
 }
 
 // TODO: return array for previous transactions
@@ -316,18 +433,7 @@ func (ps *Storage) StoreTransaction(tx chain.Transaction) error {
     return ps.doStoreTransaction(tx, ps.RLocker())
 }
 
-func (ps *Storage) ProcessDeposit(tx chain.Transaction) (prev, deposit *util.MerkleTree, err error) {
-    ps.Lock()
-    defer ps.Unlock()
 
-    prevBlk, err := ps.doPackageBlock(ps.CurrentBlock, noopLock{})
-    if err != nil {
-        return nil, nil, err
-    }
-    ps.doStoreTransaction(tx, noopLock{})
-    depositBlk, err := ps.doPackageBlock(ps.CurrentBlock, noopLock{})
-    return prevBlk, depositBlk, err
-}
 
 func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
     if blkNum >= ps.CurrentBlock {
@@ -370,6 +476,7 @@ func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transactio
     }
 
     txs := make([]chain.Transaction, len(buffer))
+
     // TODO: Do transactions have to be in index order?
     for _, tx := range buffer {
         txs[tx.TxIdx] = tx

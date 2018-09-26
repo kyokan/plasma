@@ -9,10 +9,9 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
-	"github.com/kyokan/plasma/eth"
-	"github.com/kyokan/plasma/util"
 	"github.com/kyokan/plasma/txdag"
 	"github.com/kyokan/plasma/types"
+	"github.com/kyokan/plasma/util"
 )
 
 type TransactionSink struct {
@@ -87,25 +86,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.Tr
 	}()
 }
 
-func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
-	go func() {
-		for {
-			deposit := <-ch
 
-			tx := chain.Transaction{
-				Input0: chain.ZeroInput(),
-				Input1: chain.ZeroInput(),
-				Output0: &chain.Output{
-					NewOwner: deposit.Sender,
-					Amount:   deposit.Value,
-				},
-				Output1: chain.ZeroOutput(),
-				Fee:     big.NewInt(0),
-			}
-			sink.c <- tx
-		}
-	}()
-}
 
 func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, error) {
 	inputTx1, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Input0.BlkNum, tx.Input0.TxIdx)

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/kyokan/plasma/cli"
 	"github.com/spf13/cobra"
 )
@@ -13,6 +14,7 @@ var blockCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		fmt.Print(rootHost)
 		blockNum, err := cmd.Flags().GetUint64(FlagBlockNum)
 		if err != nil {
 			return err
@@ -25,7 +27,7 @@ var blockCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(blockCmd)
 	blockCmd.Flags().String(FlagRootHost, "", "hostname and port of the root node")
-	blockCmd.Flags().String(FlagBlockNum, "", "the block number to show")
+	blockCmd.Flags().Uint64(FlagBlockNum,  10000, "the block number to show")
 	blockCmd.MarkFlagRequired(FlagRootHost)
 	blockCmd.MarkFlagRequired(FlagBlockNum)
 }

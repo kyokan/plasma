@@ -79,7 +79,7 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Print(block.Header.Number)
 	txs, err := r.storage.FindTransactionsByBlockNum(block.Header.Number)
 	if err != nil {
 		return nil, err

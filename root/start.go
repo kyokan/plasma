@@ -32,7 +32,7 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	p := node.NewPlasmaNode(storage, sink, plasma)
 	go p.Start()
 	// TODO: ensure that 1 deposit tx is always 1 block
-	go node.StartDepositListener(storage, sink, plasma)
+	go node.StartDepositListener(storage, plasma)
 
 	server := NewServer(ctx, storage, sink)
 	go server.Start(config.RPCPort)

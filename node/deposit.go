@@ -8,9 +8,10 @@ import (
 	"github.com/kyokan/plasma/eth"
 )
 
-func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasma eth.Client) {
+func StartDepositListener(storage db.PlasmaStorage,  plasma eth.Client) {
 	ch := make(chan eth.DepositEvent)
-	sink.AcceptDepositEvents(ch)
+	storage.ProcessDeposits(ch)
+
 
 	for {
 		lastPolledIdx, err := storage.LastDepositEventIdx()
@@ -37,9 +38,10 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 				ch <- eth.DepositEvent{
 					Sender: event.Sender,
 					Value:  event.Value,
+					Height: event.Height,
 				}
-
 				count++
+				log.Printf("New deposit with block height %d\n", event.Height)
 
 				// TODO: AcceptDepositEvents is not synchronized so sleeps are required.
 				time.Sleep(time.Second * 3)

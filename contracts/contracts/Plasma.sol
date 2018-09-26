@@ -11,7 +11,7 @@ contract Plasma {
     using RLP for RLP.RLPItem;
     using RLP for RLP.Iterator;
 
-    event Deposit(address sender, uint value);
+    event Deposit(address sender, uint value, uint height);
     event SubmitBlock(address sender, bytes32 root);
     event ExitStarted(address sender, uint64 exitId);
     event ChallengeSuccess(address sender, uint64 exitId);
@@ -29,6 +29,7 @@ contract Plasma {
     uint64 public currentChildBlock;
     PriorityQueue public exitQueue;
     uint256 public lastFinalizedTime;
+    uint64 public depositBlockCount;
 
     struct ChildBlock {
         bytes32 root;
@@ -47,6 +48,7 @@ contract Plasma {
     constructor() {
         authority = msg.sender;
         currentChildBlock = 1;
+        depositBlockCount = 1;
         lastFinalizedTime = block.timestamp;
         exitQueue = new PriorityQueue();
     }
@@ -57,7 +59,7 @@ contract Plasma {
             root: root,
             created_at: block.timestamp
         });
-        currentChildBlock = currentChildBlock + 1;
+        currentChildBlock = currentChildBlock + 1000;
 
         SubmitBlock(msg.sender, root);
     }
@@ -72,6 +74,7 @@ contract Plasma {
     }
 
     function deposit(bytes txBytes) public payable {
+        require(depositBlockCount < 1000);
         RLP.RLPItem memory txItem = txBytes.toRLPItem();
         RLP.RLPItem[] memory txList = txItem.toList();
 
@@ -82,14 +85,15 @@ contract Plasma {
 
         bytes32 root = createSimpleMerkleRoot(txBytes);
 
-        childChain[currentChildBlock] = ChildBlock({
+        childChain[currentChildBlock+depositBlockCount] = ChildBlock({
             root: root,
             created_at: block.timestamp
         });
 
-        currentChildBlock = currentChildBlock + 1;
+        Deposit(msg.sender, msg.value, currentChildBlock+depositBlockCount);
 
-        Deposit(msg.sender, msg.value);
+        depositBlockCount = depositBlockCount + 1;
+
     }
 
     function createSimpleMerkleRoot(bytes txBytes) returns (bytes32) {
@@ -300,6 +304,16 @@ contract Plasma {
     ) constant returns (uint256) {
         // For now always allow the earliest block to be in the front
         // of the queue.  Don't care about 7 day cliff.
-        return blocknum * 1000000000 + txindex * 10000 + oindex;
+
+        // usual priority for non-deposit blocks
+        if( blocknum%1000 == 0){
+            return blocknum * 1000000000 + txindex * 10000 + oindex;
+         }
+        // priority for deposit blocks
+        else{
+             //actually this is only a dummy, priority should be -7 days and not -1 blocknum
+             return (blocknum -1)* 1000000000 + txindex * 10000 + oindex;
+         }
     }
+
 }

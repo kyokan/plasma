@@ -34,20 +34,15 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 	for {
 		select {
 		case tx := <-node.TxSink.c:
-			if tx.IsDeposit() {
-				log.Print("Received deposit transaction. Packaging into block.")
-				tick.Stop()
-				go node.Storage.ProcessDeposit(tx)
-				tick = time.NewTicker(interval)
-			} else {
 				node.Storage.StoreTransaction(tx)
-			}
 		case <-tick.C:
 			go node.packageBlock()
 
 		}
 	}
 }
+
+
 
 func (node PlasmaNode) packageBlock() {
 	rlpMerkle, err := node.Storage.PackageCurrentBlock()

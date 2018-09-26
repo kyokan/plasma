@@ -65,6 +65,7 @@ type Client interface {
 type DepositEvent struct {
 	Sender common.Address
 	Value  *big.Int
+	Height *big.Int
 }
 
 type clientState struct {
