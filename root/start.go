@@ -34,7 +34,7 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	// TODO: ensure that 1 deposit tx is always 1 block
 	go node.StartDepositListener(storage, sink, plasma)
 
-	server := NewServer(ctx, storage, sink)
+	server := NewServer(ctx, storage)
 	go server.Start(config.RPCPort)
 	log.Printf("Started RPC server on port %d", config.RPCPort)
 
