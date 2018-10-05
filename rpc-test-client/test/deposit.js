@@ -23,7 +23,7 @@ before(async () => {
 describe('Deposit (long test)', () => {
     it('deposits funds from first account and checks balance', function (done) {
         let account = new plasma.Account(client, web3, contract, accountAddress, accountKey);
-        const amount = web3.utils.toBN(web3.utils.toWei('1', 'ether'));
+        const amount = web3.utils.toBN(web3.utils.toWei('5', 'ether'));
         account.GetPlasmaBalance((err, initialBalance) => {
             expect(err).to.equal(null);
             if (err != null) {

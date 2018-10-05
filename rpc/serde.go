@@ -56,10 +56,14 @@ func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 		Fee:      SerializeBig(tx.Fee),
 		BlockNum: tx.BlkNum,
 		TxIdx:    tx.TxIdx,
+		RootSig:  tx.RootSig,
 	}
 }
 
 func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
+	if tx == nil {
+		return chain.ZeroTransaction()
+	}
 	return &chain.Transaction{
 		Input0: DeserializeInput(tx.Input0),
 		Sig0: tx.Sig0,
@@ -70,6 +74,7 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 		Fee: DeserializeBig(tx.Fee),
 		BlkNum: tx.BlockNum,
 		TxIdx: tx.TxIdx,
+		RootSig: tx.RootSig,
 	}
 }
 
@@ -82,11 +87,15 @@ func SerializeInput(in *chain.Input) (*pb.Input) {
 }
 
 func DeserializeInput(in *pb.Input) (*chain.Input) {
-	return &chain.Input{
+	result := &chain.Input{
 		BlkNum: in.BlockNum,
 		TxIdx: in.TxIdx,
-		OutIdx: uint8(in.TxIdx),
+		OutIdx: 0,
 	}
+	if in.OutIdx > 0 {
+		result.OutIdx = 1
+	}
+	return result
 }
 
 func SerializeOutput(out *chain.Output) (*pb.Output) {

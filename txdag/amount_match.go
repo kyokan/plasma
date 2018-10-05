@@ -6,7 +6,7 @@ import (
 
     "github.com/ethereum/go-ethereum/common"
     "github.com/pkg/errors"
-        "github.com/kyokan/plasma/chain"
+    "github.com/kyokan/plasma/chain"
 )
 
 type OutputSortHelper struct {

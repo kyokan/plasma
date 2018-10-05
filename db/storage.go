@@ -23,8 +23,7 @@ import (
 
 type PlasmaStorage interface {
 
-    isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error)
-    StoreTransaction(tx chain.Transaction) error
+    StoreTransaction(tx chain.Transaction) (*chain.Transaction, error)
     ProcessDeposit(tx chain.Transaction) (prev, deposit *util.MerkleTree, err error)
     FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
     FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error)
@@ -69,6 +68,7 @@ type Storage struct {
     PrevBlockHash util.Hash
     CurrentTxIdx  uint32
     Transactions  []chain.Transaction
+    client        eth.Client
 }
 
 func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
@@ -79,6 +79,7 @@ func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
         CurrentBlock: 1,
         CurrentTxIdx: 0,
         Transactions: make([]chain.Transaction, blockSize),
+        client: client,
     }
     lastBlock, err := result.LatestBlock()
     if err != nil {
@@ -131,22 +132,27 @@ func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain
     return prevTx, nil
 }
 
-func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) error {
+func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*chain.Transaction, error) {
     prevTxs, err := ps.isTransactionValid(tx)
     if err != nil {
-        return err
+        return nil, err
     }
     lock.Lock()
     tx.TxIdx = atomic.AddUint32(&ps.CurrentTxIdx, 1) - 1
     tx.BlkNum = ps.CurrentBlock
+    ps.Transactions[tx.TxIdx] = tx
     lock.Unlock()
 
-    ps.Transactions[tx.TxIdx] = tx
+    rootSig, signErr := ps.client.SignData(tx.SignatureHash())
+    if signErr != nil {
+        return nil, signErr
+    }
+    tx.RootSig = rootSig
 
     txEnc, err := rlp.EncodeToBytes(&tx)
 
     if err != nil {
-        return err
+        return nil, err
     }
 
     hash := tx.Hash()
@@ -185,7 +191,7 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) er
     }
 
     batch.Replay(ps)
-    return nil
+    return &tx, nil
 }
 
 func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.MerkleTree, error) {
@@ -199,10 +205,10 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.Merk
         locker.Unlock()
         return nil, nil
     }
+    atomic.AddUint64(&ps.CurrentBlock, 1)
+    blkNum := ps.CurrentBlock - 1
     // The batch will act as in-memory buffer
     batch := new(leveldb.Batch)
-    blkNum := ps.CurrentBlock
-    ps.CurrentBlock = blkNum + 1
     transactions := ps.Transactions[0:ps.CurrentTxIdx]
     ps.CurrentTxIdx = 0
     ps.Transactions = make([]chain.Transaction, blockSize)
@@ -256,7 +262,6 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*util.Merk
     return &rlpMerkle, ps.DB.Write(batch, nil)
 }
 
-// TODO: return array for previous transactions
 func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error) {
     if tx.IsDeposit() {
         return []*chain.Transaction{chain.ZeroTransaction()}, nil
@@ -307,12 +312,25 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
             return nil, errors.New(fmt.Sprintf("Input %d was already spent", i))
         }
     }
-    // TODO: Validate amount
-    // TODO: Validate signatures
+
+    totalInput := result[0].OutputAt(tx.Input0.OutIdx).Amount
+    if len(result) > 1 {
+        totalInput = big.NewInt(0).Add(totalInput, result[1].OutputAt(tx.Input1.OutIdx).Amount)
+    }
+
+    totalOutput := big.NewInt(0).Add(tx.Output0.Amount, tx.Fee)
+    if !tx.Output1.IsZeroOutput() {
+        totalOutput = totalOutput.Add(totalOutput, tx.Output1.Amount)
+    }
+
+    if totalInput.Cmp(totalOutput) != 0 {
+        return nil, errors.New("inputs and outputs do not have the same sum")
+    }
+
     return result, nil
 }
 
-func (ps *Storage) StoreTransaction(tx chain.Transaction) error {
+func (ps *Storage) StoreTransaction(tx chain.Transaction) (*chain.Transaction, error) {
     return ps.doStoreTransaction(tx, ps.RLocker())
 }
 
@@ -605,7 +623,7 @@ func (ps *Storage) createGenesisBlock() (*util.MerkleTree, error) {
         Fee:     new(big.Int),
     }
     locker := noopLock{}
-    err := ps.doStoreTransaction(tx, locker)
+    _, err := ps.doStoreTransaction(tx, locker)
     if err != nil {
         return nil, err
     }

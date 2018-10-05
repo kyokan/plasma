@@ -2,29 +2,26 @@ package root
 
 import (
 	"context"
-	"github.com/kyokan/plasma/rpc/pb"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/rpc"
-	"github.com/ethereum/go-ethereum/common"
-	"net"
-	"fmt"
+	"github.com/kyokan/plasma/rpc/pb"
 	"google.golang.org/grpc"
-	"github.com/kyokan/plasma/node"
-	"github.com/kyokan/plasma/types"
 	"log"
+	"net"
 )
 
 type Server struct {
 	storage db.PlasmaStorage
 	ctx     context.Context
-	sink    *node.TransactionSink
 }
 
-func NewServer(ctx context.Context, storage db.PlasmaStorage, sink *node.TransactionSink) (*Server) {
+func NewServer(ctx context.Context, storage db.PlasmaStorage) (*Server) {
 	return &Server{
 		storage: storage,
 		ctx:     ctx,
-		sink:    sink,
 	}
 }
 
@@ -64,7 +61,14 @@ func (r *Server) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb
 
 func (r *Server) GetUTXOs(ctx context.Context, req *pb.GetUTXOsRequest) (*pb.GetUTXOsResponse, error) {
 	addr := common.BytesToAddress(req.Address)
-	txs, err := r.storage.UTXOs(&addr)
+	var txs []chain.Transaction
+	var err error
+	if req.Spendable {
+		txs, err = r.storage.SpendableTxs(&addr)
+	} else {
+		txs, err = r.storage.UTXOs(&addr)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -103,30 +107,12 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	tx := rpc.DeserializeTx(req.Transaction)
-	from := common.BytesToAddress(req.From)
-	to := common.BytesToAddress(req.To)
-	amount := rpc.DeserializeBig(req.Amount)
 
-	txReq := &types.TransactionRequest{
-		Transaction: *tx,
-		From:        from,
-		To:          to,
-		Amount:      amount,
+	signedTx, storeErr := r.storage.StoreTransaction(*tx)
+	if storeErr != nil {
+		return nil, storeErr
 	}
-
-	ch := make(chan types.TransactionRequest)
-	txChan := make(chan chan types.TransactionRequest)
-	r.sink.AcceptTransactionRequests(txChan)
-	txChan <- ch
-	ch <- *txReq
-	res := <-ch
-	close(ch)
-
-	if res.Response.Error != nil {
-		return nil, res.Response.Error
-	}
-
 	return &pb.SendResponse{
-		Transaction: rpc.SerializeTx(res.Response.Transaction),
+		Transaction: rpc.SerializeTx(signedTx),
 	}, nil
 }

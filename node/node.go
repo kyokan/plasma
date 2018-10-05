@@ -40,6 +40,7 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 				go node.Storage.ProcessDeposit(tx)
 				tick = time.NewTicker(interval)
 			} else {
+				//signedTx, err := node.Storage.StoreTransaction(tx)
 				node.Storage.StoreTransaction(tx)
 			}
 		case <-tick.C:
