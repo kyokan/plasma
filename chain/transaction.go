@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-)
+	)
 
 // JSON tags needed for test fixtures
 type Transaction struct {
@@ -25,6 +25,7 @@ type Transaction struct {
 	Fee     *big.Int `json:"Fee"`
 	BlkNum  uint64   `json:"BlkNum"`
 	TxIdx   uint32   `json:"TxIdx"`
+	RootSig []byte   `json:"RootSig"`
 }
 
 type rlpHelper struct {
@@ -41,12 +42,30 @@ type rlpHelper struct {
 	NewOwner1 common.Address
 	Amount1   big.Int
 	Fee       big.Int
+	RootSig   []byte
+}
+
+func ZeroTransaction() *Transaction {
+	return &Transaction{
+		Input0: ZeroInput(),
+		Input1: ZeroInput(),
+		Output0: ZeroOutput(),
+		Output1: ZeroOutput(),
+		Fee: big.NewInt(0),
+	}
 }
 
 func (tx *Transaction) IsDeposit() bool {
 	return tx.Input0.IsZeroInput() &&
 		tx.Input1.IsZeroInput() &&
 		!tx.Output0.IsZeroOutput() &&
+		tx.Output1.IsZeroOutput()
+}
+
+func (tx *Transaction) IsZeroTransaction() bool {
+	return tx.Input0.IsZeroInput() &&
+		tx.Input1.IsZeroInput() &&
+		tx.Output0.IsZeroOutput() &&
 		tx.Output1.IsZeroOutput()
 }
 
@@ -196,6 +215,7 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	if tx.Fee != nil {
 		itf.Fee = *tx.Fee
 	}
+	itf.RootSig = tx.RootSig
 	return rlp.Encode(w, &itf)
 }
 
@@ -212,5 +232,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	tx.Sig0 = itf.Sig0
 	tx.Sig1 = itf.Sig1
 	tx.Fee  = big.NewInt(itf.Fee.Int64())
+	tx.RootSig = itf.RootSig
 	return nil
 }

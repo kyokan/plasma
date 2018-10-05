@@ -3,7 +3,6 @@ package chain
 import (
 	"bytes"
 	"encoding/binary"
-
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/kyokan/plasma/util"
 )
