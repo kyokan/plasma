@@ -86,16 +86,6 @@ class Account {
         });
     }
 
-    GetPlasmaUTXOs(cb) {
-        this.client.GetUTXOs(this.web3.utils.hexToBytes(this.address), (err, utxos) => {
-            cb(err, utxos);
-        });
-    }
-
-    GetPlasmaBlock(number, cb) {
-        this.client.GetBlock(number, cb);
-    }
-
     GetBlock(number, cb) {
         this.contract.methods.getBlock(number).call(cb);
     }
@@ -295,11 +285,6 @@ class Account {
             });
         });
     }
-
-    Send(to, amount, cb) {
-        let self = this;
-
-    }
 }
 
 const transaction_rpc_format = {
@@ -471,12 +456,6 @@ class Output {
             amount: this.amount.toString(10)
         };
     }
-}
-
-
-function hash(input) {
-    const hash = ejs.sha256(input);
-    return hash;
 }
 
 class Transaction {

@@ -21,21 +21,23 @@ before(async () => {
 });
 
 describe('Send', () => {
-    it('sends 1 nano from 0x627306090abab3a6e1400e9345bc60c78a8bef57 to 0xf17f52151ebef6c7334fad080c5704d77216b732', function () {
+    it('sends 1 nano from 0x627306090abab3a6e1400e9345bc60c78a8bef57 to 0xf17f52151ebef6c7334fad080c5704d77216b732', function (done) {
         let account = new plasma.Account(client, web3, contract, accountAddress, accountKey);
         const amount = web3.utils.toBN(web3.utils.toWei('1', 'nano'));
         account.Send('0xf17f52151ebef6c7334fad080c5704d77216b732', amount, (err, transaction) => {
             expect(err).to.equal(null);
             expect(transaction.output0.amount.eq(amount)).to.equal(true);
+            done();
         });
     });
 
-    it('sends 1 ether from 0x627306090abab3a6e1400e9345bc60c78a8bef57 to 0xf17f52151ebef6c7334fad080c5704d77216b732', function () {
+    it('sends 1 ether from 0x627306090abab3a6e1400e9345bc60c78a8bef57 to 0xf17f52151ebef6c7334fad080c5704d77216b732', function (done) {
         let account = new plasma.Account(client, web3, contract, accountAddress, accountKey);
         const amount = web3.utils.toBN(web3.utils.toWei('1', 'ether'));
         account.Send('0xf17f52151ebef6c7334fad080c5704d77216b732', amount, (err, transaction) => {
             expect(err).to.equal(null);
             expect(transaction.output0.amount.eq(amount)).to.equal(true);
+            done();
         });
     });
 
