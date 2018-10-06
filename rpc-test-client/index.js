@@ -85,6 +85,7 @@ class Account {
             return cb(null, balance);
         });
     }
+
     GetPlasmaUTXOs(cb) {
         this.client.GetUTXOs(this.web3.utils.hexToBytes(this.address), (err, utxos) => {
             cb(err, utxos);
@@ -472,175 +473,10 @@ class Output {
     }
 }
 
-const transaction_rpc_format = {
-    "input0": {
-        "blockNum": "0",
-        "txIdx": 0,
-        "outIdx": 0
-    },
-    "sig0": {
-        "type": "Buffer",
-        "data": []
-    },
-    "input1": {
-        "blockNum": "0",
-        "txIdx": 0,
-        "outIdx": 0
-    },
-    "sig1": {
-        "type": "Buffer",
-        "data": []
-    },
-    "output0": {
-        "newOwner": {
-            "type": "Buffer",
-            "data": [98, 115, 6, 9, 10, 186, 179, 166, 225, 64, 14, 147, 69, 188, 96, 199, 138, 139, 239, 87
-            ]
-        },
-        "amount": {
-            "values": {
-                "type": "Buffer",
-                "data": [13, 224, 182, 179, 167, 100, 0, 0
-                ]
-            }
-        }
-    },
-    "output1": {
-        "newOwner": {
-            "type": "Buffer",
-            "data": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-            ]
-        },
-        "amount": {
-            "values": {
-                "type": "Buffer",
-                "data": []
-            }
-        }
-    },
-    "fee": {
-        "values": {
-            "type": "Buffer",
-            "data": []
-        }
-    },
-    "BlockNum": "2",
-    "TxIdx": 0,
-    "RootSig": {
-        "type": "Buffer",
-        "data": [157, 128, 191, 87, 94, 141, 243, 153, 49, 4, 199, 92, 215, 150, 160, 77, 11, 42, 191, 208, 85,
-            237, 63, 238, 251, 81, 253, 181, 230, 50, 219, 101, 51, 220, 32, 238, 167, 76, 151, 136, 23, 254, 209,
-            116, 188, 222, 128, 58, 51, 188, 212, 185, 230, 233, 213, 10, 110, 118, 43, 22, 179, 44, 97, 232, 1
-        ]
-    }
-};
-transaction_rpc_format;
 
 function hash(input) {
     const hash = ejs.sha256(input);
     return hash;
-}
-
-class Input {
-    zero() {
-        this.blockNum = "0";
-        this.txIdx    =  0;
-        this.outIdx   =  0;
-    }
-
-    constructor (...args) {
-        this.zero();
-        if (args.length == 0) {
-            return;
-        }
-        if (args.length == 1) {
-            const other = args[0];
-            if (_.isEmpty(other)) {
-                return;
-            }
-            this.blockNum = other.blockNum;
-            this.txIdx    = other.txIdx;
-            this.outIdx   = other.outIdx;
-            return;
-        }
-        if (args.length == 3) {
-            this.blockNum = args[0];
-            this.txIdx    = args[1];
-            this.outIdx   = args[2];
-            return;
-        }
-        throw new Error("Invalid number of arguments for constructing Input instance");
-    }
-
-    Hash() {
-        const blockNumBuf = ejs.toBuffer(this.blockNum);
-        const txIdxBuf    = ejs.toBuffer(this.txIdx);
-        const outIdxBuf   = ejs.toBuffer(this.outIdx);
-        const buf = Buffer.concat([blockNumBuf, txIdxBuf, outIdxBuf], blockNumBuf.length + txIdxBuf.length + outIdxBuf.length);
-        return hash(buf);
-    }
-
-    toRpc() {
-        return this;
-    }
-
-    toString() {
-        return this;
-    }
-
-}
-
-class Output {
-    zero() {
-        this.newOwner = Buffer.from(new Uint8Array(20));
-        this.amount   = Buffer.from(new Uint8Array(0));
-    }
-
-    constructor(...args) {
-        this.zero();
-        if (args.length == 0) {
-            return;
-        }
-        if (args.length == 1) {
-            const other = args[0];
-            if (_.isEmpty(other)) {
-                return;
-            }
-            this.newOwner = other.newOwner;
-            this.amount   = toBN(other.amount);
-
-            return;
-        }
-        if (args.length == 2) {
-            this.newOwner = args[0];
-            this.amount   = args[1];
-            return;
-        }
-        throw new Error("Invalid number of arguments for constructing Output instance");
-    }
-
-    Hash() {
-        const newOwnerBuf = ejs.toBuffer(this.newOwner);
-        const amountBuf   = ejs.toBuffer(this.amount);
-        const buf = Buffer.concat([newOwnerBuf, amountBuf], newOwnerBuf.length + amountBuf.length);
-        return hash(buf);
-    }
-
-    toRpc() {
-        return {
-            newOwner: ejs.toBuffer(this.newOwner),
-            amount: {
-                values: this.amount.toBuffer('be', this.amount.byteLength())
-            }
-        };
-    }
-
-    toString() {
-        return {
-            newOwner: this.newOwner,
-            amount: this.amount.toString(10)
-        };
-    }
 }
 
 class Transaction {
