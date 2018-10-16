@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/kyokan/plasma/txdag"
 	"math/big"
 	"time"
 
@@ -176,6 +178,49 @@ func UTXOs(rootHost string, address common.Address) error {
 	txs := rpc.DeserializeTxs(res.Transactions)
 	table := txsTable(txs)
 	table.Render()
+	return nil
+}
+
+func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address, amount *big.Int) error {
+	ctx := context.Background()
+	conn, err := grpc.Dial(rootHost, grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	rc := pb.NewRootClient(conn)
+
+	utxoResponse, err := rc.GetUTXOs(ctx, &pb.GetUTXOsRequest{Address: from.Bytes()})
+	if err != nil {
+		return err
+	}
+	utxos := rpc.DeserializeTxs(utxoResponse.Transactions)
+	tx, err := txdag.FindBestUTXOs(from, to, amount, utxos)
+	if err != nil {
+		return err
+	}
+
+	hash := eth.GethHash(tx.SignatureHash())
+	signature, err := crypto.Sign(hash, privateKey)
+	if err != nil {
+		return err
+	}
+
+	tx.Sig0 = signature
+	if !tx.Input1.IsZeroInput() {
+		tx.Sig1 = signature
+	}
+
+	res, err := rc.Send(ctx, &pb.SendRequest{
+		Transaction: rpc.SerializeTx(tx),
+	})
+	if err != nil {
+		return err
+	}
+	tx = rpc.DeserializeTx(res.Transaction)
+	jsonTx, err := json.MarshalIndent(&tx, "", "\t")
+	fmt.Printf("Send results: %s", string(jsonTx));
 	return nil
 }
 

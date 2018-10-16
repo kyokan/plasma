@@ -46,6 +46,7 @@ message Transaction {
     BigInt fee = 7;
     uint64 BlockNum = 8;
     uint32 TxIdx = 9;
+    bytes RootSig = 10;
 }
 
 message GetBalanceRequest {
@@ -58,6 +59,7 @@ message GetBalanceResponse {
 
 message GetUTXOsRequest {
     bytes address = 1;
+    bool  spendable = 2;
 }
 
 message GetUTXOsResponse {
@@ -75,9 +77,6 @@ message GetBlockResponse {
 
 message SendRequest {
     Transaction transaction = 1;
-    bytes from = 2;
-    bytes to = 3;
-    BigInt amount = 4;
 }
 
 message SendResponse {
