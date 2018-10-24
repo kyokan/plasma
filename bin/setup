@@ -19,7 +19,7 @@ echo "Starting Ganache..."
 
 (
     cd $DIR/../contracts
-    prefix_cmd 'ganache' ${cyan} "ganache-cli -m 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat' -p 9545 --deterministic --verbose-rpc --networkId ${NETWORK} --db ../test/storage/ganache --unlock '0,1,2,3,4,5,6,7,8,9'"
+    prefix_cmd 'ganache' ${cyan} "ganache-cli -m 'candy maple cake sugar pudding cream honey rich smooth crumble sweet treat' --gasLimit 0x6691b700 -p 9545 --deterministic --verbose-rpc --networkId ${NETWORK} --db ../test/storage/ganache --unlock '0,1,2,3,4,5,6,7,8,9'"
 ) &
 
 sleep 2
