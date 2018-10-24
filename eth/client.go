@@ -44,7 +44,7 @@ type Client interface {
 	UserAddress() common.Address
 	Contract() *contracts.Plasma
 	SignData(data []byte) ([]byte, error)
-	SubmitBlock(merkle *util.MerkleTree) error
+	SubmitBlock(merkleHash util.Hash) error
 	Deposit(value *big.Int, tx *chain.Transaction) error
 	StartExit(opts *StartExitOpts) error
 	ChallengeExit(opts *ChallengeExitOpts) error

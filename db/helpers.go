@@ -64,18 +64,6 @@ func txPrefixKey(parts ...string) []byte {
     return prefixKey(txKeyPrefix, parts...)
 }
 
-func rlpMerkleTree(accepted []chain.Transaction) util.MerkleTree {
-    hashables := make([]util.RLPHashable, len(accepted))
-
-    for i := range accepted {
-        txPtr := &accepted[i]
-        hashables[i] = util.RLPHashable(txPtr)
-    }
-
-    merkle := util.TreeFromRLPItems(hashables)
-    return merkle
-}
-
 func spend(addr *common.Address, input *chain.Input) []byte {
     blkNum := fmt.Sprintf("%d", input.BlkNum)
     txIdx  := fmt.Sprintf("%d", input.TxIdx)

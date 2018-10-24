@@ -2,6 +2,7 @@ package eth
 
 import (
 	"crypto/ecdsa"
+	"github.com/kyokan/plasma/merkle"
 	"log"
 	"math/big"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -31,10 +32,10 @@ type Block struct {
 	StartedAt *big.Int
 }
 
-func (c *clientState) SubmitBlock(merkle *util.MerkleTree) error {
+func (c *clientState) SubmitBlock(merkleHash util.Hash) error {
 	opts := CreateKeyedTransactor(c.privateKey)
 	var root [32]byte
-	copy(root[:], merkle.Root.Hash[:32])
+	copy(root[:], merkleHash[:32])
 	tx, err := c.contract.SubmitBlock(opts, root)
 
 	if err != nil {
@@ -70,8 +71,19 @@ func (c *clientState) StartExit(opts *StartExitOpts) error {
 		return err
 	}
 
-	merkle := CreateMerkleTree(opts.Txs)
-	proof := util.CreateMerkleProof(merkle, opts.TxIndex)
+	hashables := make([]merkle.DualHashable, len(opts.Txs))
+	for i:= 0; i < len(opts.Txs); i++ {
+		hashables[i] = &opts.Txs[i]
+	}
+	hashes, err := merkle.GetProof(hashables, 17, int32(opts.TxIndex))
+	if err != nil {
+		return err
+	}
+	proof := []byte{}
+	for i := 0; i < len(hashes); i++ {
+		proof = append(proof, hashes[i]...)
+	}
+
 	res, err := c.contract.StartExit(
 		auth,
 		opts.BlockNum,
@@ -96,8 +108,19 @@ func (c *clientState) ChallengeExit(opts *ChallengeExitOpts) error {
 		return nil
 	}
 
-	merkle := CreateMerkleTree(opts.Txs)
-	proof := util.CreateMerkleProof(merkle, opts.TxIndex)
+	hashables := make([]merkle.DualHashable, len(opts.Txs))
+	for i:= 0; i < len(opts.Txs); i++ {
+		hashables[i] = &opts.Txs[i]
+	}
+	hashes, err := merkle.GetProof(hashables, 16, int32(opts.TxIndex))
+	if err != nil {
+		return err
+	}
+	proof := []byte{}
+	for i := 0; i < len(hashes); i++ {
+		proof = append(proof, hashes[i]...)
+	}
+
 	res, err := c.contract.ChallengeExit(
 		auth,
 		opts.ExitId,
@@ -160,17 +183,4 @@ func (c *clientState) Block(blocknum uint64) (*Block, error) {
 func (c *clientState) CurrentChildBlock() (uint64, error) {
 	opts := CreateCallOpts(c.UserAddress())
 	return c.contract.CurrentChildBlock(opts)
-}
-
-// Note this prevents import cycle with utils.
-func CreateMerkleTree(accepted []chain.Transaction) util.MerkleTree {
-	hashables := make([]util.RLPHashable, len(accepted))
-
-	for i := range accepted {
-		tx := accepted[i]
-		hashables[i] = util.RLPHashable(&tx)
-	}
-
-	merkle := util.TreeFromRLPItems(hashables)
-	return merkle
 }

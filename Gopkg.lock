@@ -338,6 +338,7 @@
   packages = [
     "pbkdf2",
     "scrypt",
+    "sha3",
   ]
   pruneopts = "T"
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
@@ -519,8 +520,10 @@
     "github.com/stretchr/testify/suite",
     "github.com/syndtr/goleveldb/leveldb",
     "github.com/syndtr/goleveldb/leveldb/comparer",
+    "github.com/syndtr/goleveldb/leveldb/iterator",
     "github.com/syndtr/goleveldb/leveldb/memdb",
     "github.com/syndtr/goleveldb/leveldb/util",
+    "golang.org/x/crypto/sha3",
     "golang.org/x/net/context",
     "google.golang.org/grpc",
     "gopkg.in/urfave/cli.v1",
