@@ -1,0 +1,4 @@
+db: "./database"
+node-url: "http://localhost:9545"
+contract-addr: "0xf25186b5081ff5ce73482ad761db0eb0d25abfbf"
+private-key: "c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3"
