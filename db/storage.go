@@ -487,7 +487,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
     defer memSpendIter.Release()
     for memSpendIter.Next() {
         spendKey := memSpendIter.Key()
-        lookupKey := string(spendKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        lookupKey := string(spendKey[len(spendKeyPrefix) + len(keyPartsSeparator):])
         spendMap[lookupKey] = 1
     }
 
@@ -530,29 +530,50 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
 
         ret = append(ret, *tx)
     }
-
+    sortTransactions(ret)
     return ret, nil
 }
 
 func (ps *Storage) UTXOs(addr *common.Address) ([]chain.Transaction, error) {
-    txs, err := ps.SpendableTxs(addr)
+    earnPrefix := earnPrefixKey(addr)
+    earnMap := make(map[string]uint8)
 
-    if err != nil {
-        return nil, err
+    ps.RLock()
+
+    memEarnIterator := ps.MemoryDB.NewIterator(levelutil.BytesPrefix(earnPrefix))
+    defer memEarnIterator.Release()
+    for memEarnIterator.Next() {
+        earnKey := memEarnIterator.Key()
+        lookupKey := string(earnKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        earnMap[lookupKey] = 1
+    }
+
+    ps.RUnlock()
+
+    earnIter := ps.DB.NewIterator(levelutil.BytesPrefix(earnPrefix), nil)
+    defer earnIter.Release()
+
+    for earnIter.Next() {
+        earnKey := earnIter.Key()
+        lookupKey := string(earnKey[len(earnKeyPrefix) + len(keyPartsSeparator):])
+        earnMap[lookupKey] = 1
     }
 
     var ret []chain.Transaction
+    for key := range earnMap {
+        _, blkNum, txIdx, _, err := parseSuffix([]byte(key))
+        if err != nil {
+            return nil, err
+        }
+        tx, err := ps.FindTransactionByBlockNumTxIdx(blkNum, txIdx)
 
-    for _, tx := range txs {
-        utxo := tx.OutputFor(addr)
-
-        if !util.AddressesEqual(&utxo.NewOwner, addr) {
-            continue
+        if err != nil {
+            return nil, err
         }
 
-        ret = append(ret, tx)
+        ret = append(ret, *tx)
     }
-
+    sortTransactions(ret)
     return ret, nil
 }
 // Block

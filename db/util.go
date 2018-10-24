@@ -3,7 +3,9 @@ package db
 import (
 	"bytes"
 	"fmt"
+	"github.com/kyokan/plasma/chain"
 	"log"
+	"sort"
 	"strconv"
 
 )
@@ -36,4 +38,14 @@ func bytesToUint64(b []byte) uint64 {
 	}
 
 	return uint64(n)
+}
+
+func sortTransactions(txs []chain.Transaction) {
+	txLess := func (lhs, rhs int) bool {
+		if txs[lhs].BlkNum == txs[rhs].BlkNum {
+		return txs[lhs].TxIdx < txs[rhs].TxIdx
+	}
+		return txs[lhs].BlkNum < txs[rhs].BlkNum
+	}
+	sort.Slice(txs, txLess)
 }
