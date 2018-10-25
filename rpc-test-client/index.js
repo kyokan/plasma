@@ -3,10 +3,11 @@ const protoLoader = require('@grpc/proto-loader');
 const grpc = require('grpc');
 const _ = require('lodash');
 const ejs = require('ethereumjs-util');
-const etx = require('ethereumjs-tx');
 const web3 = require('web3');
 const BN = require('bn.js');
 const secp256k1 = require('secp256k1');
+const MerkleTree = require('merkletreejs');
+const sha3 = require('js-sha3');
 
 class PlasmaClient {
     constructor(protoFile, url) {
@@ -116,6 +117,7 @@ class Account {
             if (err != null) {
                 return cb(err);
             }
+            // console.log(`Got gas estimate ${results[0]}, gas price ${results[1]}, nonce ${results[2]}`);
             return cb(null, {
                 gasEstimate: 2 * results[0],
                 gasPrice: results[1],
@@ -134,7 +136,7 @@ class Account {
             let tx = self.transactionForAmount(to, amount, utxos);
             try {
                 const rpcTx = tx.toRpc();
-                // console.log(`Transaction RPC: ${JSON.stringify(rpcTx, null, 2)}`);
+                // // console.log(`Transaction RPC: ${JSON.stringify(rpcTx, null, 2)}`);
                 this.client.Send({transaction: rpcTx}, (sendErr, sendRes) => {
                     if (sendErr != null) {
                         return cb(sendErr);
@@ -155,7 +157,7 @@ class Account {
         const signature = secp256k1.sign(result.SignatureHash(), this.privateKey);
         result.sig0 = Buffer.from(signature.signature);
         result.sig1 = Buffer.from(signature.signature);
-        // console.log(`Signed transaction ${result.toString()}`);
+        // // console.log(`Signed transaction ${result.toString()}`);
         return result;
     }
 
@@ -176,7 +178,7 @@ class Account {
             if (addr0 === this.address) {
                 if (tx.output0.amount.cmp(amount) == 0) {
                     result.input0 = new Input(tx.BlockNum, tx.TxIdx, 0);
-                    // console.log(`Using input ${tx.toString()}, output 0`);
+                    // // console.log(`Using input ${tx.toString()}, output 0`);
                     return this.signTransaction(result);
                 }
                 sorter = sorter.concat([{amount: tx.output0.amount, index: index, outIdx: 0}]);
@@ -184,7 +186,7 @@ class Account {
             if (addr1 === this.address) {
                 if (tx.output1.amount.cmp(amount) == 0) {
                     result.input0 = new Input(tx.BlockNum, tx.TxIdx, 1);
-                    // console.log(`Using input ${tx.toString()}, output 1`);
+                    // // console.log(`Using input ${tx.toString()}, output 1`);
                     return this.signTransaction(result);
                 }
                 sorter = sorter.concat([{amount: tx.output1.amount, index: index, outIdx: 1}]);
@@ -203,7 +205,7 @@ class Account {
             }
             result.output1 = new Output(this.address, inputAmount.sub(amount));
             result.input0 = new Input(inputTx.BlockNum, inputTx.TxIdx, min.outIdx);
-            // console.log(`Using input ${inputTx.toString()}, output ${min.outIdx}`);
+            // // console.log(`Using input ${inputTx.toString()}, output ${min.outIdx}`);
             return this.signTransaction(result);
         }
         let leftBound = 0;
@@ -231,9 +233,6 @@ class Account {
             result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, sorter[leftBound].outIdx);
             result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, sorter[rightBound].outIdx);
 
-            // console.log(`Using input ${inputTx0.toString()}, output ${sorter[leftBound].outIdx}`);
-            // console.log(`Using input ${inputTx1.toString()}, output ${sorter[rightBound].outIdx}`);
-
             return this.signTransaction(result);
         }
         if (lhs >= 0 && rhs >= 0) {
@@ -252,8 +251,8 @@ class Account {
             }
             result.output1 = new Output(this.address, inputAmount.sub(amount));
 
-            // console.log(`Using input ${inputTx0.toString()}, output ${sorter[lhs].outIdx}`);
-            // console.log(`Using input ${inputTx1.toString()}, output ${sorter[rhs].outIdx}`);
+            // // console.log(`Using input ${inputTx0.toString()}, output ${sorter[lhs].outIdx}`);
+            // // console.log(`Using input ${inputTx1.toString()}, output ${sorter[rhs].outIdx}`);
 
             return this.signTransaction(result);
         }
@@ -296,86 +295,90 @@ class Account {
         });
     }
 
-    Send(to, amount, cb) {
+    Exit(transaction, cb) {
         let self = this;
+        const output0Address = self.web3.utils.bytesToHex(transaction.output0.newOwner);
+        const output1Address = self.web3.utils.bytesToHex(transaction.output1.newOwner);
+        let outputIdx;
+        if (self.address === output0Address) {
+            outputIdx = 0;
+        }
+        if (self.address === output1Address) {
+            outputIdx = 1;
+        }
+        self.GetPlasmaBlock(transaction.BlockNum, (err, block) => {
+            if (err != null) {
+                return cb(err);
+            }
 
+            let elements = new Array(Math.pow(2, 16));
+            const zeroTx = doHash(Buffer.from(new Uint8Array(32)));
+            for (let i = 0; i < Math.pow(2, 16); i++) {
+                if (i < block.transactions.length) {
+                    const tx = new Transaction(block.transactions[i]);
+                    elements[i] = doHash(tx.RLPEncode());
+                }
+                else {
+                    elements[i] = zeroTx;
+                }
+            }
+            const merkleTree = new MerkleTree(elements, doHash);
+            const root = merkleTree.getRoot();
+            // console.log(`Merkle root is ${self.web3.utils.bytesToHex(root)}`);
+            let proof = merkleTree.getProof(elements[transaction.TxIdx]);
+            let proofLength = 0;
+            // console.log(`Transaction hash: ${self.web3.utils.bytesToHex(elements[transaction.TxIdx])}`);
+            let proofBuffer = Buffer.from('');
+            for (let i = 0; i < proof.length; i++) {
+                proofLength += proof[i].data.length;
+                // console.log(`\tproof[${i}] = ${self.web3.utils.bytesToHex(proof[i].data)}`);
+                proofBuffer = Buffer.concat([proofBuffer, proof[i].data], proofLength);
+            }
+
+            self.prepareEthCall( (err, result) => {
+                if (err != null) {
+                    return cb(err, null);
+                }
+
+                let nonce = result.nonce;
+                // Retrying as sometimes the call fails with invalid RPC response error
+                let exitFn = function (callback) {
+                    let params = {
+                        nonce:    self.web3.utils.toHex(nonce),
+                        chainId:  15,
+                        to:       self.contract.options.address,
+                        gasPrice: self.web3.utils.toHex(result.gasPrice),
+                        gas:      self.web3.utils.toHex(5 * result.gasEstimate),
+                        from:     self.address
+                    };
+                    self.contract.methods.startExit(
+                        transaction.BlockNum, // uint64
+                        transaction.TxIdx, // uint32
+                        outputIdx, // uint8
+                        transaction.RLPEncode(),
+                        proofBuffer
+                    ).send(params, (error, receipt) => {
+                        callback(error, receipt);
+                    });
+                };
+                async.retry({times: 3}, exitFn, (error, receipt) => {
+                    return cb(error, receipt);
+                });
+            });
+        });
     }
 }
 
-const transaction_rpc_format = {
-    "input0": {
-        "blockNum": "0",
-        "txIdx": 0,
-        "outIdx": 0
-    },
-    "sig0": {
-        "type": "Buffer",
-        "data": []
-    },
-    "input1": {
-        "blockNum": "0",
-        "txIdx": 0,
-        "outIdx": 0
-    },
-    "sig1": {
-        "type": "Buffer",
-        "data": []
-    },
-    "output0": {
-        "newOwner": {
-            "type": "Buffer",
-            "data": [98, 115, 6, 9, 10, 186, 179, 166, 225, 64, 14, 147, 69, 188, 96, 199, 138, 139, 239, 87
-            ]
-        },
-        "amount": {
-            "values": {
-                "type": "Buffer",
-                "data": [13, 224, 182, 179, 167, 100, 0, 0
-                ]
-            }
-        }
-    },
-    "output1": {
-        "newOwner": {
-            "type": "Buffer",
-            "data": [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-            ]
-        },
-        "amount": {
-            "values": {
-                "type": "Buffer",
-                "data": []
-            }
-        }
-    },
-    "fee": {
-        "values": {
-            "type": "Buffer",
-            "data": []
-        }
-    },
-    "BlockNum": "2",
-    "TxIdx": 0,
-    "RootSig": {
-        "type": "Buffer",
-        "data": [157, 128, 191, 87, 94, 141, 243, 153, 49, 4, 199, 92, 215, 150, 160, 77, 11, 42, 191, 208, 85,
-            237, 63, 238, 251, 81, 253, 181, 230, 50, 219, 101, 51, 220, 32, 238, 167, 76, 151, 136, 23, 254, 209,
-            116, 188, 222, 128, 58, 51, 188, 212, 185, 230, 233, 213, 10, 110, 118, 43, 22, 179, 44, 97, 232, 1
-        ]
-    }
-};
-transaction_rpc_format;
-
-function hash(input) {
-    const hash = ejs.sha256(input);
-    return hash;
+function doHash(input) {
+    const result = web3.utils.sha3(input);
+    return Buffer.from(web3.utils.hexToBytes(result));
 }
 
 class Input {
     zero() {
-        this.blockNum = "0";
-        this.txIdx    =  0;
-        this.outIdx   =  0;
+        this.blockNum = 0;
+        this.txIdx    = 0;
+        this.outIdx   = 0;
     }
 
     constructor (...args) {
@@ -388,13 +391,23 @@ class Input {
             if (_.isEmpty(other)) {
                 return;
             }
-            this.blockNum = other.blockNum;
+            if (_.isNumber(other.blockNum)) {
+                this.blockNum = other.blockNum;
+            } else {
+                this.blockNum = parseInt(other.blockNum, 16);
+            }
             this.txIdx    = other.txIdx;
             this.outIdx   = other.outIdx;
             return;
         }
         if (args.length == 3) {
-            this.blockNum = args[0];
+            if (_.isNumber(args[0])) {
+                this.blockNum = args[0];
+            }
+            else {
+                this.blockNum = parseInt(args[0], 16);
+            }
+
             this.txIdx    = args[1];
             this.outIdx   = args[2];
             return;
@@ -407,11 +420,15 @@ class Input {
         const txIdxBuf    = ejs.toBuffer(this.txIdx);
         const outIdxBuf   = ejs.toBuffer(this.outIdx);
         const buf = Buffer.concat([blockNumBuf, txIdxBuf, outIdxBuf], blockNumBuf.length + txIdxBuf.length + outIdxBuf.length);
-        return hash(buf);
+        return doHash(buf);
     }
 
     toRpc() {
-        return this;
+        return {
+            blockNum: this.blockNum.toString(),
+            txIdx: this.txIdx,
+            outIdx: this.outIdx
+        };
     }
 
     toString() {
@@ -453,7 +470,7 @@ class Output {
         const newOwnerBuf = ejs.toBuffer(this.newOwner);
         const amountBuf   = ejs.toBuffer(this.amount);
         const buf = Buffer.concat([newOwnerBuf, amountBuf], newOwnerBuf.length + amountBuf.length);
-        return hash(buf);
+        return doHash(buf);
     }
 
     toRpc() {
@@ -473,11 +490,6 @@ class Output {
     }
 }
 
-
-function hash(input) {
-    const hash = ejs.sha256(input);
-    return hash;
-}
 
 class Transaction {
     zero() {
@@ -542,15 +554,29 @@ class Transaction {
         });
     }
 
+    toArray() {
+        return [
+            this.input0.blockNum,
+            this.input0.txIdx,
+            this.input0.outIdx,
+            this.sig0,
+            this.input1.blockNum,
+            this.input1.txIdx,
+            this.input1.outIdx,
+            this.sig1,
+            this.output0.newOwner,
+            this.output0.amount,
+            this.output1.newOwner,
+            this.output1.amount,
+            0, //this.fee,
+            this.RootSig
+        ];
+    }
+
     RLPEncode() {
-        const a = [
-                this.input0.blkNum, this.input0.txIdx, this.input0.outIdx, this.sig0,
-                this.input1.blkNum, this.input1.txIdx, this.input1.outIdx, this.sig1,
-                this.output0.newOwner, this.output0.amount,
-                this.output1.newOwner, this.output1.amount,
-                this.fee, this.RootSig
-            ];
-        return ejs.rlp.encode(a);
+        const encoded = ejs.rlp.encode(this.toArray());
+        // console.log(`RLP encoding: ${web3.utils.bytesToHex(encoded)}`);
+        return encoded;
     }
 
     SignatureHash() {

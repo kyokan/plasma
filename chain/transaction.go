@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-	)
+)
 
 // JSON tags needed for test fixtures
 type Transaction struct {
@@ -188,6 +188,10 @@ func (tx *Transaction) RLPHash() util.Hash {
 	}
 
 	return util.DoHash(bytes)
+}
+
+func (tx *Transaction) SetIndex(index uint32) {
+	tx.TxIdx = index
 }
 
 func (tx *Transaction) EncodeRLP(w io.Writer) error {

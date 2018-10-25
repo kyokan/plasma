@@ -215,8 +215,8 @@ contract Plasma {
         bytes proof
     ) returns (bool)
     {
-        // TODO: might need to adjust depth
-        require(proof.length == 15 * 32);
+
+        require(proof.length == 16 * 32);
 
         bytes32 root = childChain[blocknum].root;
 
@@ -225,7 +225,7 @@ contract Plasma {
         // Offset for bytes assembly starts at 32
         uint j = 32;
 
-        for(uint i = 0; i < 15; i++) {
+        for(uint i = 0; i < 16; i++) {
             bytes32 sibling;
             assembly {
                 sibling := mload(add(proof, j))
