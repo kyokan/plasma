@@ -40,6 +40,7 @@ clean:
 	rm -rf ~/.plasma
 	rm -rf ./test/storage/ganache/*
 	rm -rf ./test/storage/root
+	rm -rf .vendor-new
 
 test:
 	@go test ./...

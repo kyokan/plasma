@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/util"
 	"github.com/stretchr/testify/require"
+	"sync"
 	"testing"
 )
 
@@ -55,11 +56,41 @@ func Test_FullTree(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint8(0); i < 4; i++ {
 		h := TestHashable{counter: i}
-		err = queue.Enqueue([]DualHashable{h})
+		err = queue.Enqueue(h)
 		require.NoError(t, err)
 	}
 	_, err = queue.GetRootHash()
 	require.NoError(t, err)
+}
+
+func Test_Concurrency(t *testing.T) {
+	udepth := uint32(7)
+	queue, err := createMerkleQueue(testHasher, int32(udepth), -1, false)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+
+	concurrency := uint8(64)
+
+	wg.Add(int(concurrency))
+	elements := make([]TestHashable, concurrency)
+	for i := uint8(0); i < concurrency; i++ {
+		elements[i].counter = i
+	}
+	fn := func(element TestHashable) {
+		queue.Enqueue(element)
+		wg.Done()
+	}
+	for i := uint8(0); i < concurrency; i++ {
+		go fn(elements[i])
+	}
+
+	wg.Wait()
+	root, err := queue.GetRootRLPHash()
+	require.NoError(t, err)
+	// This ensures that the indices are assigned sequentially.
+	// If they weren't the root (bitwise) hash would be different.
+	require.EqualValues(t, "0000000000000000ffffffffffffffff", common.Bytes2Hex(root))
 }
 
 func Test_PartialTree(t *testing.T) {
@@ -72,7 +103,7 @@ func Test_PartialTree(t *testing.T) {
 
 		for count := uint8(0); count < 5; count++ {
 			h := TestHashable{counter: count}
-			err = queue.Enqueue([]DualHashable{h})
+			err = queue.Enqueue(h)
 			require.NoError(t, err)
 		}
 
@@ -99,7 +130,7 @@ func Test_Proof(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		for count := uint8(0); count < 5; count++ {
 			h := TestHashable{counter: count}
-			err = queue.Enqueue([]DualHashable{h})
+			err = queue.Enqueue(h)
 			require.NoError(t, err)
 		}
 
@@ -133,11 +164,11 @@ func Test_OverCapacityTree(t *testing.T) {
 	require.NoError(t, err)
 	for i := uint8(0); i < 4; i++ {
 		h := TestHashable{counter: i}
-		err = queue.Enqueue([]DualHashable{h})
+		err = queue.Enqueue(h)
 		require.NoError(t, err)
 	}
 	h := TestHashable{counter: 4}
-	err = queue.Enqueue([]DualHashable{h})
+	err = queue.Enqueue(h)
 	require.Error(t, err)
 	_, err = queue.GetRootHash()
 	require.NoError(t, err)
@@ -213,7 +244,7 @@ func Test_ShallowTree(t *testing.T) {
 	precomputeHashes(util.DoHash, false)
 	queue, err := createMerkleQueue(util.DoHash, 3, -1, false)
 	require.NoError(t, err)
-	queue.Enqueue([]DualHashable{tx})
+	queue.Enqueue(tx)
 	root, err := queue.GetRootRLPHash()
 	require.NoError(t, err)
 	precomputeHashes(testHasher, false)
