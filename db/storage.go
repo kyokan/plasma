@@ -127,7 +127,7 @@ func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain
         input = tx.Input1
     }
 
-    prevTx, err := ps.FindTransactionByBlockNumTxIdx(input.BlkNum, input.TxIdx)
+    prevTx, err := ps.findTransactionByBlockNumTxIdx(input.BlkNum, input.TxIdx, noopLock{})
 
     if err != nil {
         return nil, err
@@ -137,24 +137,26 @@ func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain
 }
 
 func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*chain.Transaction, error) {
+    lock.Lock()
+    defer lock.Unlock()
+
     prevTxs, err := ps.isTransactionValid(tx)
     if err != nil {
         return nil, err
     }
-    lock.Lock()
+
     // Moved TxIdx assignment inside the merkle queue
     // tx.TxIdx = atomic.AddUint32(&ps.CurrentTxIdx, 1) - 1
     tx.BlkNum = ps.CurrentBlock
 
     rootSig, err := ps.client.SignData(tx.SignatureHash())
     if err != nil {
-        lock.Unlock()
         return nil, err
     }
     tx.RootSig = rootSig
 
-    err = ps.merkleQueue.Enqueue([]merkle.DualHashable{&tx})
-    lock.Unlock()
+    err = ps.merkleQueue.Enqueue(&tx)
+
     if err != nil {
         return nil, err
     }
@@ -339,7 +341,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
 }
 
 func (ps *Storage) StoreTransaction(tx chain.Transaction) (*chain.Transaction, error) {
-    return ps.doStoreTransaction(tx, ps.RLocker())
+    return ps.doStoreTransaction(tx, ps)
 }
 
 func (ps *Storage) ProcessDeposit(tx chain.Transaction) (prev, deposit util.Hash, err error) {
@@ -409,9 +411,9 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
     return txs, nil
 }
 
-func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error) {
-    ps.RLock()
-    defer ps.RUnlock()
+func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32, locker sync.Locker) (*chain.Transaction, error) {
+    locker.Lock()
+    defer locker.Unlock()
 
     key := blkNumTxIdxKey(blkNum, txIdx)
     var data []byte
@@ -448,6 +450,10 @@ func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (
     tx.TxIdx  = txIdx
 
     return &tx, nil
+}
+
+func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error) {
+    return ps.findTransactionByBlockNumTxIdx(blkNum, txIdx, ps.RLocker())
 }
 // Address
 func (ps *Storage) Balance(addr *common.Address) (*big.Int, error) {
@@ -522,7 +528,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
         if err != nil {
             return nil, err
         }
-        tx, err := ps.FindTransactionByBlockNumTxIdx(blkNum, txIdx)
+        tx, err := ps.findTransactionByBlockNumTxIdx(blkNum, txIdx, noopLock{})
 
         if err != nil {
             return nil, err
@@ -565,7 +571,7 @@ func (ps *Storage) UTXOs(addr *common.Address) ([]chain.Transaction, error) {
         if err != nil {
             return nil, err
         }
-        tx, err := ps.FindTransactionByBlockNumTxIdx(blkNum, txIdx)
+        tx, err := ps.findTransactionByBlockNumTxIdx(blkNum, txIdx, noopLock{})
 
         if err != nil {
             return nil, err

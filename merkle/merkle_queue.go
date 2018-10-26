@@ -7,6 +7,7 @@ import (
 	"github.com/kyokan/plasma/util"
 	"math"
 	"sync"
+	"sync/atomic"
 )
 
 const (
@@ -19,6 +20,11 @@ type DualHashable interface {
 	SetIndex(uint32)
 }
 
+type ElementWrapper struct {
+	elem    DualHashable
+	posChan chan uint32
+}
+
 type Hasher func([]byte) util.Hash
 
 var precomputedHashes [maxDepth]util.Hash
@@ -28,7 +34,7 @@ var once sync.Once
 func precomputeHashes(hasher Hasher, sparse bool) {
 	emptyBuf := make([]byte, 32)
 	var index int
-	precomputedHashes   [maxDepth - 1] = hasher(emptyBuf)
+	precomputedHashes[maxDepth - 1] = hasher(emptyBuf)
 
 	if sparse {
 		for index = maxDepth - 2; index >= 0; index-- {
@@ -38,12 +44,12 @@ func precomputeHashes(hasher Hasher, sparse bool) {
 	}
 
 	for index = maxDepth - 2; index >= 0; index-- {
-		precomputedHashes[index]    = hasher(append(precomputedHashes[index+1], precomputedHashes[index+1]...))
+		precomputedHashes[index] = hasher(append(precomputedHashes[index+1], precomputedHashes[index+1]...))
 	}
 }
 
 type MerkleQueue interface {
-	Enqueue(transaction []DualHashable) error
+	Enqueue(DualHashable) error
 	GetRootRLPHash() (util.Hash, error)
 	GetRootHash() (util.Hash, error)
 	GetRLPProof() ([]util.Hash, error)
@@ -108,14 +114,14 @@ type merkleQueue struct {
 	depth       int32
 	context     context.Context
 	cancel      context.CancelFunc
-	leaves      uint32
+
 	leafIndex   uint32
-	maxLeaves   float64
+	maxLeaves   uint32
 	proofIndex  int32
 
 	proofState *proofState
 
-	queue chan DualHashable
+	queue chan ElementWrapper
 
 	hasher Hasher
 }
@@ -133,12 +139,11 @@ func createMerkleQueue(hasher Hasher, depth, index int32, sparse bool) (*merkleQ
 	result := merkleQueue{
 		current:    make([]*queueElement, depth),
 		depth:      depth - 1, // zero based
-		leaves:     uint32(0),
 		leafIndex:  uint32(0),
-		maxLeaves:  math.Pow(2, float64(depth-1)),
+		maxLeaves:  uint32(math.Pow(2, float64(depth-1))) - 1,
 		proofIndex: index,
 		hasher:     hasher,
-		queue:      make(chan DualHashable),
+		queue:      make(chan ElementWrapper),
 	}
 	result.context, result.cancel = context.WithCancel(context.Background())
 
@@ -182,7 +187,7 @@ func (merkle *merkleQueue) computeRootHashes() error {
 	merkle.Lock()
 	defer merkle.Unlock()
 
-	if merkle.leaves == 0 {
+	if merkle.leafIndex == 0 {
 		merkle.current[0] = createQueueElement(merkle.depth,
 			merkle.getPrecomputedHash(0),
 			merkle.getPrecomputedHash(0))
@@ -235,9 +240,13 @@ func (merkle *merkleQueue) listen() {
 	defer merkle.Unlock()
 	for {
 		select {
-		case tx := <-merkle.queue:
+		case wrapper := <-merkle.queue:
+			tx := wrapper.elem
 			tx.SetIndex(merkle.leafIndex)
-			merkle.leafIndex++
+			wrapper.posChan <- merkle.leafIndex
+
+			atomic.AddUint32(&merkle.leafIndex, 1)
+
 			newElement := createQueueElement(merkle.depth, tx.Hash(), tx.RLPHash())
 			merkle.proofState.store(newElement)
 			merkle.processElement(newElement)
@@ -248,11 +257,27 @@ func (merkle *merkleQueue) listen() {
 	}
 }
 
+func (merkle *merkleQueue) Enqueue(transaction DualHashable) error {
+	if atomic.CompareAndSwapUint32(&merkle.maxLeaves, merkle.leafIndex, merkle.maxLeaves) {
+		return errors.New("Max number of leaves reached")
+	}
+
+	posChan := make(chan uint32)
+	defer close(posChan)
+
+	merkle.queue <- ElementWrapper{
+		elem: 	 transaction,
+		posChan: posChan,
+	}
+	<- posChan
+
+	return nil
+}
+
 func (merkle *merkleQueue) Reset() {
 	for i := int32(0); i < merkle.depth; i++ {
 		merkle.current[i] = nil
 	}
-	merkle.leaves = uint32(0)
 	merkle.leafIndex = uint32(0)
 	merkle.context, merkle.cancel = context.WithCancel(context.Background())
 
@@ -260,18 +285,6 @@ func (merkle *merkleQueue) Reset() {
 		merkle.proofState = createProofState(merkle.proofIndex, merkle.depth)
 	}
 	go merkle.listen()
-}
-
-func (merkle *merkleQueue) Enqueue(transactions []DualHashable) error {
-	if float64(merkle.leaves + uint32(len(transactions))) > merkle.maxLeaves {
-		return errors.New("Max number of leaves reached")
-	}
-	for i := 0; i < len(transactions); i++ {
-		merkle.leaves++
-		merkle.queue <- transactions[i]
-	}
-
-	return nil
 }
 
 func (merkle *merkleQueue) GetRootHash() (util.Hash, error) {
@@ -304,7 +317,7 @@ func (merkle *merkleQueue) GetRLPProof() ([]util.Hash, error) {
 }
 
 func (merkle *merkleQueue) GetNumberOfLeafes() uint32 {
-	return merkle.leaves
+	return atomic.LoadUint32(&merkle.leafIndex)
 }
 
 func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) ([]util.Hash, error) {
@@ -312,10 +325,13 @@ func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) 
 	if err != nil {
 		return nil, err
 	}
-	err = queue.Enqueue(transactions)
-	if err != nil {
-		return nil, err
+	for _, transaction := range transactions {
+		err = queue.Enqueue(transaction)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return queue.GetRLPProof()
 }
 
