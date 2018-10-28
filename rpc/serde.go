@@ -8,7 +8,8 @@ import (
 )
 
 func DeserializeBig(in *pb.BigInt) (*big.Int) {
-	return new(big.Int).SetBytes(in.Values)
+	b, _ := new(big.Int).SetString(string(in.Values), 10)
+	return b
 }
 
 func DeserializeUintBig(in *pb.BigInt) uint {
@@ -17,7 +18,7 @@ func DeserializeUintBig(in *pb.BigInt) uint {
 
 func SerializeBig(in *big.Int) (*pb.BigInt) {
 	return &pb.BigInt{
-		Values: in.Bytes(),
+		Values: []byte(in.String()),
 	}
 }
 
