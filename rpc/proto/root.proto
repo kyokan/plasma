@@ -6,26 +6,22 @@ service Root {
     rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {
         option (google.api.http) = {
             get: "/v1/balances/{address}"
-            body: "*"
         };
     }
     rpc GetUTXOs (GetUTXOsRequest) returns (GetUTXOsResponse) {
         option (google.api.http) = {
             get: "/v1/utxos/{address}/{spendable}"
-            body: "*"
         };
     }
     rpc GetBlock (GetBlockRequest) returns (GetBlockResponse) {
         option (google.api.http) = {
             get: "/v1/block/{number}"
-            body: "*"
         };
     }
     rpc Send (SendRequest) returns (SendResponse) {}
     rpc BlockHeight(EmptyRequest) returns (BlockHeightResponse) {
         option (google.api.http) = {
             get: "/v1/blockheight"
-            body: "*"
         };
     }
 }
