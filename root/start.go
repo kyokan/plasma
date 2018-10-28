@@ -43,15 +43,14 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	go server.Start(config.RPCPort)
 	log.Printf("Started RPC server on port %d", config.RPCPort)
 
-	endpoint := fmt.Sprintf("0.0.0.0:%d", config.RESTPort)
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err = pb.RegisterRootHandlerFromEndpoint(ctx, mux, endpoint, opts)
+	err = pb.RegisterRootHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", config.RPCPort), opts)
 	if err != nil {
 		return err
 	}
 	log.Printf("Started REST server on port %d", config.RESTPort)
-	go http.ListenAndServe(endpoint, mux)
+	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", config.RESTPort), mux)
 
 	// TODO: add an exit listener to make sure to add an exit transaction to root node.
 	// Also add an exit block to the plasma contract.
