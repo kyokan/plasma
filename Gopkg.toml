@@ -64,7 +64,6 @@
   name = "gopkg.in/urfave/cli.v1"
   version = "1.20.0"
 
-
 [[constraint]]
   name = "github.com/spf13/cobra"
   version = "0.0.3"
@@ -75,7 +74,7 @@
 
 [[constraint]]
   name = "google.golang.org/grpc"
-  version = "1.14.0"
+  version = "1.16.0"
 
 [[override]]
   name = "github.com/rjeczalik/notify"

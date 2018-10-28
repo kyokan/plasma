@@ -191,7 +191,10 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 
 	rc := pb.NewRootClient(conn)
 
-	utxoResponse, err := rc.GetUTXOs(ctx, &pb.GetUTXOsRequest{Address: from.Bytes()})
+	utxoResponse, err := rc.GetUTXOs(ctx, &pb.GetUTXOsRequest{
+		Address:   from.Bytes(),
+		Spendable: true,
+	})
 	if err != nil {
 		return err
 	}
@@ -200,6 +203,8 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 	if err != nil {
 		return err
 	}
+	j, _ := json.MarshalIndent(&tx, "", "\t")
+	fmt.Println(string(j))
 
 	hash := eth.GethHash(tx.SignatureHash())
 	signature, err := crypto.Sign(hash, privateKey)
@@ -220,7 +225,7 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 	}
 	tx = rpc.DeserializeTx(res.Transaction)
 	jsonTx, err := json.MarshalIndent(&tx, "", "\t")
-	fmt.Printf("Send results: %s", string(jsonTx));
+	fmt.Printf("Send results: %s", string(jsonTx))
 	return nil
 }
 
@@ -257,7 +262,7 @@ func txsTable(txs []chain.Transaction) *tablewriter.Table {
 		"Fee",
 	})
 	for _, tx := range txs {
-		txsTable.Append([]string {
+		txsTable.Append([]string{
 			strconv.FormatUint(uint64(tx.TxIdx), 10),
 			strconv.FormatUint(tx.Input0.BlkNum, 10),
 			strconv.FormatUint(uint64(tx.Input0.TxIdx), 10),

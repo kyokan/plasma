@@ -19,6 +19,7 @@ const (
 	FlagAddress      = "address"
 	FlagBlockNum     = "blocknum"
 	FlagAmount       = "amount"
+	FlagRESTPort     = "rest-port"
 )
 
 var boundFlags = []string{

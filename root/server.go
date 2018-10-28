@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-)
+	)
 
 type Server struct {
 	storage db.PlasmaStorage
@@ -114,5 +114,16 @@ func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 	}
 	return &pb.SendResponse{
 		Transaction: rpc.SerializeTx(signedTx),
+	}, nil
+}
+
+func (r *Server) BlockHeight(context.Context, *pb.EmptyRequest) (*pb.BlockHeightResponse, error) {
+	latest, err := r.storage.LatestBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.BlockHeightResponse{
+		Height: latest.Header.Number,
 	}, nil
 }
