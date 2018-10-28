@@ -18,7 +18,7 @@ var sendCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		rpcHost, err := cmd.Flags().GetString(FlagRPCPort)
+		rpcHost, err := cmd.Flags().GetString(FlagRootHost)
 		if err != nil {
 			return err
 		}
@@ -46,11 +46,11 @@ var sendCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(sendCmd)
-	sendCmd.Flags().String(FlagRPCPort, "", "hostname and port of the root node")
+	sendCmd.Flags().String(FlagRootHost, "", "hostname and port of the root node")
 	sendCmd.Flags().String(FlagAddress, "", "address to send funds from")
 	sendCmd.Flags().String(FlagTo, "", "address to send funds to")
 	sendCmd.Flags().String(FlagAmount, "", "amount to send")
-	sendCmd.MarkFlagRequired(FlagRPCPort)
+	sendCmd.MarkFlagRequired(FlagRootHost)
 	sendCmd.MarkFlagRequired(FlagAddress)
 	sendCmd.MarkFlagRequired(FlagTo)
 	sendCmd.MarkFlagRequired(FlagAmount)

@@ -25,7 +25,7 @@ var blockCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(blockCmd)
 	blockCmd.Flags().String(FlagRootHost, "", "hostname and port of the root node")
-	blockCmd.Flags().String(FlagBlockNum, "", "the block number to show")
+	blockCmd.Flags().Uint64(FlagBlockNum, 0, "the block number to show")
 	blockCmd.MarkFlagRequired(FlagRootHost)
 	blockCmd.MarkFlagRequired(FlagBlockNum)
 }

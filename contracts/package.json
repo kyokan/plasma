@@ -8,6 +8,7 @@
   "license": "ISC",
   "dependencies": {
     "commander": "^2.15.0",
-    "shelljs": "^0.8.1"
+    "shelljs": "^0.8.1",
+    "truffle-privatekey-provider": "^0.1.0"
   }
 }
