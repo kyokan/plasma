@@ -14,6 +14,7 @@ func NewGlobalConfig() *config.GlobalConfig {
 		NodeURL:      viper.GetString(FlagNodeURL),
 		RPCPort:      viper.GetInt(FlagRPCPort),
 		ContractAddr: viper.GetString(FlagContractAddr),
+		RESTPort:     viper.GetInt(FlagRESTPort),
 	}
 }
 

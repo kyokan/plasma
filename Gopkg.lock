@@ -78,10 +78,13 @@
   digest = "1:832e17df5ff8bbe0e0693d2fb46c5e53f96c662ee804049ce3ab6557df74e3ab"
   name = "github.com/golang/protobuf"
   packages = [
+    "jsonpb",
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
+    "ptypes/struct",
     "ptypes/timestamp",
   ]
   pruneopts = "T"
@@ -122,6 +125,18 @@
   pruneopts = "T"
   revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:c4a0b2286ccdfcb4575e19c2bab20d4972ba7fce2ed7cba0941c168708b96f54"
+  name = "github.com/grpc-ecosystem/grpc-gateway"
+  packages = [
+    "runtime",
+    "runtime/internal",
+    "utilities",
+  ]
+  pruneopts = "T"
+  revision = "aeab1d96e0f1368d243e2e5f526aa29d495517bb"
+  version = "v1.5.1"
 
 [[projects]]
   branch = "master"
@@ -407,12 +422,15 @@
   branch = "master"
   digest = "1:960f1fa3f12667fe595c15c12523718ed8b1b5428c83d70da54bb014da9a4c1a"
   name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
+  packages = [
+    "googleapis/api/annotations",
+    "googleapis/rpc/status",
+  ]
   pruneopts = "T"
   revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
 
 [[projects]]
-  digest = "1:a985c4820889930a08c19181d2aeb1c57ab1929bce7a66b781109dd1db8fb433"
+  digest = "1:ef437b2116089e1355b910bcbfb66c90d5164c6623f37deb5b94a6973a1ddf16"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -443,8 +461,8 @@
     "tap",
   ]
   pruneopts = "T"
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
 
 [[projects]]
   digest = "1:3ccd10c863188cfe0d936fcfe6a055c95362e43af8e7039e33baade846928e74"
@@ -509,6 +527,8 @@
     "github.com/gorilla/mux",
     "github.com/gorilla/rpc",
     "github.com/gorilla/rpc/json",
+    "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/grpc-ecosystem/grpc-gateway/utilities",
     "github.com/keybase/go-codec/codec",
     "github.com/olekukonko/tablewriter",
     "github.com/pborman/uuid",
@@ -525,7 +545,11 @@
     "github.com/syndtr/goleveldb/leveldb/util",
     "golang.org/x/crypto/sha3",
     "golang.org/x/net/context",
+    "google.golang.org/genproto/googleapis/api/annotations",
     "google.golang.org/grpc",
+    "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/grpclog",
+    "google.golang.org/grpc/status",
     "gopkg.in/urfave/cli.v1",
   ]
   solver-name = "gps-cdcl"

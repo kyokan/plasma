@@ -1,13 +1,32 @@
 syntax = "proto3";
-
+import "google/api/annotations.proto";
 package pb;
 
 service Root {
-    rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {}
-    rpc GetUTXOs (GetUTXOsRequest) returns (GetUTXOsResponse) {}
-    rpc GetBlock (GetBlockRequest) returns (GetBlockResponse) {}
+    rpc GetBalance(GetBalanceRequest) returns (GetBalanceResponse) {
+        option (google.api.http) = {
+            get: "/v1/balances/{address}"
+        };
+    }
+    rpc GetUTXOs (GetUTXOsRequest) returns (GetUTXOsResponse) {
+        option (google.api.http) = {
+            get: "/v1/utxos/{address}/{spendable}"
+        };
+    }
+    rpc GetBlock (GetBlockRequest) returns (GetBlockResponse) {
+        option (google.api.http) = {
+            get: "/v1/block/{number}"
+        };
+    }
     rpc Send (SendRequest) returns (SendResponse) {}
+    rpc BlockHeight(EmptyRequest) returns (BlockHeightResponse) {
+        option (google.api.http) = {
+            get: "/v1/blockheight"
+        };
+    }
 }
+
+message EmptyRequest {}
 
 message BigInt {
     bytes values = 1;
@@ -81,4 +100,8 @@ message SendRequest {
 
 message SendResponse {
     Transaction transaction = 1;
+}
+
+message BlockHeightResponse {
+    uint64 height = 1;
 }

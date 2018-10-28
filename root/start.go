@@ -1,9 +1,9 @@
 package root
 
 import (
-					"github.com/kyokan/plasma/eth"
+	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/db"
-		"github.com/kyokan/plasma/config"
+	"github.com/kyokan/plasma/config"
 	"crypto/ecdsa"
 	"github.com/kyokan/plasma/node"
 	"context"
@@ -11,6 +11,11 @@ import (
 	"os/signal"
 	"path"
 	"log"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"google.golang.org/grpc"
+	"github.com/kyokan/plasma/rpc/pb"
+	"fmt"
+	"net/http"
 )
 
 func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
@@ -38,12 +43,21 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	go server.Start(config.RPCPort)
 	log.Printf("Started RPC server on port %d", config.RPCPort)
 
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	err = pb.RegisterRootHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", config.RPCPort), opts)
+	if err != nil {
+		return err
+	}
+	log.Printf("Started REST server on port %d", config.RESTPort)
+	go http.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", config.RESTPort), mux)
+
 	// TODO: add an exit listener to make sure to add an exit transaction to root node.
 	// Also add an exit block to the plasma contract.
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	<- c
+	<-c
 	cancel()
 	return nil
 }
