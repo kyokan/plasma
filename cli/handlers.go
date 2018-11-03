@@ -168,7 +168,7 @@ func UTXOs(rootHost string, address common.Address) error {
 	defer conn.Close()
 
 	rc := pb.NewRootClient(conn)
-	res, err := rc.GetUTXOs(context.Background(), &pb.GetUTXOsRequest{
+	res, err := rc.GetOutputs(context.Background(), &pb.GetOutputsRequest{
 		Address: address.Bytes(),
 	})
 	if err != nil {
@@ -191,7 +191,7 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 
 	rc := pb.NewRootClient(conn)
 
-	utxoResponse, err := rc.GetUTXOs(ctx, &pb.GetUTXOsRequest{
+	utxoResponse, err := rc.GetOutputs(ctx, &pb.GetOutputsRequest{
 		Address:   from.Bytes(),
 		Spendable: true,
 	})

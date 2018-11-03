@@ -41,7 +41,6 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost s
 	rootClient := pb.NewRootClient(conn)
 	go RootNodeListener(ctx, storage, ethClient, rootClient, userAddress)
 	go ExitStartedListener(ctx, storage, ethClient, rootClient)
-	go Run(config.RPCPort)
 
 	select {}
 	return nil
