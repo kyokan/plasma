@@ -81,6 +81,11 @@ message GetBlockRequest {
 message GetBlockResponse {
     Block block = 1;
     repeated Transaction transactions = 2;
+    BlockMeta metadata = 3;
+
+    message BlockMeta {
+        uint64 createdAt = 1;
+    }
 }
 
 message SendRequest {

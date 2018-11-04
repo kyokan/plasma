@@ -21,6 +21,10 @@ type Block struct {
 	BlockHash util.Hash    `json:"BlockHash"`
 }
 
+type BlockMetadata struct {
+	CreatedAt uint64
+}
+
 func (head BlockHeader) Hash() util.Hash {
 	buf := new(bytes.Buffer)
 	buf.Write(head.MerkleRoot)
