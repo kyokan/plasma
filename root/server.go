@@ -177,8 +177,11 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 	if err != nil {
 		return nil, err
 	}
-
 	txs, err := r.storage.FindTransactionsByBlockNum(block.Header.Number)
+	if err != nil {
+		return nil, err
+	}
+	meta, err := r.storage.BlockMetaAtHeight(req.Number)
 	if err != nil {
 		return nil, err
 	}
@@ -194,6 +197,9 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 			Hash: block.BlockHash,
 		},
 		Transactions: rpc.SerializeTxs(txs),
+		Metadata: &pb.GetBlockResponse_BlockMeta{
+			CreatedAt: meta.CreatedAt,
+		},
 	}
 
 	return res, nil

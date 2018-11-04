@@ -20,11 +20,12 @@ import (
     "github.com/syndtr/goleveldb/leveldb/comparer"
     "github.com/syndtr/goleveldb/leveldb/memdb"
     levelutil "github.com/syndtr/goleveldb/leveldb/util"
+    "github.com/ethereum/go-ethereum/common/hexutil"
+    "time"
 )
 
 
 type PlasmaStorage interface {
-
     StoreTransaction(tx chain.Transaction) (*chain.Transaction, error)
     ProcessDeposit(tx chain.Transaction) (prev, deposit util.Hash, err error)
     FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
@@ -35,6 +36,7 @@ type PlasmaStorage interface {
     UTXOs(addr *common.Address) ([]chain.Transaction, error)
 
     BlockAtHeight(num uint64) (*chain.Block, error)
+    BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error)
     LatestBlock() (*chain.Block, error)
     PackageCurrentBlock() (util.Hash, error)
     SaveBlock(*chain.Block) error
@@ -167,7 +169,7 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     }
 
     hash := tx.Hash()
-    hexHash := common.ToHex(hash)
+    hexHash := hexutil.Encode(hash)
     hashKey := txPrefixKey("hash", hexHash)
 
     batch := new(leveldb.Batch)
@@ -175,7 +177,7 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     batch.Put(blkNumHashkey(tx.BlkNum, hexHash), txEnc)
     batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), txEnc)
 
-    empty := []byte{}
+    var empty []byte
 
     // Recording spends
     if tx.Input0.IsZeroInput() == false {
@@ -208,12 +210,11 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
 func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (util.Hash, error) {
     // Lock for writing
     locker.Lock()
+    defer locker.Unlock()
     if height != ps.CurrentBlock { // make sure we're not packaging same block twice
-        locker.Unlock()
         return nil, nil
     }
     if ps.merkleQueue.GetNumberOfLeafes() == 0 {
-        locker.Unlock()
         return nil, nil
     }
     atomic.AddUint64(&ps.CurrentBlock, 1)
@@ -245,22 +246,27 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (util.Hash,
     }
     ps.PrevBlockHash = block.BlockHash
 
-    enc, err := rlp.EncodeToBytes(rlpMerklepHash);
+    enc, err := rlp.EncodeToBytes(rlpMerklepHash)
     if err != nil {
-        locker.Unlock()
         return nil, err
     }
-    batch.Put(merklePrefixKey(common.ToHex(merkleHash)), enc)
+    batch.Put(merklePrefixKey(hexutil.Encode(merkleHash)), enc)
 
     enc, err = rlp.EncodeToBytes(block)
     if err != nil {
-        locker.Unlock()
         return nil, err
     }
-    key := blockPrefixKey(common.ToHex(block.BlockHash))
+    key := blockPrefixKey(hexutil.Encode(block.BlockHash))
     batch.Put(key, enc)
     batch.Put(blockPrefixKey(latestKey), key)
     batch.Put(blockNumKey(block.Header.Number), key)
+    enc, err = rlp.EncodeToBytes(chain.BlockMetadata{
+        CreatedAt: uint64(time.Now().Unix()),
+    })
+    if err != nil {
+        return nil, err
+    }
+    batch.Put(blockMetaPrefixKey(block.Header.Number), enc)
 
     memIter := ps.MemoryDB.NewIterator(nil)
     for memIter.Next() {
@@ -603,6 +609,21 @@ func (ps *Storage) BlockAtHeight(num uint64) (*chain.Block, error) {
     return &blk, nil
 }
 
+func (ps *Storage) BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error) {
+    data, err := ps.DB.Get(blockMetaPrefixKey(num), nil)
+    if err != nil {
+        return nil, err
+    }
+
+    var meta chain.BlockMetadata
+    err = rlp.DecodeBytes(data, &meta)
+    if err != nil {
+        return nil, err
+    }
+
+    return &meta, nil
+}
+
 func (ps *Storage) LatestBlock() (*chain.Block, error) {
     key := blockPrefixKey(latestKey)
 
@@ -648,7 +669,7 @@ func (ps *Storage) SaveBlock(blk *chain.Block) error {
     ps.Lock()
     defer ps.Unlock()
 
-    key := blockPrefixKey(common.ToHex(blk.BlockHash))
+    key := blockPrefixKey(hexutil.Encode(blk.BlockHash))
     batch := new(leveldb.Batch)
     batch.Put(key, enc)
     batch.Put(blockPrefixKey(latestKey), key)
@@ -710,7 +731,7 @@ func (ps *Storage) SaveExitEventIdx(idx uint64) error {
 
 // Invalid block
 func (ps *Storage) GetInvalidBlock(blkHash util.Hash) (*chain.Block, error) {
-    key := invalidPrefixKey(common.ToHex(blkHash))
+    key := invalidPrefixKey(hexutil.Encode(blkHash))
 
     data, err := ps.DB.Get(key, nil)
     if err != nil {
@@ -732,7 +753,7 @@ func (ps *Storage) SaveInvalidBlock(blk *chain.Block) error {
         return err
     }
 
-    key := invalidPrefixKey(common.ToHex(blk.BlockHash))
+    key := invalidPrefixKey(hexutil.Encode(blk.BlockHash))
     return ps.DB.Put(key, enc, nil)
 }
 
