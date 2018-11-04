@@ -5,29 +5,19 @@ import (
 	"math/big"
 	"github.com/kyokan/plasma/chain"
 	"github.com/ethereum/go-ethereum/common"
+	"strings"
+	"fmt"
 )
-
-func DeserializeBig(in *pb.BigInt) (*big.Int) {
-	b, _ := new(big.Int).SetString(string(in.Values), 10)
-	return b
-}
-
-func DeserializeUintBig(in *pb.BigInt) uint {
-	return uint(DeserializeBig(in).Uint64())
-}
 
 func SerializeBig(in *big.Int) (*pb.BigInt) {
 	return &pb.BigInt{
-		Values: []byte(in.String()),
+		Hex: fmt.Sprintf("0x%s", strings.ToLower(in.Text(16))),
 	}
 }
 
-func SerializeUintBig(in uint64) (*pb.BigInt) {
-	bi := new(big.Int).SetUint64(in)
-
-	return &pb.BigInt{
-		Values: bi.Bytes(),
-	}
+func DeserializeBig(in *pb.BigInt) (*big.Int) {
+	b, _ := new(big.Int).SetString(in.Hex, 16)
+	return b
 }
 
 func SerializeTxs(txs []chain.Transaction) ([]*pb.Transaction) {
@@ -66,15 +56,15 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 		return chain.ZeroTransaction()
 	}
 	return &chain.Transaction{
-		Input0: DeserializeInput(tx.Input0),
-		Sig0: tx.Sig0,
-		Input1: DeserializeInput(tx.Input1),
-		Sig1:tx.Sig1,
+		Input0:  DeserializeInput(tx.Input0),
+		Sig0:    tx.Sig0,
+		Input1:  DeserializeInput(tx.Input1),
+		Sig1:    tx.Sig1,
 		Output0: DeserializeOutput(tx.Output0),
 		Output1: DeserializeOutput(tx.Output1),
-		Fee: DeserializeBig(tx.Fee),
-		BlkNum: tx.BlockNum,
-		TxIdx: tx.TxIdx,
+		Fee:     DeserializeBig(tx.Fee),
+		BlkNum:  tx.BlockNum,
+		TxIdx:   tx.TxIdx,
 		RootSig: tx.RootSig,
 	}
 }
@@ -90,7 +80,7 @@ func SerializeInput(in *chain.Input) (*pb.Input) {
 func DeserializeInput(in *pb.Input) (*chain.Input) {
 	result := &chain.Input{
 		BlkNum: in.BlockNum,
-		TxIdx: in.TxIdx,
+		TxIdx:  in.TxIdx,
 		OutIdx: 0,
 	}
 	if in.OutIdx > 0 {
@@ -109,18 +99,22 @@ func SerializeOutput(out *chain.Output) (*pb.Output) {
 func DeserializeOutput(out *pb.Output) (*chain.Output) {
 	return &chain.Output{
 		NewOwner: common.BytesToAddress(out.NewOwner),
-		Amount: DeserializeBig(out.Amount),
+		Amount:   DeserializeBig(out.Amount),
 	}
 }
 
 func DeserializeBlock(block *pb.Block) (*chain.Block) {
 	return &chain.Block{
 		Header: &chain.BlockHeader{
-			MerkleRoot:block.Header.MerkleRoot,
-			RLPMerkleRoot:block.Header.RlpMerkleRoot,
-			PrevHash:block.Header.PrevHash,
-			Number: block.Header.Number,
+			MerkleRoot:    block.Header.MerkleRoot,
+			RLPMerkleRoot: block.Header.RlpMerkleRoot,
+			PrevHash:      block.Header.PrevHash,
+			Number:        block.Header.Number,
 		},
 		BlockHash: block.Hash,
 	}
+}
+
+func De0x(in string) string {
+	return strings.Replace(in, "0x", "", 1)
 }

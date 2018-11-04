@@ -22,5 +22,7 @@ var startRootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(startRootCmd)
 	startRootCmd.Flags().Uint(FlagRPCPort, 6545, "port for the RPC server to listen on")
+	startRootCmd.Flags().Uint(FlagRESTPort, 6546, "port for the RPC server to listen on")
 	viper.BindPFlag(FlagRPCPort, startRootCmd.Flags().Lookup(FlagRPCPort))
+	viper.BindPFlag(FlagRESTPort, startRootCmd.Flags().Lookup(FlagRESTPort))
 }

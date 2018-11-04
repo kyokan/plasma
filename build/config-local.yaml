@@ -1,0 +1,3 @@
+node-url: "http://localhost:8545"
+contract-addr: "0xd01c08c7180eae392265d8c7df311cf5a93f1b73"
+private-key: "09cd8192c4ad4dd3b023a8ef381a24d29266ebd4af88ecdac92ec874e1c2fed8"

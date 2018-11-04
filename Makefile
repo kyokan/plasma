@@ -1,8 +1,6 @@
 deps:
 	@$(MAKE) -C ./contracts deps
 	@$(MAKE) -C ./rpc-test-client deps
-	@echo "--> Installing protobuf HTTP extensions..."
-	@go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
@@ -26,8 +24,7 @@ abigen:
 	$(MAKE) -C ./contracts abigen
 
 protogen:
-	protoc -I ${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
-	protoc -I ${GOPATH}/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb --grpc-gateway_out=logtostderr=true:rpc/pb
+	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
 
 build-all: abigen build
 
