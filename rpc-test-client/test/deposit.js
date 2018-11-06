@@ -6,8 +6,8 @@ let accounts = b4.Accounts;
 let web3     = b4.Web3;
 
 describe('Deposit (long test)', () => {
-    it('deposits funds from first account and checks balance', function (done) {
-        let account = accounts[0];
+    it('deposits funds from second account and checks balance', function (done) {
+        let account = accounts[1];
         const amount = web3.utils.toBN(web3.utils.toWei('3', 'ether'));
         account.GetPlasmaBalance((err, initialBalance) => {
             expect(err).to.equal(null);

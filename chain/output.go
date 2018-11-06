@@ -3,7 +3,6 @@ package chain
 import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/kyokan/plasma/util"
 	"math/big"
 )
@@ -44,6 +43,6 @@ func (out *Output) Hash() util.Hash {
 	buf := new(bytes.Buffer)
 	buf.Write(out.NewOwner.Bytes())
 	buf.Write(out.Amount.Bytes())
-	digest := sha3.Sum256(buf.Bytes())
-	return digest[:]
+	digest := util.DoHash(buf.Bytes())
+	return digest
 }

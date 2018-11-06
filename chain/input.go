@@ -3,7 +3,6 @@ package chain
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/kyokan/plasma/util"
 )
 
@@ -37,6 +36,6 @@ func (in *Input) Hash() util.Hash {
 	binary.Write(buf, binary.BigEndian, in.BlkNum)
 	binary.Write(buf, binary.BigEndian, in.TxIdx)
 	binary.Write(buf, binary.BigEndian, in.OutIdx)
-	digest := sha3.Sum256(buf.Bytes())
-	return digest[:]
+	digest := util.DoHash(buf.Bytes())
+	return digest
 }

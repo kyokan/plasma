@@ -8,6 +8,8 @@ const BN = require('bn.js');
 const secp256k1 = require('secp256k1');
 const MerkleTree = require('merkletreejs');
 const sha3 = require('js-sha3');
+const UInt64BE = require('int64-buffer').Uint64BE;
+const ethLib = require('eth-lib');
 
 class PlasmaClient {
     constructor(protoFile, url) {
@@ -69,12 +71,13 @@ class PlasmaClient {
 }
 
 class Account {
-    constructor(client, web3, contract, address, key) {
+    constructor(client, web3, contract, address, key, publicKey) {
         this.client = client;
         this.web3 = web3;
         this.contract = contract;
         this.address = address;
-        this.privateKey = ejs.toBuffer(`0x${key}`);
+        this.privateKey = Buffer.from(key);
+        this.publicKey = Buffer.from(publicKey);
     }
 
     GetPlasmaBalance(cb) {
@@ -117,7 +120,6 @@ class Account {
             if (err != null) {
                 return cb(err);
             }
-            // console.log(`Got gas estimate ${results[0]}, gas price ${results[1]}, nonce ${results[2]}`);
             return cb(null, {
                 gasEstimate: 2 * results[0],
                 gasPrice: results[1],
@@ -134,14 +136,13 @@ class Account {
             }
             const utxos = result.transactions;
             let tx = self.transactionForAmount(to, amount, utxos);
+            const signedTransaction = self.signTransaction(tx);
             try {
-                const rpcTx = tx.toRpc();
-                // // console.log(`Transaction RPC: ${JSON.stringify(rpcTx, null, 2)}`);
-                this.client.Send({transaction: rpcTx}, (sendErr, sendRes) => {
+                const rpcTx = signedTransaction.toRpc();
+                self.client.Send({transaction: rpcTx}, (sendErr, sendRes) => {
                     if (sendErr != null) {
                         return cb(sendErr);
                     }
-                    // TODO: verify root's signature
                     return cb(null, new Transaction(sendRes.transaction));
                 });
             }
@@ -154,10 +155,12 @@ class Account {
     signTransaction(tx) {
         let result = new Transaction(tx);
         // This will throw if key is invalid
-        const signature = secp256k1.sign(result.SignatureHash(), this.privateKey);
-        result.sig0 = Buffer.from(signature.signature);
-        result.sig1 = Buffer.from(signature.signature);
-        // // console.log(`Signed transaction ${result.toString()}`);
+        const signatureHash = result.SignatureHash();
+        const signed = ejs.ecsign(signatureHash, this.privateKey);
+        const v = Buffer.from([signed.v]);
+        const sig = Buffer.concat([signed.r, signed.s, v]);
+        result.sig0 = sig;
+        result.sig1 = sig;
         return result;
     }
 
@@ -178,16 +181,14 @@ class Account {
             if (addr0 === this.address) {
                 if (tx.output0.amount.cmp(amount) == 0) {
                     result.input0 = new Input(tx.BlockNum, tx.TxIdx, 0);
-                    // // console.log(`Using input ${tx.toString()}, output 0`);
-                    return this.signTransaction(result);
+                    return result;
                 }
                 sorter = sorter.concat([{amount: tx.output0.amount, index: index, outIdx: 0}]);
             }
             if (addr1 === this.address) {
                 if (tx.output1.amount.cmp(amount) == 0) {
                     result.input0 = new Input(tx.BlockNum, tx.TxIdx, 1);
-                    // // console.log(`Using input ${tx.toString()}, output 1`);
-                    return this.signTransaction(result);
+                    return result;
                 }
                 sorter = sorter.concat([{amount: tx.output1.amount, index: index, outIdx: 1}]);
             }
@@ -205,8 +206,7 @@ class Account {
             }
             result.output1 = new Output(this.address, inputAmount.sub(amount));
             result.input0 = new Input(inputTx.BlockNum, inputTx.TxIdx, min.outIdx);
-            // // console.log(`Using input ${inputTx.toString()}, output ${min.outIdx}`);
-            return this.signTransaction(result);
+            return result;
         }
         let leftBound = 0;
         let rightBound = sorter.length - 1;
@@ -233,7 +233,7 @@ class Account {
             result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, sorter[leftBound].outIdx);
             result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, sorter[rightBound].outIdx);
 
-            return this.signTransaction(result);
+            return result;
         }
         if (lhs >= 0 && rhs >= 0) {
             const inputTx0 = transactions[sorter[lhs].index];
@@ -251,10 +251,7 @@ class Account {
             }
             result.output1 = new Output(this.address, inputAmount.sub(amount));
 
-            // // console.log(`Using input ${inputTx0.toString()}, output ${sorter[lhs].outIdx}`);
-            // // console.log(`Using input ${inputTx1.toString()}, output ${sorter[rhs].outIdx}`);
-
-            return this.signTransaction(result);
+            return result;
         }
 
         throw new Error('no suitable UTXOs found');
@@ -324,14 +321,11 @@ class Account {
             }
             const merkleTree = new MerkleTree(elements, doHash);
             const root = merkleTree.getRoot();
-            // console.log(`Merkle root is ${self.web3.utils.bytesToHex(root)}`);
             let proof = merkleTree.getProof(elements[transaction.TxIdx]);
             let proofLength = 0;
-            // console.log(`Transaction hash: ${self.web3.utils.bytesToHex(elements[transaction.TxIdx])}`);
             let proofBuffer = Buffer.from('');
             for (let i = 0; i < proof.length; i++) {
                 proofLength += proof[i].data.length;
-                // console.log(`\tproof[${i}] = ${self.web3.utils.bytesToHex(proof[i].data)}`);
                 proofBuffer = Buffer.concat([proofBuffer, proof[i].data], proofLength);
             }
 
@@ -416,11 +410,13 @@ class Input {
     }
 
     Hash() {
-        const blockNumBuf = ejs.toBuffer(this.blockNum);
-        const txIdxBuf    = ejs.toBuffer(this.txIdx);
+        const blockNumBuf = new UInt64BE(this.blockNum).toBuffer(); // 64 bits
+        const txIdxStr    = this.txIdx.toString(16).padStart(8, 0); // 16 bits
+        const txIdxBuf    = Buffer.from(txIdxStr, 'hex');
         const outIdxBuf   = ejs.toBuffer(this.outIdx);
         const buf = Buffer.concat([blockNumBuf, txIdxBuf, outIdxBuf], blockNumBuf.length + txIdxBuf.length + outIdxBuf.length);
-        return doHash(buf);
+        const digest = doHash(buf);
+        return digest;
     }
 
     toRpc() {
@@ -468,9 +464,10 @@ class Output {
 
     Hash() {
         const newOwnerBuf = ejs.toBuffer(this.newOwner);
-        const amountBuf   = ejs.toBuffer(this.amount);
+        const amountBuf   = this.amount.toBuffer('be', this.amount.byteLength());
         const buf = Buffer.concat([newOwnerBuf, amountBuf], newOwnerBuf.length + amountBuf.length);
-        return doHash(buf);
+        const digest = doHash(buf);
+        return digest;
     }
 
     toRpc() {
@@ -575,7 +572,6 @@ class Transaction {
 
     RLPEncode() {
         const encoded = ejs.rlp.encode(this.toArray());
-        // console.log(`RLP encoding: ${web3.utils.bytesToHex(encoded)}`);
         return encoded;
     }
 
@@ -584,10 +580,16 @@ class Transaction {
         const input1Buf  = this.input1.Hash();
         const output0Buf = this.output0.Hash();
         const output1Buf = this.output1.Hash();
-        const feeBuf     = ejs.toBuffer(this.fee);
-        const size = input0Buf.length + input1Buf.length + output0Buf.length + output1Buf.length + feeBuf.length;
+        let feeBuf = Buffer.from('');
+        if (this.fee.byteLength() > 0) {
+            feeBuf = this.fee.toBuffer('be', this.fee.byteLength());
+        }
+
+        let size = input0Buf.length + input1Buf.length + output0Buf.length + output1Buf.length + feeBuf.length;
         const buf = Buffer.concat([input0Buf, input1Buf, output0Buf, output1Buf, feeBuf], size);
-        return ejs.sha256(buf);
+        const digest = doHash(buf);
+        const hash = ejs.hashPersonalMessage(digest);
+        return hash;
     }
 }
 
