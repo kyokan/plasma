@@ -17,10 +17,12 @@ const earnKeyPrefix       = "earn"
 const spendKeyPrefix      = "spend"
 const merkleKeyPrefix     = "merkle"
 const blockKeyPrefix      = "blk"
+const blockMetaKeyPrefix  = "blkmeta"
 const latestKey           = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
 const latestExitIdxKey    = "LATEST_EXIT_IDX"
 const invalidKeyPrefix    = "invalid"
+
 // TODO: Read this from configuration
 const blockSize           = uint32(100)
 
@@ -34,6 +36,10 @@ func blockNumKey(num uint64) []byte {
 
 func blockPrefixKey(parts ...string) []byte {
     return prefixKey(blockKeyPrefix, parts...)
+}
+
+func blockMetaPrefixKey(number uint64) []byte {
+	return prefixKey(blockMetaKeyPrefix, strconv.FormatUint(number, 10))
 }
 
 func extractAmount(tx *chain.Transaction, addr *common.Address) *big.Int {

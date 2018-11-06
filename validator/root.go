@@ -93,7 +93,7 @@ func RootNodeListener(ctx context.Context, storage db.PlasmaStorage, ethClient e
 }
 
 func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClient, userAddress common.Address) error {
-	res, err := rootClient.GetUTXOs(ctx, &pb.GetUTXOsRequest{
+	res, err := rootClient.GetOutputs(ctx, &pb.GetOutputsRequest{
 		Address: userAddress.Bytes(),
 	})
 	if err != nil {

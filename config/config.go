@@ -5,4 +5,5 @@ type GlobalConfig struct {
 	NodeURL      string
 	RPCPort      int
 	ContractAddr string
+	RESTPort int
 }
