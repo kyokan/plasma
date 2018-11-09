@@ -23,7 +23,8 @@ function init() {
     contract = new web3.eth.Contract(contractItf, contractAddress);
     client = new plasma.PlasmaClient(__dirname + './../../rpc/proto/root.proto', 'localhost:8643');
     _.each(ganacheAccountsInfo.private_keys, function(key, address) {
-        accounts = accounts.concat(new plasma.Account(client, web3, contract, address, key));
+        const info = ganacheAccountsInfo.addresses[address];
+        accounts = accounts.concat(new plasma.Account(client, web3, contract, address, info.secretKey, info.publicKey));
     });
 
     state = {

@@ -6,8 +6,8 @@ const plasma = require('../index');
 let accounts = b4.Accounts;
 
 describe('Exits', () => {
-    it(`exits from ${accounts[0].address}`, function (done) {
-        let account = accounts[0];
+    it(`exits from ${accounts[2].address}`, function (done) {
+        let account = accounts[2];
         account.GetPlasmaUTXOs((err, utxos) => {
             expect(err).to.equal(null);
             expect(_.isEmpty(utxos)).to.equal(false);

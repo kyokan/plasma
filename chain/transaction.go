@@ -9,7 +9,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
 )
@@ -175,9 +174,8 @@ func doHash(values []interface{}) util.Hash {
 			panic(err)
 		}
 	}
-
-	digest := sha3.Sum256(buf.Bytes())
-	return digest[:]
+	digest := util.DoHash(buf.Bytes())
+	return digest
 }
 
 func (tx *Transaction) RLPHash() util.Hash {

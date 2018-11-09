@@ -183,13 +183,11 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     if tx.Input0.IsZeroInput() == false {
         input := tx.InputAt(0)
         outputOwner := prevTxs[0].OutputAt(input.OutIdx).NewOwner
-        // TODO: Validate that signature matches
         batch.Put(spend(&outputOwner, tx.Input0), empty)
     }
     if tx.Input1.IsZeroInput() == false {
         input := tx.InputAt(0)
         outputOwner := prevTxs[1].OutputAt(input.OutIdx).NewOwner
-        // TODO: Validate that signature matches
         batch.Put(spend(&outputOwner, tx.Input1), empty)
     }
 
@@ -298,20 +296,35 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         return nil, err
     }
     if prevTx == nil {
-        return nil, errors.New("Couldn't find previous transaction")
+        return nil, errors.New("Couldn't find transaction for input 0")
     }
+
+    signatureHash := eth.GethHash(tx.SignatureHash())
+
+    outputAddress := prevTx.OutputAt(tx.Input0.OutIdx).NewOwner
+    err = util.ValidateSignature(signatureHash, tx.Sig0, outputAddress)
+    if err != nil {
+        return nil, err
+    }
+
     result = append(result, prevTx)
-    spendKeys = append(spendKeys, spend(&prevTx.OutputAt(tx.Input0.OutIdx).NewOwner, tx.Input0))
+    spendKeys = append(spendKeys, spend(&outputAddress, tx.Input0))
+
     if tx.Input1.IsZeroInput() == false {
         prevTx, err := ps.findPreviousTx(&tx, 1)
         if err != nil {
             return nil, err
         }
         if prevTx == nil {
-            return nil, errors.New("Couldn't find previous transaction")
+            return nil, errors.New("Couldn't find transaction for input 1")
+        }
+        outputAddress = prevTx.OutputAt(tx.Input1.OutIdx).NewOwner
+        err = util.ValidateSignature(signatureHash, tx.Sig1, outputAddress)
+        if err != nil {
+            return nil, err
         }
         result = append(result, prevTx)
-        spendKeys = append(spendKeys, spend(&prevTx.OutputAt(tx.Input1.OutIdx).NewOwner, tx.Input1))
+        spendKeys = append(spendKeys, spend(&outputAddress, tx.Input1))
     }
     for i, spendKey := range spendKeys {
         if ps.MemoryDB != nil {

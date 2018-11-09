@@ -106,7 +106,14 @@ func (c *clientState) Contract() *contracts.Plasma {
 
 func (c *clientState) SignData(data []byte) ([]byte, error) {
 	hash := GethHash(data)
-	return crypto.Sign(hash, c.privateKey)
+	signed, err := crypto.Sign(hash, c.privateKey)
+	if err != nil {
+		return nil, err
+	}
+	if len(signed) == 65 && signed[64] < 2 {
+		signed[64] += 27;
+	}
+	return signed, nil
 }
 
 func (c *clientState) SubscribeDeposits(address common.Address, resChan chan<- DepositEvent) error {
