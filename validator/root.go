@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/kyokan/plasma/merkle"
 	"log"
+	"math/big"
 	"time"
 
 	"encoding/json"
@@ -58,12 +60,12 @@ func RootNodeListener(ctx context.Context, storage db.PlasmaStorage, ethClient e
 			plasmaBlock := rpc.DeserializeBlock(response.Block)
 
 			// Block number for the contract is off by one
-			contractBlock, err := ethClient.Block(blockNum)
+			root, created, err := ethClient.GetChildBlock(big.NewInt(int64(blockNum)))
 			if err != nil {
 				log.Println("caught error getting block", err)
 			}
 
-			if IsValidBlock(plasmaBlock, *contractBlock) {
+			if IsValidBlock(plasmaBlock, root, created) {
 				log.Println("Block is valid, saving locally.")
 				storage.SaveBlock(plasmaBlock)
 			} else {
@@ -103,12 +105,11 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 	txs := rpc.DeserializeTxs(res.Transactions)
 
 	type UTXO struct {
-		BlkNum    uint64
-		TxIdx     uint32
-		OutputIdx uint8
+		chain.Transaction
+		outputIdx *big.Int
 	}
 
-	utxosByBlock := make(map[uint64][]UTXO)
+	utxosByBlock := make(map[*big.Int][]UTXO)
 
 	for _, tx := range txs {
 		utxos := utxosByBlock[tx.BlkNum]
@@ -118,48 +119,49 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		}
 
 		// Collect a list of outputs because technically both can belong to the user.
-		var outputIdxs []int
+		var outputIdxs []*big.Int
 
 		if tx.Output0.NewOwner == userAddress {
-			outputIdxs = append(outputIdxs, 0)
+			outputIdxs = append(outputIdxs, chain.Zero())
 		} else if tx.Output1.NewOwner == userAddress {
-			outputIdxs = append(outputIdxs, 1)
+			outputIdxs = append(outputIdxs, chain.One())
 		} else {
 			log.Fatalf("Transaction must have at least one output that belongs to address: %s\n", userAddress)
 		}
 
 		for _, outputIdx := range outputIdxs {
-			utxos = append(
-				utxos,
-				UTXO{
-					tx.BlkNum,
-					tx.TxIdx,
-					uint8(outputIdx),
-				},
-			)
+			utxo := UTXO{outputIdx: outputIdx}
+			utxo.Transaction = tx
+			utxos = append(utxos, utxo)
 		}
 
 		utxosByBlock[tx.BlkNum] = utxos
 	}
 
+	// TODO: This is highly inefficient, needs to be fixed
 	for blkNum, utxos := range utxosByBlock {
 		res2, err := rootClient.GetBlock(ctx, &pb.GetBlockRequest{
-			Number: blkNum,
+			Number: blkNum.Uint64(),
 		})
 		if err != nil {
 			return err
 		}
-
+		transactions := rpc.DeserializeTxs(res2.Transactions)
+		hashables := make([]merkle.DualHashable, len(transactions))
+		for i := 0; i < len(transactions); i++ {
+			hashables[i] = &transactions[i]
+		}
 		for _, utxo := range utxos {
-			log.Printf("Exiting block: %d, tx: %d, output: %d\n", utxo.BlkNum, utxo.TxIdx, utxo.OutputIdx)
-
-			ethClient.StartExit(&eth.StartExitOpts{
-				Block:    rpc.DeserializeBlock(res2.Block),
-				Txs:      rpc.DeserializeTxs(res2.Transactions),
-				BlockNum: utxo.BlkNum,
-				TxIndex:  utxo.TxIdx,
-				OutIndex: utxo.OutputIdx,
-			})
+			log.Printf("Exiting block: %s, tx: %s, output: %s\n", utxo.BlkNum.String(), utxo.TxIdx.String(), utxo.outputIdx.String())
+			proof, _ := merkle.GetProof(hashables, merkle.DefaultDepth, int32(utxo.TxIdx.Int64()))
+			opts := &eth.StartExitOpts{
+				Transaction: utxo.Transaction,
+				Input: *chain.NewInput(utxo.BlkNum, utxo.TxIdx, utxo.outputIdx),
+				Signature: []byte{}, // TODO: Fix this
+				ConfirmSignature: []byte{}, // TODO: Fix this
+				Proof: proof,
+			}
+			ethClient.StartTransactionExit(opts)
 
 			time.Sleep(3 * time.Second)
 		}
@@ -168,9 +170,9 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 	return nil
 }
 
-func IsValidBlock(block *chain.Block, plasmaBlock eth.Block) bool {
+func IsValidBlock(block *chain.Block, root [32]byte, created *big.Int) bool {
 	fmt.Println(block.Header.Number)
 	fmt.Println(hex.EncodeToString(block.Header.RLPMerkleRoot))
-	fmt.Println(hex.EncodeToString(plasmaBlock.Root))
-	return bytes.Equal(block.Header.RLPMerkleRoot, plasmaBlock.Root)
+	fmt.Println(hex.EncodeToString(root[:]))
+	return bytes.Equal(block.Header.RLPMerkleRoot, root[:])
 }

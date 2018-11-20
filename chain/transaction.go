@@ -22,26 +22,38 @@ type Transaction struct {
 	Output0 *Output  `json:"Output0"`
 	Output1 *Output  `json:"Output1"`
 	Fee     *big.Int `json:"Fee"`
-	BlkNum  uint64   `json:"BlkNum"`
-	TxIdx   uint32   `json:"TxIdx"`
+	BlkNum  *big.Int `json:"BlkNum"`
+	TxIdx   *big.Int `json:"TxIdx"`
 	RootSig []byte   `json:"RootSig"`
 }
 
+// Transaction encoding:
+// [Blknum0, TxIndex0, Oindex0, depositNonce0, Amount0, ConfirmSig0
+//  Blknum1, TxIndex1, Oindex1, depositNonce1, Amount1, ConfirmSig1
+//  NewOwner0, Denom0, NewOwner1, Denom1, Fee]
 type rlpHelper struct {
-	BlkNum0   uint64
-	TxIdx0    uint32
-	OutIdx0   uint8
-	Sig0      []byte
-	BlkNum1   uint64
-	TxIdx1    uint32
-	OutIdx1   uint8
-	Sig1      []byte
-	NewOwner0 common.Address
-	Amount0   big.Int
-	NewOwner1 common.Address
-	Amount1   big.Int
-	Fee       big.Int
-	RootSig   []byte
+	BlkNum0       big.Int
+	TxIdx0        big.Int
+	OutIdx0       big.Int
+	DepositNonce0 big.Int
+	Amount0       big.Int
+	Sig0          []byte
+
+	BlkNum1       big.Int
+	TxIdx1        big.Int
+	OutIdx1       big.Int
+	DepositNonce1 big.Int
+	Amount1       big.Int
+	Sig1          []byte
+
+	NewOwner0     common.Address
+	Denom0        big.Int
+
+	NewOwner1     common.Address
+	Denom1        big.Int
+
+	Fee           big.Int
+	RootSig       []byte
 }
 
 func ZeroTransaction() *Transaction {
@@ -80,12 +92,8 @@ func (tx *Transaction) InputAt(idx uint8) *Input {
 	return tx.Input1
 }
 
-func (tx *Transaction) OutputAt(idx uint8) *Output {
-	if idx != 0 && idx != 1 {
-		panic(fmt.Sprint("Invalid output index: ", idx))
-	}
-
-	if idx == 0 {
+func (tx *Transaction) OutputAt(idx *big.Int) *Output {
+	if idx.Cmp(big.NewInt(0)) == 0 {
 		return tx.Output0
 	}
 
@@ -93,13 +101,13 @@ func (tx *Transaction) OutputAt(idx uint8) *Output {
 }
 
 func (tx *Transaction) OutputFor(addr *common.Address) *Output {
-	output := tx.OutputAt(0)
+	output := tx.OutputAt(big.NewInt(0))
 
 	if util.AddressesEqual(&output.NewOwner, addr) {
 		return output
 	}
 
-	output = tx.OutputAt(1)
+	output = tx.OutputAt(big.NewInt(1))
 
 	if util.AddressesEqual(&output.NewOwner, addr) {
 		return output
@@ -108,17 +116,17 @@ func (tx *Transaction) OutputFor(addr *common.Address) *Output {
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
 }
 
-func (tx *Transaction) OutputIndexFor(addr *common.Address) uint8 {
-	output := tx.OutputAt(0)
+func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
+	output := tx.OutputAt(big.NewInt(0))
 
 	if util.AddressesEqual(&output.NewOwner, addr) {
-		return 0
+		return big.NewInt(0)
 	}
 
-	output = tx.OutputAt(1)
+	output = tx.OutputAt(big.NewInt(1))
 
 	if util.AddressesEqual(&output.NewOwner, addr) {
-		return 1
+		return big.NewInt(1)
 	}
 
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
@@ -189,30 +197,30 @@ func (tx *Transaction) RLPHash() util.Hash {
 }
 
 func (tx *Transaction) SetIndex(index uint32) {
-	tx.TxIdx = index
+	tx.TxIdx = big.NewInt(int64(index))
 }
 
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	var itf rlpHelper
 	if tx.Input0 != nil {
-		itf.BlkNum0 = tx.Input0.BlkNum
-		itf.TxIdx0  = tx.Input0.TxIdx
-		itf.OutIdx0 = tx.Input0.OutIdx
+		itf.BlkNum0 = *tx.Input0.BlkNum
+		itf.TxIdx0  = *tx.Input0.TxIdx
+		itf.OutIdx0 = *tx.Input0.OutIdx
 		itf.Sig0    = tx.Sig0
 	}
 	if tx.Input1 != nil {
-		itf.BlkNum1 = tx.Input1.BlkNum
-		itf.TxIdx1  = tx.Input1.TxIdx
-		itf.OutIdx1 = tx.Input1.OutIdx
+		itf.BlkNum1 = *tx.Input1.BlkNum
+		itf.TxIdx1  = *tx.Input1.TxIdx
+		itf.OutIdx1 = *tx.Input1.OutIdx
 		itf.Sig1    = tx.Sig1
 	}
 	if tx.Output0 != nil {
 		itf.NewOwner0 = tx.Output0.NewOwner
-		itf.Amount0   = *tx.Output0.Amount
+		itf.Amount0   = *tx.Output0.Denom
 	}
 	if tx.Output1 != nil {
 		itf.NewOwner1 = tx.Output1.NewOwner
-		itf.Amount1   = *tx.Output1.Amount
+		itf.Amount1   = *tx.Output1.Denom
 	}
 	if tx.Fee != nil {
 		itf.Fee = *tx.Fee
@@ -227,10 +235,12 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	if err != nil {
 		return err
 	}
-	tx.Input0  = NewInput(itf.BlkNum0, itf.TxIdx0, itf.OutIdx0)
-	tx.Input1  = NewInput(itf.BlkNum1, itf.TxIdx1, itf.OutIdx1)
+	tx.Input0  = NewInput(&itf.BlkNum0, &itf.TxIdx0, &itf.OutIdx0)
+	tx.Input1  = NewInput(&itf.BlkNum1, &itf.TxIdx1, &itf.OutIdx1)
 	tx.Output0 = NewOutput(itf.NewOwner0, &itf.Amount0)
+	tx.Output0.DepositNonce = &itf.DepositNonce0
 	tx.Output1 = NewOutput(itf.NewOwner1, &itf.Amount1)
+	tx.Output1.DepositNonce = &itf.DepositNonce1
 	tx.Sig0 = itf.Sig0
 	tx.Sig1 = itf.Sig1
 	tx.Fee  = big.NewInt(itf.Fee.Int64())

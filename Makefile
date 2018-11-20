@@ -1,11 +1,13 @@
 deps:
-	@$(MAKE) -C ./contracts deps
+	@echo "--> Installing Plasma MVP Rootchain..."
+	git submodule update --init --recursive
+	npm install --prefix plasma-mvp-rootchain plasma-mvp-rootchain
 	@$(MAKE) -C ./rpc-test-client deps
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
 migrate:
-	$(MAKE) -C ./contracts migrate
+	#TODO new contracts
 
 build:
 	go build -o ./target/plasma ./cmd/plasma/main.go
@@ -20,8 +22,13 @@ build-cross:
 install:
 	go install ./cmd/plasma
 
-abigen:
-	$(MAKE) -C ./contracts abigen
+abigen: deps
+	cd plasma-mvp-rootchain && \
+	pwd && \
+	truffle compile && \
+	mkdir -p abi/contracts gen/contracts && \
+	cat ./build/contracts/RootChain.json | jq ".abi" > abi/contracts/RootChain.abi && \
+	abigen --abi abi/contracts/RootChain.abi --pkg contracts --type Plasma --out gen/contracts/rootchain.go
 
 protogen:
 	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
@@ -35,7 +42,10 @@ setup: deps build
 	@./bin/setup
 
 clean:
-	$(MAKE) -C ./contracts clean
+	rm -rf ./plasma-mvp-rootchain/node_modules
+	rm -rf ./plasma-mvp-rootchain/abi
+	rm -rf ./plasma-mvp-rootchain/gen
+	rm -rf ./plasma-mvp-rootchain/build
 	rm -rf ./target
 	rm -rf ~/.plasma
 	rm -rf ./test/storage/ganache/*

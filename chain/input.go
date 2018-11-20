@@ -4,16 +4,18 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/kyokan/plasma/util"
+	"math/big"
+	"sync"
 )
 
 // JSON tags needed for test fixtures
 type Input struct {
-	BlkNum uint64 `json:"BlkNum"`
-	TxIdx  uint32 `json:"TxIdx"`
-	OutIdx uint8  `json:"OutIdx"`
+	BlkNum       *big.Int `json:"BlkNum"`
+	TxIdx        *big.Int `json:"TxIdx"`
+	OutIdx       *big.Int `json:"OutIdx"`
 }
 
-func NewInput(blkNum uint64, txIdx uint32, outIdx uint8) *Input {
+func NewInput(blkNum, txIdx, outIdx *big.Int) *Input {
 	return &Input{
 		BlkNum: blkNum,
 		TxIdx:  txIdx,
@@ -22,13 +24,14 @@ func NewInput(blkNum uint64, txIdx uint32, outIdx uint8) *Input {
 }
 
 func ZeroInput() *Input {
-	return NewInput(0, 0, 0)
+	zero := big.NewInt(0)
+	return NewInput(zero, zero, zero)
 }
 
 func (in *Input) IsZeroInput() bool {
-	return in.BlkNum == 0 &&
-		in.TxIdx == 0 &&
-		in.OutIdx == 0
+	return in.BlkNum == nil &&
+			in.TxIdx == nil &&
+			in.OutIdx == nil
 }
 
 func (in *Input) Hash() util.Hash {
@@ -39,3 +42,22 @@ func (in *Input) Hash() util.Hash {
 	digest := util.DoHash(buf.Bytes())
 	return digest
 }
+
+var zero, one *big.Int
+var once sync.Once
+
+func initialize() {
+	zero = big.NewInt(0)
+	one  = big.NewInt(1)
+}
+
+func Zero() *big.Int {
+	once.Do(initialize)
+	return zero
+}
+
+func One() *big.Int {
+	once.Do(initialize)
+	return one
+}
+

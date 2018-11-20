@@ -4,6 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"encoding/json"
 	"fmt"
+	"math/big"
 )
 
 func (m *BigInt) MarshalJSON() ([]byte, error) {
@@ -11,7 +12,11 @@ func (m *BigInt) MarshalJSON() ([]byte, error) {
 }
 
 func (m *Input) MarshalJSON() ([]byte, error) {
-	if m.TxIdx == 0 && m.BlockNum == 0 && m.OutIdx == 0 {
+	zero := big.NewInt(0)
+	blkNum, _ := new(big.Int).SetString(m.BlockNum.Hex, 16)
+	txIdx, _ := new(big.Int).SetString(m.TxIdx.Hex, 16)
+	outIdx, _ := new(big.Int).SetString(m.OutIdx.Hex, 16)
+	if txIdx.Cmp(zero) == 0 && blkNum.Cmp(zero) == 0 && outIdx.Cmp(zero) == 0 {
 		return []byte("null"), nil
 	}
 
@@ -52,6 +57,7 @@ func (m BlockHeader) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
+// TODO: Please use the chain.Transaction as it already has the JSON annotations
 type rawTransaction struct {
 	Input0   *Input  `json:"input0"`
 	Sig0     *string `json:"sig0"`
@@ -60,8 +66,8 @@ type rawTransaction struct {
 	Output0  *Output `json:"output0"`
 	Output1  *Output `json:"output1"`
 	Fee      *BigInt `json:"fee"`
-	BlockNum uint64  `json:"blockNum"`
-	TxIdx    uint32  `json:"txIdx"`
+	BlockNum *BigInt `json:"blockNum"`
+	TxIdx    *BigInt `json:"txIdx"`
 	RootSig  string  `json:"rootSig"`
 }
 

@@ -5,24 +5,83 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/kyokan/plasma/contracts/gen/contracts"
+	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
 )
 
-func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error) {
+func (c *clientState) filterOpts(start uint64) (*bind.FilterOpts, error) {
 	header, err := c.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	end := header.Number.Uint64()
 
-	opts := bind.FilterOpts{
+	return &bind.FilterOpts{
 		Start:   start,
 		End:     &end, // TODO: end doesn't seem to work
 		Context: context.Background(),
+	}, nil
+}
+
+func (c *clientState) AddedToBalancesFilter(start uint64) ([]contracts.PlasmaAddedToBalances, uint64, error) {
+	opts, err := c.filterOpts(start)
+	if err != nil {
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterAddedToBalances(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter added to balance events: %v", err)
 	}
 
-	itr, err := c.contract.FilterDeposit(&opts)
+	next := true
+	var events []contracts.PlasmaAddedToBalances
+	for next {
+		if itr.Event != nil {
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, end, nil
+}
+
+func (c *clientState) BlockSubmittedFilter(start uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error) {
+	opts, err := c.filterOpts(start)
+	if err != nil {
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterBlockSubmitted(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter block submitted events: %v", err)
+	}
+
+	next := true
+	var events []contracts.PlasmaBlockSubmitted
+	for next {
+		if itr.Event != nil {
+			events = append(events, *itr.Event)
+		}
+		next = itr.Next()
+	}
+
+	return events, end, nil
+}
+
+func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error) {
+	opts, err := c.filterOpts(start)
+	if err != nil {
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterDeposit(opts)
 	if err != nil {
 		log.Fatalf("Failed to filter deposit events: %v", err)
 	}
@@ -39,186 +98,153 @@ func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, ui
 	return events, end, nil
 }
 
-func (c *clientState) ExitStartedFilter(start uint64) ([]contracts.PlasmaExitStarted, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterExitStarted(&opts)
-
+func (c *clientState) ChallengedTransactionExitFilter(start uint64) ([]contracts.PlasmaChallengedTransactionExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter exit started events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterChallengedTransactionExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter challenged transaction exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaExitStarted
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaChallengedTransactionExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (c *clientState) DebugAddressFilter(start uint64) ([]contracts.PlasmaDebugAddress, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterDebugAddress(&opts)
-
+func (c *clientState) ChallengedDepositExitFilter(start uint64) ([]contracts.PlasmaChallengedDepositExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter debug address events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterChallengedDepositExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter challenged deposit exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaDebugAddress
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaChallengedDepositExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (c *clientState) DebugUintFilter(start uint64) ([]contracts.PlasmaDebugUint, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterDebugUint(&opts)
-
+func (c *clientState) FinalizedTransactionExitFilter(start uint64) ([]contracts.PlasmaFinalizedTransactionExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter debug uint events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterFinalizedTransactionExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter finalized transaction exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaDebugUint
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaFinalizedTransactionExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (c *clientState) DebugBoolFilter(start uint64) ([]contracts.PlasmaDebugBool, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterDebugBool(&opts)
-
+func (c *clientState) FinalizedDepositExitFilter(start uint64) ([]contracts.PlasmaFinalizedDepositExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter debug bool events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterFinalizedDepositExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter finalized deposit exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaDebugBool
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaFinalizedDepositExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (c *clientState) ChallengeSuccessFilter(
-	start uint64,
-) ([]contracts.PlasmaChallengeSuccess, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterChallengeSuccess(&opts)
-
+func (c *clientState) StartedTransactionExitFilter(start uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter challenge success events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterStartedTransactionExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter started transaction exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaChallengeSuccess
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaStartedTransactionExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
 
-func (c *clientState) ChallengeFailureFilter(
-	start uint64,
-) ([]contracts.PlasmaChallengeFailure, uint64) {
-	opts := bind.FilterOpts{
-		Start:   start,
-		End:     nil, // TODO: end doesn't seem to work
-		Context: context.Background(),
-	}
-
-	itr, err := c.contract.FilterChallengeFailure(&opts)
-
+func (c *clientState) StartedDepositExitFilter(start uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error) {
+	opts, err := c.filterOpts(start)
 	if err != nil {
-		log.Fatalf("Failed to filter challenge failure events: %v", err)
+		return nil, 0, err
+	}
+	end := *opts.End
+
+
+	itr, err := c.contract.FilterStartedDepositExit(opts)
+	if err != nil {
+		log.Fatalf("Failed to filter started deposit exit events: %v", err)
 	}
 
 	next := true
-
-	var events []contracts.PlasmaChallengeFailure
-
-	var lastBlockNumber uint64
-
+	var events []contracts.PlasmaStartedDepositExit
 	for next {
 		if itr.Event != nil {
-			lastBlockNumber = itr.Event.Raw.BlockNumber
 			events = append(events, *itr.Event)
 		}
 		next = itr.Next()
 	}
 
-	return events, lastBlockNumber
+	return events, end, nil
 }
+

@@ -29,7 +29,7 @@ type PlasmaStorage interface {
     StoreTransaction(tx chain.Transaction) (*chain.Transaction, error)
     ProcessDeposit(tx chain.Transaction) (prev, deposit util.Hash, err error)
     FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
-    FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error)
+    FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.Transaction, error)
 
     Balance(addr *common.Address) (*big.Int, error)
     SpendableTxs(addr *common.Address) ([]chain.Transaction, error)
@@ -149,7 +149,7 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
 
     // Moved TxIdx assignment inside the merkle queue
     // tx.TxIdx = atomic.AddUint32(&ps.CurrentTxIdx, 1) - 1
-    tx.BlkNum = ps.CurrentBlock
+    tx.BlkNum = big.NewInt(int64(ps.CurrentBlock))
 
     rootSig, err := ps.client.SignData(tx.SignatureHash())
     if err != nil {
@@ -193,12 +193,14 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
 
     // Recording earns
     if tx.Output0.IsZeroOutput() == false {
-        output := tx.OutputAt(0)
-        batch.Put(earn(&output.NewOwner, tx, 0), empty)
+        outIdx := big.NewInt(0)
+        output := tx.OutputAt(outIdx)
+        batch.Put(earn(&output.NewOwner, tx, outIdx), empty)
     }
     if tx.Output1.IsZeroOutput() == false {
-        output := tx.OutputAt(1)
-        batch.Put(earn(&output.NewOwner, tx, 1), empty)
+        outIdx := big.NewInt(1)
+        output := tx.OutputAt(outIdx)
+        batch.Put(earn(&output.NewOwner, tx, outIdx), empty)
     }
 
     batch.Replay(ps)
@@ -342,14 +344,14 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         }
     }
 
-    totalInput := result[0].OutputAt(tx.Input0.OutIdx).Amount
+    totalInput := result[0].OutputAt(tx.Input0.OutIdx).Denom
     if len(result) > 1 {
-        totalInput = big.NewInt(0).Add(totalInput, result[1].OutputAt(tx.Input1.OutIdx).Amount)
+        totalInput = big.NewInt(0).Add(totalInput, result[1].OutputAt(tx.Input1.OutIdx).Denom)
     }
 
-    totalOutput := big.NewInt(0).Add(tx.Output0.Amount, tx.Fee)
+    totalOutput := big.NewInt(0).Add(tx.Output0.Denom, tx.Fee)
     if !tx.Output1.IsZeroOutput() {
-        totalOutput = totalOutput.Add(totalOutput, tx.Output1.Amount)
+        totalOutput = totalOutput.Add(totalOutput, tx.Output1.Denom)
     }
 
     if totalInput.Cmp(totalOutput) != 0 {
@@ -407,30 +409,30 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
         // prefix looks like "tx::blkNum::1::txIdx::"
         // key looks like    "tx::blkNum::1::txIdx::20"
         idx := string(iter.Key()[len(prefix):])
-        txIdx, err := strconv.ParseUint(idx, 10, 64)
-        if err != nil {
-            return nil, err
+        txIdx, success := new(big.Int).SetString(idx, 10)
+        if success == false {
+            return nil, errors.New("Failed to parse transaction index from key")
         }
-        err = rlp.DecodeBytes(iter.Value(), &tx)
+        err := rlp.DecodeBytes(iter.Value(), &tx)
         if err != nil {
             return nil, err
         }
         // RLP encoding for tranctions doesn't contain TxIdx or BlkNum
-        tx.TxIdx = uint32(txIdx)
-        tx.BlkNum = blkNum
+        tx.TxIdx = txIdx
+        tx.BlkNum = big.NewInt(int64(blkNum))
         buffer = append(buffer, tx)
     }
 
     txs := make([]chain.Transaction, len(buffer))
     // TODO: Do transactions have to be in index order?
     for _, tx := range buffer {
-        txs[tx.TxIdx] = tx
+        txs[tx.TxIdx.Int64()] = tx
     }
 
     return txs, nil
 }
 
-func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32, locker sync.Locker) (*chain.Transaction, error) {
+func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int, locker sync.Locker) (*chain.Transaction, error) {
     locker.Lock()
     defer locker.Unlock()
 
@@ -438,7 +440,7 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32, l
     var data []byte
     var err error
 
-    if blkNum == ps.CurrentBlock {
+    if blkNum.Cmp(big.NewInt(int64(ps.CurrentBlock))) == 0 {
         exists := ps.MemoryDB.Contains(key)
         if !exists {
             return nil, nil
@@ -471,7 +473,7 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32, l
     return &tx, nil
 }
 
-func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.Transaction, error) {
+func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.Transaction, error) {
     return ps.findTransactionByBlockNumTxIdx(blkNum, txIdx, ps.RLocker())
 }
 // Address

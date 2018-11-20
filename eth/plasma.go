@@ -2,14 +2,13 @@ package eth
 
 import (
 	"crypto/ecdsa"
-	"github.com/kyokan/plasma/merkle"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/kyokan/plasma/chain"
+	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
+	"github.com/kyokan/plasma/util"
 	"log"
 	"math/big"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/chain"
-	"github.com/kyokan/plasma/contracts/gen/contracts"
-	"github.com/kyokan/plasma/util"
 )
 
 type PlasmaClient struct {
@@ -49,12 +48,8 @@ func (c *clientState) SubmitBlock(merkleHash util.Hash) error {
 func (c *clientState) Deposit(value *big.Int, t *chain.Transaction) error {
 	opts := CreateKeyedTransactor(c.privateKey)
 	opts.Value = value
-	bytes, err := rlp.EncodeToBytes(&t)
-	if err != nil {
-		return err
-	}
 
-	tx, err := c.contract.Deposit(opts, bytes)
+	tx, err := c.contract.Deposit(opts, c.UserAddress())
 	if err != nil {
 		return err
 	}
@@ -63,124 +58,89 @@ func (c *clientState) Deposit(value *big.Int, t *chain.Transaction) error {
 	return nil
 }
 
-func (c *clientState) StartExit(opts *StartExitOpts) error {
+
+func (c *clientState) GetChildBlock(nonce *big.Int) ([32]byte, *big.Int, error) {
+	opts := CreateCallOpts(c.UserAddress())
+	return c.contract.GetChildBlock(opts, nonce)
+}
+
+func (c *clientState) StartDepositExit(nonce *big.Int) error {
 	auth := CreateKeyedTransactor(c.privateKey)
-	tx := opts.Txs[opts.TxIndex]
-	bytes, err := rlp.EncodeToBytes(&tx)
-	if err != nil {
-		return err
-	}
 
-	hashables := make([]merkle.DualHashable, len(opts.Txs))
-	for i:= 0; i < len(opts.Txs); i++ {
-		hashables[i] = &opts.Txs[i]
-	}
-	hashes, err := merkle.GetProof(hashables, 17, int32(opts.TxIndex))
-	if err != nil {
-		return err
-	}
-	proof := []byte{}
-	for i := 0; i < len(hashes); i++ {
-		proof = append(proof, hashes[i]...)
-	}
-
-	res, err := c.contract.StartExit(
-		auth,
-		opts.BlockNum,
-		opts.TxIndex,
-		opts.OutIndex,
-		bytes,
-		proof,
-	)
+	res, err := c.contract.StartDepositExit(auth, nonce)
 
 	if err != nil {
 		return err
 	}
-	log.Printf("Start Exit pending: 0x%x\n", res.Hash())
+	log.Printf("Start Deposit Exit pending: 0x%x\n", res.Hash())
 	return nil
 }
 
-func (c *clientState) ChallengeExit(opts *ChallengeExitOpts) error {
+func (c *clientState) StartTransactionExit(opts *StartExitOpts) error {
 	auth := CreateKeyedTransactor(c.privateKey)
-	tx := opts.Txs[opts.TxIndex]
-	bytes, err := rlp.EncodeToBytes(&tx)
-	if err != nil {
-		return nil
-	}
-
-	hashables := make([]merkle.DualHashable, len(opts.Txs))
-	for i:= 0; i < len(opts.Txs); i++ {
-		hashables[i] = &opts.Txs[i]
-	}
-	hashes, err := merkle.GetProof(hashables, 16, int32(opts.TxIndex))
+	var txPos [3]*big.Int
+	txPos[0] = opts.Input.BlkNum
+	txPos[1] = opts.Input.TxIdx
+	txPos[2] = opts.Input.OutIdx
+	encoded, err := rlp.EncodeToBytes(opts.Transaction)
 	if err != nil {
 		return err
 	}
-	proof := []byte{}
-	for i := 0; i < len(hashes); i++ {
-		proof = append(proof, hashes[i]...)
-	}
-
-	res, err := c.contract.ChallengeExit(
-		auth,
-		opts.ExitId,
-		opts.BlockNum,
-		opts.TxIndex,
-		bytes,
-		proof,
-	)
+	res, err := c.contract.StartTransactionExit(auth, txPos, encoded, opts.Proof, opts.Signature, opts.ConfirmSignature)
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
+	log.Printf("Start Transaction Exit pending: 0x%x\n", res.Hash())
 	return nil
 }
 
-func (c *clientState) Finalize() error {
-	opts := CreateKeyedTransactor(c.privateKey)
-	res, err := c.contract.Finalize(opts)
+func (c *clientState) ChallengeDepositExit(nonce *big.Int, opts *ChallengeExitOpts) error {
+	auth := CreateKeyedTransactor(c.privateKey)
+	var existingTxPos [3]*big.Int
+	existingTxPos[0] = opts.ExistingInput.BlkNum
+	existingTxPos[1] = opts.ExistingInput.TxIdx
+	existingTxPos[2] = opts.ExistingInput.OutIdx
+	encoded, err := rlp.EncodeToBytes(opts.Transaction)
 	if err != nil {
 		return err
 	}
-
-	log.Printf("Finalize pending: 0x%x\n", res.Hash())
+	res, err := c.contract.ChallengeDepositExit(auth, nonce, existingTxPos, encoded, opts.Signature, opts.Proof, opts.ConfirmSignature)
+	if err != nil {
+		return err
+	}
+	log.Printf("Challenge Deposit Exit pending: 0x%x\n", res.Hash())
 	return nil
 }
 
-func (c *clientState) Exit(exitId uint64) (*Exit, error) {
-	opts := CreateCallOpts(c.UserAddress())
-	owner, amount, blocknum, txindex, oindex, startedAt, err := c.contract.GetExit(opts, exitId)
+func (c *clientState) ChallengeTransactionExit(opts *ChallengeExitOpts) error {
+	auth := CreateKeyedTransactor(c.privateKey)
+	var existingTxPos, txPos [3]*big.Int
+	existingTxPos[0] = opts.ExistingInput.BlkNum
+	existingTxPos[1] = opts.ExistingInput.TxIdx
+	existingTxPos[2] = opts.ExistingInput.OutIdx
+	txPos[0] = opts.Input.BlkNum
+	txPos[1] = opts.Input.TxIdx
+	txPos[2] = opts.Input.OutIdx
+	encoded, err := rlp.EncodeToBytes(opts.Transaction)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	return &Exit{
-		owner,
-		amount,
-		blocknum,
-		txindex,
-		oindex,
-		startedAt,
-	}, nil
+	res, err := c.contract.ChallengeTransactionExit(auth, existingTxPos, txPos, encoded, opts.Signature, opts.Proof, opts.ConfirmSignature)
+	if err != nil {
+		return err
+	}
+	log.Printf("Challenge Transaction Exit pending: 0x%x\n", res.Hash())
+	return nil
 }
 
-func (c *clientState) Block(blocknum uint64) (*Block, error) {
-	opts := CreateCallOpts(c.UserAddress())
-
-	log.Printf("Block for address 0x%x\n", opts.From)
-	root, startedAt, err := c.contract.GetBlock(opts, blocknum)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Block{
-		root[:],
-		startedAt,
-	}, nil
+func (c *clientState) FinalizeDepositExits() error {
+	auth := CreateKeyedTransactor(c.privateKey)
+	_, err := c.contract.FinalizeDepositExits(auth)
+	return err
 }
 
-func (c *clientState) CurrentChildBlock() (uint64, error) {
-	opts := CreateCallOpts(c.UserAddress())
-	return c.contract.CurrentChildBlock(opts)
+func (c *clientState) FinalizeTransactionExits() error {
+	auth := CreateKeyedTransactor(c.privateKey)
+	_, err := c.contract.FinalizeTransactionExits(auth)
+	return err
 }

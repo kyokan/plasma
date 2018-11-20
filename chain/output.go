@@ -9,21 +9,23 @@ import (
 
 // JSON tags needed for test fixtures
 type Output struct {
-	NewOwner common.Address `json:"NewOwner"`
-	Amount   *big.Int       `json:"Amount"`
+	NewOwner     common.Address `json:"NewOwner"`
+	Denom        *big.Int       `json:"Denom"`
+	DepositNonce *big.Int		`json:"Nonce"`
 }
 
 func NewOutput(newOwner common.Address, amount *big.Int) *Output {
 	return &Output{
 		NewOwner: common.BytesToAddress(newOwner.Bytes()),
-		Amount  : big.NewInt(amount.Int64()),
+		Denom:    big.NewInt(amount.Int64()),
 	}
 }
 
 func ZeroOutput() *Output {
 	return &Output{
-		NewOwner: common.BytesToAddress(make([]byte, 20, 20)),
-		Amount:   big.NewInt(0),
+		NewOwner:     common.BytesToAddress(make([]byte, 20, 20)),
+		Denom:        big.NewInt(0),
+		DepositNonce: big.NewInt(0),
 	}
 }
 
@@ -36,13 +38,14 @@ func (out *Output) IsZeroOutput() bool {
 		}
 	}
 
-	return out.Amount.Cmp(big.NewInt(0)) == 0
+	return out.Denom.Cmp(big.NewInt(0)) == 0 &&
+		   out.DepositNonce.Cmp(big.NewInt(0)) == 0
 }
 
 func (out *Output) Hash() util.Hash {
 	buf := new(bytes.Buffer)
 	buf.Write(out.NewOwner.Bytes())
-	buf.Write(out.Amount.Bytes())
+	buf.Write(out.Denom.Bytes())
 	digest := util.DoHash(buf.Bytes())
 	return digest
 }

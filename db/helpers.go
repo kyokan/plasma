@@ -43,7 +43,7 @@ func blockMetaPrefixKey(number uint64) []byte {
 }
 
 func extractAmount(tx *chain.Transaction, addr *common.Address) *big.Int {
-    return tx.OutputFor(addr).Amount
+    return tx.OutputFor(addr).Denom
 }
 
 func earnPrefixKey(addr *common.Address) []byte {
@@ -54,12 +54,12 @@ func spendPrefixKey(addr *common.Address) []byte {
     return prefixKey(spendKeyPrefix, util.AddressToHex(addr))
 }
 
-func blkNumHashkey(blkNum uint64, hexHash string) []byte {
-    return txPrefixKey("blkNum", strconv.FormatUint(blkNum, 10), "hash", hexHash)
+func blkNumHashkey(blkNum *big.Int, hexHash string) []byte {
+    return txPrefixKey("blkNum", blkNum.String(), "hash", hexHash)
 }
 
-func blkNumTxIdxKey(blkNum uint64, txIdx uint32) []byte {
-    return txPrefixKey("blkNum", strconv.FormatUint(blkNum, 10), "txIdx", strconv.FormatUint(uint64(txIdx), 10))
+func blkNumTxIdxKey(blkNum, txIdx *big.Int) []byte {
+    return txPrefixKey("blkNum", blkNum.String(), "txIdx", txIdx.String())
 }
 
 func invalidPrefixKey(parts ...string) []byte {
@@ -77,35 +77,32 @@ func spend(addr *common.Address, input *chain.Input) []byte {
     return prefixKey(spendKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx)
 }
 
-func earn(addr *common.Address, tx chain.Transaction, outputIdx uint8) []byte {
-    blkNum := fmt.Sprintf("%d", tx.BlkNum)
-    txIdx  := fmt.Sprintf("%d", tx.TxIdx)
-    outIdx := fmt.Sprintf("%d", outputIdx)
-    return prefixKey(earnKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx)
+func earn(addr *common.Address, tx chain.Transaction, outputIdx *big.Int) []byte {
+    return prefixKey(earnKeyPrefix, util.AddressToHex(addr), tx.BlkNum.String(), tx.TxIdx.String(), outputIdx.String())
 }
 
-func parseSuffix(key []byte) (*common.Address, uint64, uint32, uint8, error) {
+func parseSuffix(key []byte) (*common.Address, *big.Int, *big.Int, *big.Int, error) {
     parts := strings.Split(string(key), "::")
     if len(parts) != 4 {
-        return nil, 0, 0, 0, errors.New("Invalid format key")
+        return nil, nil, nil, nil, errors.New("Invalid format key")
     }
 
     addr := common.BytesToAddress([]byte(parts[0]))
 
-    blkNum, err := strconv.ParseUint(parts[1], 10, 64)
-    if err != nil {
-        return nil, 0, 0, 0, err
+    blkNum, success := new(big.Int).SetString(parts[1], 10)
+    if success == false {
+        return nil, nil, nil, nil, errors.New("Failed to parse block number")
     }
 
-    txIdx, err := strconv.ParseUint(parts[2], 10, 32)
-    if err != nil {
-        return nil, 0, 0, 0, err
+    txIdx, success := new(big.Int).SetString(parts[1], 10)
+    if success == false {
+        return nil, nil, nil, nil, errors.New("Failed to parse transaction index")
     }
 
-    outIdx, err := strconv.ParseUint(parts[3], 10, 32)
-    if err != nil {
-        return nil, 0, 0, 0, err
+    outIdx, success := new(big.Int).SetString(parts[1], 10)
+    if success == false {
+        return nil, nil, nil, nil, errors.New("Failed to parse output index")
     }
 
-    return &addr, blkNum, uint32(txIdx), uint8(outIdx), nil
+    return &addr, blkNum, txIdx, outIdx, nil
 }

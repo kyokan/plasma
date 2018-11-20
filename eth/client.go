@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
-	"github.com/kyokan/plasma/contracts/gen/contracts"
+	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
 	"github.com/kyokan/plasma/chain"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -25,18 +25,16 @@ const depositFilter = "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5
 const depositDescription = `[{"anonymous":false,"inputs":[{"indexed":false,"name":"sender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Deposit","type":"event"}]`
 
 type StartExitOpts struct {
-	Block    *chain.Block
-	Txs      []chain.Transaction
-	BlockNum uint64
-	TxIndex  uint32
-	OutIndex uint8
+	Transaction      chain.Transaction
+	Input 	 		 chain.Input
+	Signature  		 []byte
+	Proof            []byte
+	ConfirmSignature []byte
 }
 
 type ChallengeExitOpts struct {
-	ExitId   uint64
-	Txs      []chain.Transaction
-	BlockNum uint64
-	TxIndex  uint32
+	StartExitOpts
+	ExistingInput chain.Input
 }
 
 type Client interface {
@@ -46,20 +44,30 @@ type Client interface {
 	SignData(data []byte) ([]byte, error)
 	SubmitBlock(merkleHash util.Hash) error
 	Deposit(value *big.Int, tx *chain.Transaction) error
-	StartExit(opts *StartExitOpts) error
-	ChallengeExit(opts *ChallengeExitOpts) error
-	Finalize() error
-	Exit(exitId uint64) (*Exit, error)
-	Block(blockNum uint64) (*Block, error)
-	CurrentChildBlock() (uint64, error)
 
+	GetChildBlock(*big.Int) ([32]byte, *big.Int, error)
+
+	StartDepositExit(nonce *big.Int) error
+	StartTransactionExit(opts *StartExitOpts) error
+
+	ChallengeDepositExit(nonce *big.Int, opts *ChallengeExitOpts) error
+	ChallengeTransactionExit(opts *ChallengeExitOpts) error
+
+	FinalizeDepositExits() error
+	FinalizeTransactionExits() error
+
+	AddedToBalancesFilter(uint64) ([]contracts.PlasmaAddedToBalances, uint64, error)
+	BlockSubmittedFilter(uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error)
 	DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error)
-	ExitStartedFilter(start uint64) ([]contracts.PlasmaExitStarted, uint64)
-	DebugAddressFilter(start uint64) ([]contracts.PlasmaDebugAddress, uint64)
-	DebugUintFilter(start uint64) ([]contracts.PlasmaDebugUint, uint64)
-	DebugBoolFilter(start uint64) ([]contracts.PlasmaDebugBool, uint64)
-	ChallengeSuccessFilter(start uint64) ([]contracts.PlasmaChallengeSuccess, uint64)
-	ChallengeFailureFilter(start uint64) ([]contracts.PlasmaChallengeFailure, uint64)
+
+	ChallengedTransactionExitFilter(uint64) ([]contracts.PlasmaChallengedTransactionExit, uint64, error)
+	ChallengedDepositExitFilter(uint64) ([]contracts.PlasmaChallengedDepositExit, uint64, error)
+
+	FinalizedTransactionExitFilter(uint64) ([]contracts.PlasmaFinalizedTransactionExit, uint64, error)
+	FinalizedDepositExitFilter(uint64) ([]contracts.PlasmaFinalizedDepositExit, uint64, error)
+
+	StartedTransactionExitFilter(uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
+	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
 }
 
 type DepositEvent struct {

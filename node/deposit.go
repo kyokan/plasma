@@ -31,9 +31,10 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 				count := uint64(0)
 
 				for _, event := range events {
+					// TODO: Add deposit nonce to DepositEvent
 					ch <- eth.DepositEvent{
-						Sender: event.Sender,
-						Value:  event.Value,
+						Sender: event.Depositor,
+						Value:  event.Amount,
 					}
 
 					count++

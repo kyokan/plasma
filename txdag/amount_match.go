@@ -22,11 +22,11 @@ func FindBestUTXOs(from, to common.Address, amount *big.Int, txs []chain.Transac
     outputs := make([]OutputSortHelper, 0, len(txs))
     for pos, tx := range txs {
         output := tx.OutputFor(&from) // this call may panic
-        if amount.Cmp(output.Amount) == 0 {
+        if amount.Cmp(output.Denom) == 0 {
             // Found exact match
             return PrepareSendTransaction(from, to, amount, []chain.Transaction{txs[pos]})
         }
-        outputs = append(outputs, OutputSortHelper{Position: pos, Amount: output.Amount})
+        outputs = append(outputs, OutputSortHelper{Position: pos, Amount: output.Denom})
     }
     less := func(i, j int) bool { // return outputs[i] < outputs[j]
         lhs := outputs[i].Amount
@@ -34,7 +34,7 @@ func FindBestUTXOs(from, to common.Address, amount *big.Int, txs []chain.Transac
         return lhs.Cmp(rhs) == -1
     }
     sort.Slice(outputs, less)
-    // Amount is less the minimum element, no need to do anything else
+    // Denom is less the minimum element, no need to do anything else
     min := outputs[0]
     if min.Amount.Cmp(amount) == 1 { // min > amount
         return PrepareSendTransaction(from, to, amount, []chain.Transaction{txs[min.Position]})
@@ -86,7 +86,7 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
             return nil, errors.New("expected a UTXO")
         }
 
-        totalAmount.Set(utxo.Amount)
+        totalAmount.Set(utxo.Denom)
     } else {
         input1 = &chain.Input{
             BlkNum: utxoTxs[1].BlkNum,
@@ -94,12 +94,12 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
             OutIdx: utxoTxs[1].OutputIndexFor(&from),
         }
 
-        totalAmount = totalAmount.Add(utxoTxs[0].OutputFor(&from).Amount, utxoTxs[1].OutputFor(&from).Amount)
+        totalAmount = totalAmount.Add(utxoTxs[0].OutputFor(&from).Denom, utxoTxs[1].OutputFor(&from).Denom)
     }
     if totalAmount.Cmp(amount) == 1 { // totalAmount > amount
         output1 = &chain.Output{
             NewOwner: from,
-            Amount:   big.NewInt(0).Sub(totalAmount, amount),
+            Denom:    big.NewInt(0).Sub(totalAmount, amount),
         }
     } else {
         output1 = chain.ZeroOutput()
@@ -114,7 +114,7 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
         Input1: input1,
         Output0: &chain.Output{
             NewOwner: to,
-            Amount:   amount,
+            Denom:    amount,
         },
         Output1: output1,
         Fee:     big.NewInt(0),

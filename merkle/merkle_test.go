@@ -126,7 +126,7 @@ func Test_Proof(t *testing.T) {
 	queue, err := createMerkleQueue(testHasher, depth, 2, false)
 	require.NoError(t, err)
 
-	var proof []util.Hash
+	var proof util.Hash
 	for i := 0; i < 10; i++ {
 		for count := uint8(0); count < 5; count++ {
 			h := TestHashable{counter: count}
@@ -136,10 +136,10 @@ func Test_Proof(t *testing.T) {
 
 		proof, err = queue.GetRLPProof()
 		require.NoError(t, err)
-		require.EqualValues(t, depth - 1, len(proof))
-		require.EqualValues(t,  uint8(8), proof[0][15])
-		require.EqualValues(t,  uint8(3), proof[1][15])
-		require.EqualValues(t, uint8(16), proof[2][15])
+		require.EqualValues(t, 16 * (depth - 1), len(proof))
+		require.EqualValues(t,  uint8(8), proof[0 * 16 + 15])
+		require.EqualValues(t,  uint8(3), proof[1 * 16 + 15])
+		require.EqualValues(t, uint8(16), proof[2 * 16 + 15])
 		queue.Reset()
 	}
 }
@@ -153,10 +153,10 @@ func Test_DoGetProof(t *testing.T) {
 	}
 	proof, err := doGetProof(input, testHasher, depth, 2)
 	require.NoError(t, err)
-	require.EqualValues(t, depth - 1, len(proof))
-	require.EqualValues(t,  uint8(8), proof[0][15])
-	require.EqualValues(t,  uint8(3), proof[1][15])
-	require.EqualValues(t, uint8(16), proof[2][15])
+	require.EqualValues(t, 16 * (depth - 1), len(proof))
+	require.EqualValues(t,  uint8(8), proof[0 * 16 + 15])
+	require.EqualValues(t,  uint8(3), proof[1 * 16 + 15])
+	require.EqualValues(t, uint8(16), proof[2 * 16 + 15])
 }
 
 func Test_OverCapacityTree(t *testing.T) {

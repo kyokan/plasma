@@ -97,7 +97,7 @@ func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 				Input1: chain.ZeroInput(),
 				Output0: &chain.Output{
 					NewOwner: deposit.Sender,
-					Amount:   deposit.Value,
+					Denom:    deposit.Value,
 				},
 				Output1: chain.ZeroOutput(),
 				Fee:     big.NewInt(0),
@@ -126,7 +126,7 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 
 	var prevOutput1 *chain.Output
 
-	if tx.Input0.OutIdx == 0 {
+	if tx.Input0.OutIdx.Cmp(chain.Zero()) == 0 {
 		prevOutput1 = inputTx1.Output0
 	} else {
 		prevOutput1 = inputTx1.Output1
@@ -134,14 +134,14 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 
 	var prevOutput2 *chain.Output
 
-	if tx.Input1.OutIdx == 0 {
+	if tx.Input1.OutIdx.Cmp(chain.Zero()) == 0 {
 		prevOutput2 = inputTx2.Output0
 	} else {
 		prevOutput2 = inputTx2.Output1
 	}
 
-	totalInput := big.NewInt(0).Add(prevOutput1.Amount, prevOutput2.Amount)
-	totalOutput := big.NewInt(0).Add(tx.Output0.Amount, tx.Output1.Amount)
+	totalInput := big.NewInt(0).Add(prevOutput1.Denom, prevOutput2.Denom)
+	totalOutput := big.NewInt(0).Add(tx.Output0.Denom, tx.Output1.Denom)
 	totalOutput = totalOutput.Add(totalOutput, tx.Fee)
 
 	if totalInput.Cmp(totalOutput) != 0 {

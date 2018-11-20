@@ -12,6 +12,7 @@ import (
 
 const (
 	maxDepth = 17
+	DefaultDepth = maxDepth
 )
 
 type DualHashable interface {
@@ -52,7 +53,7 @@ type MerkleQueue interface {
 	Enqueue(DualHashable) error
 	GetRootRLPHash() (util.Hash, error)
 	GetRootHash() (util.Hash, error)
-	GetRLPProof() ([]util.Hash, error)
+	GetRLPProof() (util.Hash, error)
 	Reset()
 	GetNumberOfLeafes() uint32
 }
@@ -303,15 +304,15 @@ func (merkle *merkleQueue) GetRootRLPHash() (util.Hash, error) {
 	return merkle.current[0].rlpHash, nil
 }
 
-func (merkle *merkleQueue) GetRLPProof() ([]util.Hash, error) {
+func (merkle *merkleQueue) GetRLPProof() (util.Hash, error) {
+	result := []byte{}
 	err := merkle.computeRootHashes()
 	if err != nil {
 		return nil, err
 	}
 	length := len(merkle.proofState.rlpHashes) - 1 // root is not included in proof
-	result := make([]util.Hash, length)
 	for i := 0; i < length; i++ {
-		result[i] = merkle.proofState.rlpHashes[length - i]
+		result = append(result, merkle.proofState.rlpHashes[length - i]...)
 	}
 	return result, nil
 }
@@ -320,7 +321,7 @@ func (merkle *merkleQueue) GetNumberOfLeafes() uint32 {
 	return atomic.LoadUint32(&merkle.leafIndex)
 }
 
-func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) ([]util.Hash, error) {
+func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) (util.Hash, error) {
 	queue, err := createMerkleQueue(hasher, depth, index, false)
 	if err != nil {
 		return nil, err
@@ -335,7 +336,7 @@ func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) 
 	return queue.GetRLPProof()
 }
 
-func GetProof(transactions []DualHashable, depth, index int32) ([]util.Hash, error) {
+func GetProof(transactions []DualHashable, depth, index int32) (util.Hash, error) {
 	return doGetProof(transactions, util.DoHash, depth, index)
 }
 

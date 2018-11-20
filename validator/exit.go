@@ -2,6 +2,7 @@ package validator
 
 import (
 	"log"
+	"math/big"
 	"time"
 
 	"context"
@@ -23,15 +24,29 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 
 		log.Printf("Looking for exit events at block number: %d\n", idx)
 
-		events, lastIdx := ethClient.ExitStartedFilter(idx)
+		events, lastIdx, err := ethClient.StartedTransactionExitFilter(idx)
+		if err != nil {
+			log.Printf("Failed to get transaction exit events: %s", err.Error())
+			continue
+		}
 
 		if len(events) > 0 {
 			count := uint64(0)
+			/*
+			TODO: It's not clear how can I get more information about an exit
+			The contract uses the input to construct an exit which doesn't
+			include information about the transaction being exited:
+			txExits[position] = exit({
+            	owner: txList[12 + 2 * txPos[2]].toAddress(),
+            	amount: amount,
+            	createdAt: block.timestamp,
+            	state: ExitState.Pending
+        	});
 
 			for _, event := range events {
 				count += 1
 
-				exitId := event.ExitId
+				exitId := event.Position
 
 				exit, err := ethClient.Exit(exitId)
 				if err != nil {
@@ -69,6 +84,7 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 					}
 				}
 
+
 				// TODO: also if someone exits on the ethClient chain you need to
 				// make sure you exit it from the root node.
 				// So the root node also needs an exit listener.
@@ -82,6 +98,7 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 				// It's not synchronized right now...
 				time.Sleep(time.Second * 3)
 			}
+			*/
 
 			log.Printf("Found %d exit events at from blocks %d to %d.\n", count, idx, lastIdx)
 
@@ -94,7 +111,7 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 	}
 }
 
-func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.Transaction, *uint64, *uint32, error) {
+func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.Transaction, *big.Int, *big.Int, error) {
 	latestBlock, err := storage.LatestBlock()
 	if err != nil {
 		return nil, nil, nil, err
@@ -135,7 +152,7 @@ func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.P
 		if len(rej) > 0 {
 			log.Printf("Found %d double spends at block %d\n", len(rej), i)
 			// Always return the first one for now
-			return currTxs, &i, &rej[0].TxIdx, nil
+			return currTxs, big.NewInt(int64(i)), rej[0].TxIdx, nil
 		} else {
 			log.Printf("Found no double spends for block %d\n", i)
 		}

@@ -22,9 +22,9 @@ message BigInt {
 }
 
 message Input {
-    uint64 blockNum = 1;
-    uint32 txIdx = 2;
-    uint32 outIdx = 3;
+    BigInt blockNum = 1;
+    BigInt txIdx = 2;
+    BigInt outIdx = 3;
 }
 
 message Output {
@@ -52,8 +52,8 @@ message Transaction {
     Output output0 = 5;
     Output output1 = 6;
     BigInt fee = 7;
-    uint64 blockNum = 8;
-    uint32 txIdx = 9;
+    BigInt blockNum = 8;
+    BigInt txIdx = 9;
     bytes rootSig = 10;
 }
 

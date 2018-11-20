@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/kyokan/plasma/merkle"
 	"github.com/kyokan/plasma/txdag"
 	"math/big"
 	"time"
@@ -40,7 +41,11 @@ func Finalize(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	return client.Finalize()
+	err = client.FinalizeDepositExits()
+	if err != nil {
+		return err
+	}
+	return client.FinalizeTransactionExits()
 }
 
 func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost string, blockNum uint64, txIndex uint32, oIndex uint8) error {
@@ -68,14 +73,22 @@ func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost st
 	if res == nil {
 		return errors.New("block does not exist")
 	}
+	transactions := rpc.DeserializeTxs(res.Transactions)
+	hashables := make([]merkle.DualHashable, len(transactions))
+	for i := 0; i < len(transactions); i++ {
+		hashables[i] = &transactions[i]
+	}
+	proof, err := merkle.GetProof(hashables, merkle.DefaultDepth, int32(txIndex))
+	transaction := transactions[txIndex]
+	opts := &eth.StartExitOpts{
+		Transaction: transaction,
+		Input: *chain.NewInput(transaction.BlkNum, transaction.TxIdx, big.NewInt(int64(oIndex))),
+		Signature: []byte{},
+		ConfirmSignature: []byte{},
+		Proof: proof,
+	}
 
-	return client.StartExit(&eth.StartExitOpts{
-		Block:    rpc.DeserializeBlock(res.Block),
-		Txs:      rpc.DeserializeTxs(res.Transactions),
-		BlockNum: blockNum,
-		TxIndex:  txIndex,
-		OutIndex: oIndex,
-	})
+	return client.StartTransactionExit(opts)
 }
 
 func Deposit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, amount *big.Int) error {
@@ -88,15 +101,9 @@ func Deposit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, amount *
 	fmt.Printf("Deposit starting for amount: %s\n", amount.Text(10))
 	userAddress := crypto.PubkeyToAddress(*(privateKey.Public()).(*ecdsa.PublicKey))
 	t := createDepositTx(userAddress, amount)
-	client.Deposit(amount, &t)
+	err = client.Deposit(amount, &t)
 	time.Sleep(3 * time.Second)
-	curr, err := client.CurrentChildBlock()
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Last child block: %v\n", curr)
-	return nil
+	return err
 }
 
 func Balance(rootHost string, address common.Address) error {
@@ -236,7 +243,7 @@ func createDepositTx(userAddress common.Address, value *big.Int) chain.Transacti
 		Input1: chain.ZeroInput(),
 		Output0: &chain.Output{
 			NewOwner: userAddress,
-			Amount:   value,
+			Denom:    value,
 		},
 		Output1: chain.ZeroOutput(),
 		Fee:     big.NewInt(0),
@@ -263,19 +270,19 @@ func txsTable(txs []chain.Transaction) *tablewriter.Table {
 	})
 	for _, tx := range txs {
 		txsTable.Append([]string{
-			strconv.FormatUint(uint64(tx.TxIdx), 10),
-			strconv.FormatUint(tx.Input0.BlkNum, 10),
-			strconv.FormatUint(uint64(tx.Input0.TxIdx), 10),
-			strconv.FormatUint(uint64(tx.Input0.OutIdx), 10),
+			tx.TxIdx.String(),
+			tx.Input0.BlkNum.String(),
+			tx.Input0.TxIdx.String(),
+			tx.Input0.OutIdx.String(),
 			hexutil.Encode(tx.Sig0),
-			strconv.FormatUint(tx.Input1.BlkNum, 10),
-			strconv.FormatUint(uint64(tx.Input1.TxIdx), 10),
-			strconv.FormatUint(uint64(tx.Input1.OutIdx), 10),
+			tx.Input1.BlkNum.String(),
+			tx.Input1.TxIdx.String(),
+			tx.Input1.OutIdx.String(),
 			hexutil.Encode(tx.Sig1),
 			tx.Output0.NewOwner.Hex(),
-			tx.Output0.Amount.Text(10),
+			tx.Output0.Denom.Text(10),
 			tx.Output1.NewOwner.Hex(),
-			tx.Output1.Amount.Text(10),
+			tx.Output1.Denom.Text(10),
 			tx.Fee.Text(10),
 		})
 	}

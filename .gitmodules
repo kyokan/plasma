@@ -1,0 +1,3 @@
+[submodule "plasma-mvp-rootchain"]
+	path = plasma-mvp-rootchain
+	url = https://github.com/kyokan/plasma-mvp-rootchain

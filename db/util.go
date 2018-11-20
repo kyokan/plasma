@@ -42,10 +42,10 @@ func bytesToUint64(b []byte) uint64 {
 
 func sortTransactions(txs []chain.Transaction) {
 	txLess := func (lhs, rhs int) bool {
-		if txs[lhs].BlkNum == txs[rhs].BlkNum {
-		return txs[lhs].TxIdx < txs[rhs].TxIdx
-	}
-		return txs[lhs].BlkNum < txs[rhs].BlkNum
+		if txs[lhs].BlkNum.Cmp(txs[rhs].BlkNum) == 0 {
+			return txs[lhs].TxIdx.Cmp(txs[rhs].TxIdx) == -1
+		}
+		return txs[lhs].BlkNum.Cmp(txs[rhs].BlkNum) == -1
 	}
 	sort.Slice(txs, txLess)
 }
