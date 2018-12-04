@@ -58,6 +58,7 @@ is most recent to support Solidity [v0.4.18](https://github.com/ethereum/solidit
 
 ```
 mkdir -p $GOPATH/src/github.com/kyokan
+cd $GOPATH/src/github.com/kyokan
 git clone https://github.com/kyokan/plasma.git
 cd plasma
 dep ensure
