@@ -71,8 +71,9 @@ type Client interface {
 }
 
 type DepositEvent struct {
-	Sender common.Address
-	Value  *big.Int
+	Sender       common.Address
+	Value        *big.Int
+	DepositNonce *big.Int
 }
 
 type clientState struct {

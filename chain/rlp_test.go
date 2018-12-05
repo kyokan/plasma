@@ -21,9 +21,8 @@ func Test_TransactionFullRLP(t *testing.T) {
 		Output0: RandomOutput(),
 		Output1: RandomOutput(),
 		Fee:     big.NewInt(rand.Int63()),
-		BlkNum:  0, // Not encoded in RLP
-		TxIdx:   0, // Not encoded in RLP
-		RootSig: RandomSig(),
+		BlkNum:  nil, // Not encoded in RLP
+		TxIdx:   nil, // Not encoded in RLP
 	}
 	encodeAndDecode(t, &tx)
 }
@@ -37,9 +36,8 @@ func Test_TransactionFirstInputRLP(t *testing.T) {
 		Output0: RandomOutput(),
 		Output1: ZeroOutput(),
 		Fee:     big.NewInt(rand.Int63()),
-		BlkNum:  0,
-		TxIdx:   0,
-		RootSig: RandomSig(),
+		BlkNum:  nil,
+		TxIdx:   nil,
 	}
 	encodeAndDecode(t, &tx)
 }

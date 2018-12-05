@@ -89,15 +89,22 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.Tr
 
 func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 	go func() {
+		var deposit eth.DepositEvent
+		var tx chain.Transaction
 		for {
-			deposit := <-ch
+			deposit = <-ch
 
-			tx := chain.Transaction{
+			tx = chain.Transaction{
+				Deposit: chain.Deposit{
+					Amount: deposit.Value,
+					DepositNonce: deposit.DepositNonce,
+				},
 				Input0: chain.ZeroInput(),
 				Input1: chain.ZeroInput(),
 				Output0: &chain.Output{
-					NewOwner: deposit.Sender,
-					Denom:    deposit.Value,
+					NewOwner:     deposit.Sender,
+					Denom:        deposit.Value,
+					DepositNonce: deposit.DepositNonce,
 				},
 				Output1: chain.ZeroOutput(),
 				Fee:     big.NewInt(0),

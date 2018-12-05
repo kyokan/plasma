@@ -6,8 +6,10 @@ deps:
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
-migrate:
-	#TODO new contracts
+# Please use 'make setup'
+# migrate: deps
+#	cd plasma-mvp-rootchain && \
+#	truffle migrate
 
 build:
 	go build -o ./target/plasma ./cmd/plasma/main.go
@@ -24,7 +26,6 @@ install:
 
 abigen: deps
 	cd plasma-mvp-rootchain && \
-	pwd && \
 	truffle compile && \
 	mkdir -p abi/contracts gen/contracts && \
 	cat ./build/contracts/RootChain.json | jq ".abi" > abi/contracts/RootChain.abi && \
@@ -38,7 +39,7 @@ build-all: abigen build
 start: deps build
 	@./bin/start
 
-setup: deps build
+setup: build
 	@./bin/setup
 
 clean:

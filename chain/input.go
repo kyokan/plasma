@@ -24,14 +24,13 @@ func NewInput(blkNum, txIdx, outIdx *big.Int) *Input {
 }
 
 func ZeroInput() *Input {
-	zero := big.NewInt(0)
-	return NewInput(zero, zero, zero)
+	return NewInput(Zero(), Zero(), Zero())
 }
 
 func (in *Input) IsZeroInput() bool {
-	return in.BlkNum == nil &&
-			in.TxIdx == nil &&
-			in.OutIdx == nil
+	return in.BlkNum.Cmp(Zero()) == 0 &&
+			in.TxIdx.Cmp(Zero()) == 0 &&
+			in.OutIdx.Cmp(Zero()) == 0
 }
 
 func (in *Input) Hash() util.Hash {

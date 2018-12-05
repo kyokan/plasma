@@ -94,12 +94,12 @@ func parseSuffix(key []byte) (*common.Address, *big.Int, *big.Int, *big.Int, err
         return nil, nil, nil, nil, errors.New("Failed to parse block number")
     }
 
-    txIdx, success := new(big.Int).SetString(parts[1], 10)
+    txIdx, success := new(big.Int).SetString(parts[2], 10)
     if success == false {
         return nil, nil, nil, nil, errors.New("Failed to parse transaction index")
     }
 
-    outIdx, success := new(big.Int).SetString(parts[1], 10)
+    outIdx, success := new(big.Int).SetString(parts[3], 10)
     if success == false {
         return nil, nil, nil, nil, errors.New("Failed to parse output index")
     }

@@ -13,8 +13,14 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
+type Deposit struct {
+	DepositNonce *big.Int
+	Amount       *big.Int
+}
+
 // JSON tags needed for test fixtures
 type Transaction struct {
+	Deposit	         `json:"Deposit"`
 	Input0  *Input   `json:"Input0"`
 	Sig0    []byte   `json:"Sig0"`
 	Input1  *Input   `json:"Input1"`
@@ -24,7 +30,6 @@ type Transaction struct {
 	Fee     *big.Int `json:"Fee"`
 	BlkNum  *big.Int `json:"BlkNum"`
 	TxIdx   *big.Int `json:"TxIdx"`
-	RootSig []byte   `json:"RootSig"`
 }
 
 // Transaction encoding:
@@ -53,27 +58,29 @@ type rlpHelper struct {
 	Denom1        big.Int
 
 	Fee           big.Int
-	RootSig       []byte
 }
 
 func ZeroTransaction() *Transaction {
 	return &Transaction{
+		Deposit: Deposit{ DepositNonce: Zero(), Amount: Zero()},
 		Input0: ZeroInput(),
 		Input1: ZeroInput(),
 		Output0: ZeroOutput(),
 		Output1: ZeroOutput(),
-		Fee: big.NewInt(0),
+		Fee: Zero(),
 	}
 }
 
 func (tx *Transaction) IsDeposit() bool {
-	return tx.Input0.IsZeroInput() &&
-		tx.Input1.IsZeroInput() &&
-		!tx.Output0.IsZeroOutput() &&
-		tx.Output1.IsZeroOutput()
+	return tx.DepositNonce != nil && tx.Amount != nil &&
+		   tx.DepositNonce.Cmp(Zero()) == 1 && // both greater than zero
+	       tx.Amount.Cmp(Zero()) == 1
 }
 
 func (tx *Transaction) IsZeroTransaction() bool {
+	if tx.IsDeposit() {
+		return false
+	}
 	return tx.Input0.IsZeroInput() &&
 		tx.Input1.IsZeroInput() &&
 		tx.Output0.IsZeroOutput() &&
@@ -225,7 +232,7 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 	if tx.Fee != nil {
 		itf.Fee = *tx.Fee
 	}
-	itf.RootSig = tx.RootSig
+
 	return rlp.Encode(w, &itf)
 }
 
@@ -244,6 +251,6 @@ func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
 	tx.Sig0 = itf.Sig0
 	tx.Sig1 = itf.Sig1
 	tx.Fee  = big.NewInt(itf.Fee.Int64())
-	tx.RootSig = itf.RootSig
+
 	return nil
 }

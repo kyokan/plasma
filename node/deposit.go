@@ -1,6 +1,7 @@
 package node
 
 import (
+	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
 	"log"
 	"time"
 
@@ -12,8 +13,13 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 	ch := make(chan eth.DepositEvent)
 	sink.AcceptDepositEvents(ch)
 
+	var events []contracts.PlasmaDeposit
+	var event contracts.PlasmaDeposit
+	var topBlockIdx, lastPolledIdx uint64
+	var err error
+
 	for {
-		lastPolledIdx, err := storage.LastDepositEventIdx()
+		lastPolledIdx, err = storage.LastDepositEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
 			log.Fatalf("Failed to get last deposit event idx: %v", err)
@@ -25,16 +31,17 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 
 		log.Printf("Looking for deposit events at block number: %d\n", lastPolledIdx)
 
-		events, topBlockIdx, err := plasma.DepositFilter(lastPolledIdx)
+		events, topBlockIdx, err = plasma.DepositFilter(lastPolledIdx)
 		if err == nil {
 			if len(events) > 0 {
 				count := uint64(0)
 
-				for _, event := range events {
+				for _, event = range events {
 					// TODO: Add deposit nonce to DepositEvent
 					ch <- eth.DepositEvent{
-						Sender: event.Depositor,
-						Value:  event.Amount,
+						Sender:       event.Depositor,
+						Value:        event.Amount,
+						DepositNonce: event.DepositNonce,
 					}
 
 					count++

@@ -151,12 +151,6 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     // tx.TxIdx = atomic.AddUint32(&ps.CurrentTxIdx, 1) - 1
     tx.BlkNum = big.NewInt(int64(ps.CurrentBlock))
 
-    rootSig, err := ps.client.SignData(tx.SignatureHash())
-    if err != nil {
-        return nil, err
-    }
-    tx.RootSig = rootSig
-
     err = ps.merkleQueue.Enqueue(&tx)
 
     if err != nil {
@@ -278,6 +272,7 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (util.Hash,
     return rlpMerklepHash, ps.DB.Write(batch, nil)
 }
 
+// TODO: This has to change to take into account confirmation signatures
 func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error) {
     if tx.IsDeposit() {
         return []*chain.Transaction{chain.ZeroTransaction()}, nil
@@ -696,17 +691,9 @@ func (ps *Storage) SaveBlock(blk *chain.Block) error {
 }
 
 func (ps *Storage) createGenesisBlock() (util.Hash, error) {
-    tx := chain.Transaction{
-        Input0:  chain.ZeroInput(),
-        Input1:  chain.ZeroInput(),
-        Sig0:    []byte{},
-        Sig1:    []byte{},
-        Output0: chain.ZeroOutput(),
-        Output1: chain.ZeroOutput(),
-        Fee:     new(big.Int),
-    }
+    tx := chain.ZeroTransaction()
     locker := noopLock{}
-    _, err := ps.doStoreTransaction(tx, locker)
+    _, err := ps.doStoreTransaction(*tx, locker)
     if err != nil {
         return nil, err
     }

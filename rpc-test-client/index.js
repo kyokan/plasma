@@ -30,26 +30,30 @@ class PlasmaClient {
             throw new Error('Failed to read the definitions');
         }
         let l = Object.keys(definitions).length;
-        if (l != 4) {
+        if (l != 5) {
             throw new Error(`Got ${l} definitions, expecting 4`);
         }
 
         let GetBalanceFtor = definitions.GetBalance;
-        let GetUTXOsFtor   = definitions.GetUTXOs;
+        let GetOutputsFtor = definitions.GetOutputs;
         let GetBlockFtor   = definitions.GetBlock;
         let SendFtor       = definitions.Send;
+        let BlockHeightFtor= definitions.BlockHeight;
 
         if (_.isEmpty(GetBalanceFtor)) {
             throw new Error('GetBalance definition is missing');
         }
-        if (_.isEmpty(GetUTXOsFtor)) {
-            throw new Error('GetUTXOs definition is missing');
+        if (_.isEmpty(GetOutputsFtor)) {
+            throw new Error('GetOutputs definition is missing');
         }
         if (_.isEmpty(GetBlockFtor)) {
             throw new Error('GetBlock definition is missing');
         }
         if (_.isEmpty(SendFtor)) {
             throw new Error('Send definition is missing');
+        }
+        if (_.isEmpty(BlockHeightFtor)) {
+            throw new Error('BlockHeight definition is missing');
         }
     }
 
@@ -263,10 +267,6 @@ class Account {
             if (err != null) {
                 return cb(err, null);
             }
-            let tx = new Transaction({
-                output0: new Output(self.address, amount),
-                });
-            const rlpEncoded = tx.RLPEncode();
             let nonce = result.nonce;
             // Retrying as sometimes the call fails with invalid RPC response error
             let depositFn = function (callback) {
@@ -279,7 +279,7 @@ class Account {
                     gas:      self.web3.utils.toHex(result.gasEstimate), // just to be safe
                     from:     self.address
                 };
-                self.contract.methods.deposit(rlpEncoded).send(params, (error, receipt) => {
+                self.contract.methods.deposit(self.address).send(params, (error, receipt) => {
                     if (error != null && !error.message.startsWith('Error: Invalid JSON RPC response')) {
                         nonce++;
                     }
@@ -600,18 +600,8 @@ function toBN(input) {
     if (BN.isBN(input)) {
         return input;
     }
-    if (_.has(input, 'values')) {
-        const buffer = input.values;
-        if (buffer.length == 0) {
-            return web3.utils.toBN("0");
-        }
-        let chars = [];
-        for (let i = 0; i < buffer.length; i++) {
-            let v = buffer[i];
-            chars = chars.concat(v.toString(16).padStart(2, 0));
-        }
-        const s = web3.utils.bytesToHex(buffer);
-        return web3.utils.toBN(s);
+    if (_.has(input, 'hex')) {
+        return web3.utils.toBN(input.hex);
     }
     return BN.BN(input);
 }
