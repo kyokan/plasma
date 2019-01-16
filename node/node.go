@@ -51,12 +51,12 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 }
 
 func (node PlasmaNode) packageBlock() {
-	rlpMerkle, err := node.Storage.PackageCurrentBlock()
+	blockResult, err := node.Storage.PackageCurrentBlock()
 	if err != nil {
 		log.Printf("Error packaging block: %s", err.Error())
 		return
 	}
-	if rlpMerkle != nil {
-		node.Client.SubmitBlock(rlpMerkle)
+	if blockResult != nil {
+		node.Client.SubmitBlock(blockResult.MerkleRoot, blockResult.NumberTransactions, blockResult.BlockFees)
 	}
 }

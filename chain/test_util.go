@@ -11,6 +11,8 @@ func RandomInput() *Input {
 		BlkNum: big.NewInt(rand.Int63()),
 		TxIdx:  big.NewInt(rand.Int63()),
 		OutIdx: big.NewInt(rand.Int63n(2)),
+		DepositNonce: big.NewInt(0),
+		Owner: RandomAddress(),
 	}
 }
 
@@ -18,6 +20,12 @@ func RandomSig() []byte {
 	size := 32
 	result := make([]byte, size)
 	rand.Read(result)
+	return result
+}
+
+func RandomConfirmationSig() [65]byte {
+	result := [65]byte{}
+	rand.Read(result[:])
 	return result
 }
 

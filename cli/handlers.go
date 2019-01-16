@@ -82,7 +82,7 @@ func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost st
 	transaction := transactions[txIndex]
 	opts := &eth.StartExitOpts{
 		Transaction: transaction,
-		Input: *chain.NewInput(transaction.BlkNum, transaction.TxIdx, big.NewInt(int64(oIndex))),
+		Input: *chain.NewInputFromTransaction(transaction, int64(oIndex)),
 		Signature: []byte{},
 		ConfirmSignature: []byte{},
 		Proof: proof,
@@ -219,9 +219,9 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 		return err
 	}
 
-	tx.Sig0 = signature
+	copy(tx.Sig0[:], signature)
 	if !tx.Input1.IsZeroInput() {
-		tx.Sig1 = signature
+		copy(tx.Sig1[:], signature)
 	}
 
 	res, err := rc.Send(ctx, &pb.SendRequest{
@@ -274,11 +274,11 @@ func txsTable(txs []chain.Transaction) *tablewriter.Table {
 			tx.Input0.BlkNum.String(),
 			tx.Input0.TxIdx.String(),
 			tx.Input0.OutIdx.String(),
-			hexutil.Encode(tx.Sig0),
+			hexutil.Encode(tx.Sig0[:]),
 			tx.Input1.BlkNum.String(),
 			tx.Input1.TxIdx.String(),
 			tx.Input1.OutIdx.String(),
-			hexutil.Encode(tx.Sig1),
+			hexutil.Encode(tx.Sig1[:]),
 			tx.Output0.NewOwner.Hex(),
 			tx.Output0.Denom.Text(10),
 			tx.Output1.NewOwner.Hex(),

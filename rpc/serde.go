@@ -49,9 +49,9 @@ func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 	result.Value = &pb.Transaction_Utxo{
 		Utxo: &pb.UTXO{
 		Input0:   SerializeInput(tx.Input0),
-		Sig0:     tx.Sig0,
+		Sig0:     tx.Sig0[:],
 		Input1:   SerializeInput(tx.Input1),
-		Sig1:     tx.Sig1,
+		Sig1:     tx.Sig1[:],
 		Output0:  SerializeOutput(tx.Output0),
 		Output1:  SerializeOutput(tx.Output1),
 		Fee:      SerializeBig(tx.Fee),
@@ -77,14 +77,15 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 	utxo := tx.GetUtxo()
 	if utxo != nil {
 		result.Input0  = DeserializeInput(utxo.Input0)
-		result.Sig0    = utxo.Sig0
+		copy(result.Sig0[:], utxo.Sig0)
 		result.Input1  = DeserializeInput(utxo.Input1)
-		result.Sig1    = utxo.Sig1
+		copy(result.Sig1[:], utxo.Sig1)
 		result.Output0 = DeserializeOutput(utxo.Output0)
 		result.Output1 = DeserializeOutput(utxo.Output1)
 		result.Fee     = DeserializeBig(utxo.Fee)
 		result.BlkNum  = DeserializeBig(utxo.BlockNum)
 		result.TxIdx   = DeserializeBig(utxo.TxIdx)
+		copy(result.Sig0[:], utxo.Sig0)
 		return &result
 	}
 	return chain.ZeroTransaction()

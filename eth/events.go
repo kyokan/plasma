@@ -98,7 +98,7 @@ func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, ui
 	return events, end, nil
 }
 
-func (c *clientState) ChallengedTransactionExitFilter(start uint64) ([]contracts.PlasmaChallengedTransactionExit, uint64, error) {
+func (c *clientState) ChallengedExitFilter(start uint64) ([]contracts.PlasmaChallengedExit, uint64, error) {
 	opts, err := c.filterOpts(start)
 	if err != nil {
 		return nil, 0, err
@@ -106,13 +106,13 @@ func (c *clientState) ChallengedTransactionExitFilter(start uint64) ([]contracts
 	end := *opts.End
 
 
-	itr, err := c.contract.FilterChallengedTransactionExit(opts)
+	itr, err := c.contract.FilterChallengedExit(opts)
 	if err != nil {
-		log.Fatalf("Failed to filter challenged transaction exit events: %v", err)
+		log.Fatalf("Failed to filter challenged exit events: %v", err)
 	}
 
 	next := true
-	var events []contracts.PlasmaChallengedTransactionExit
+	var events []contracts.PlasmaChallengedExit
 	for next {
 		if itr.Event != nil {
 			events = append(events, *itr.Event)
@@ -123,7 +123,8 @@ func (c *clientState) ChallengedTransactionExitFilter(start uint64) ([]contracts
 	return events, end, nil
 }
 
-func (c *clientState) ChallengedDepositExitFilter(start uint64) ([]contracts.PlasmaChallengedDepositExit, uint64, error) {
+
+func (c *clientState) FinalizedExitFilter(start uint64) ([]contracts.PlasmaFinalizedExit, uint64, error) {
 	opts, err := c.filterOpts(start)
 	if err != nil {
 		return nil, 0, err
@@ -131,63 +132,13 @@ func (c *clientState) ChallengedDepositExitFilter(start uint64) ([]contracts.Pla
 	end := *opts.End
 
 
-	itr, err := c.contract.FilterChallengedDepositExit(opts)
+	itr, err := c.contract.FilterFinalizedExit(opts)
 	if err != nil {
-		log.Fatalf("Failed to filter challenged deposit exit events: %v", err)
+		log.Fatalf("Failed to filter finalized exit events: %v", err)
 	}
 
 	next := true
-	var events []contracts.PlasmaChallengedDepositExit
-	for next {
-		if itr.Event != nil {
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, end, nil
-}
-
-func (c *clientState) FinalizedTransactionExitFilter(start uint64) ([]contracts.PlasmaFinalizedTransactionExit, uint64, error) {
-	opts, err := c.filterOpts(start)
-	if err != nil {
-		return nil, 0, err
-	}
-	end := *opts.End
-
-
-	itr, err := c.contract.FilterFinalizedTransactionExit(opts)
-	if err != nil {
-		log.Fatalf("Failed to filter finalized transaction exit events: %v", err)
-	}
-
-	next := true
-	var events []contracts.PlasmaFinalizedTransactionExit
-	for next {
-		if itr.Event != nil {
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, end, nil
-}
-
-func (c *clientState) FinalizedDepositExitFilter(start uint64) ([]contracts.PlasmaFinalizedDepositExit, uint64, error) {
-	opts, err := c.filterOpts(start)
-	if err != nil {
-		return nil, 0, err
-	}
-	end := *opts.End
-
-
-	itr, err := c.contract.FilterFinalizedDepositExit(opts)
-	if err != nil {
-		log.Fatalf("Failed to filter finalized deposit exit events: %v", err)
-	}
-
-	next := true
-	var events []contracts.PlasmaFinalizedDepositExit
+	var events []contracts.PlasmaFinalizedExit
 	for next {
 		if itr.Event != nil {
 			events = append(events, *itr.Event)

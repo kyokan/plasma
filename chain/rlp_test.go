@@ -2,6 +2,7 @@ package chain
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -12,12 +13,57 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_AddressRLP(t *testing.T) {
+	address := RandomAddress()
+	encodeAndDecode(t, &address)
+}
+
+func TestEmptyAddressRLP(t *testing.T) {
+	var address common.Address
+	encodeAndDecode(t, &address)
+}
+
+func Test_SignatureRLP(t *testing.T) {
+	signature := RandomConfirmationSig()
+	encodeAndDecode(t, &signature)
+}
+
+func Test_EmptySignatureRLP(t *testing.T) {
+	var signature Signature
+	encodeAndDecode(t, &signature)
+}
+
+func Test_BigIntRLP(t *testing.T) {
+	input := big.NewInt(rand.Int63())
+	value := NewUint256(input)
+	encodeAndDecode(t, &value)
+	output := value.ToBig()
+	require.Equal(t, input, output)
+}
+
+func Test_ZeroBigIntRLP(t *testing.T) {
+	input := big.NewInt(0)
+	value := NewUint256(input)
+	encodeAndDecode(t, &value)
+	output := value.ToBig()
+	require.Equal(t, input, output)
+}
+
+func Test_NilBigIntRLP(t *testing.T) {
+	zero := big.NewInt(0)
+	var input *big.Int
+	value := NewUint256(input)
+	encodeAndDecode(t, &value)
+	output := value.ToBig()
+	require.Equal(t, zero, output)
+}
+
 func Test_TransactionFullRLP(t *testing.T) {
 	tx := Transaction{
 		Input0:  RandomInput(),
 		Input1:  RandomInput(),
-		Sig0:    RandomSig(),
-		Sig1:    RandomSig(),
+		Sig0:    RandomConfirmationSig(),
+		Sig1:    RandomConfirmationSig(),
 		Output0: RandomOutput(),
 		Output1: RandomOutput(),
 		Fee:     big.NewInt(rand.Int63()),
@@ -31,8 +77,7 @@ func Test_TransactionFirstInputRLP(t *testing.T) {
 	tx := Transaction{
 		Input0:  RandomInput(),
 		Input1:  ZeroInput(),
-		Sig0:    RandomSig(),
-		Sig1:    []byte{},
+		Sig0:    RandomConfirmationSig(),
 		Output0: RandomOutput(),
 		Output1: ZeroOutput(),
 		Fee:     big.NewInt(rand.Int63()),
@@ -40,6 +85,42 @@ func Test_TransactionFirstInputRLP(t *testing.T) {
 		TxIdx:   nil,
 	}
 	encodeAndDecode(t, &tx)
+}
+
+func Test_ConfirmedTransactionRLP(t *testing.T) {
+	confirmed := ConfirmedTransaction{
+		Transaction: Transaction{
+			Input0:  RandomInput(),
+			Input1:  RandomInput(),
+			Sig0:    RandomConfirmationSig(),
+			Sig1:    RandomConfirmationSig(),
+			Output0: RandomOutput(),
+			Output1: RandomOutput(),
+			Fee:     big.NewInt(rand.Int63()),
+			BlkNum:  nil, // Not encoded in RLP
+			TxIdx:   nil, // Not encoded in RLP
+		},
+		Signatures: [2]Signature{RandomConfirmationSig(), RandomConfirmationSig()},
+	}
+	encodeAndDecode(t, &confirmed)
+}
+
+func Test_ConfirmedTransactionFirstInputRLP(t *testing.T) {
+	confirmed := ConfirmedTransaction{
+		Transaction: Transaction{
+			Input0:  RandomInput(),
+			Input1:  ZeroInput(),
+			Sig0:    RandomConfirmationSig(),
+			Sig1:    RandomConfirmationSig(),
+			Output0: RandomOutput(),
+			Output1: RandomOutput(),
+			Fee:     big.NewInt(rand.Int63()),
+			BlkNum:  nil, // Not encoded in RLP
+			TxIdx:   nil, // Not encoded in RLP
+		},
+		Signatures: [2]Signature{RandomConfirmationSig(), },
+	}
+	encodeAndDecode(t, &confirmed)
 }
 
 func Test_InputRLP(t *testing.T) {

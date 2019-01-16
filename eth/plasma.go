@@ -31,11 +31,18 @@ type Block struct {
 	StartedAt *big.Int
 }
 
-func (c *clientState) SubmitBlock(merkleHash util.Hash) error {
+func (c *clientState) GetChildBlock(blkNum uint64) ([32]byte, *big.Int, *big.Int, *big.Int, error) {
+	auth := CreateKeyedTransactor(c.privateKey)
+	opts := CreateCallOpts(auth.From)
+	tmp, err := c.contract.ChildChain(opts, big.NewInt(int64(blkNum)))
+	return tmp.Root, tmp.NumTxns, tmp.FeeAmount, tmp.CreatedAt, err
+}
+
+func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock, feesInBlock *big.Int) error {
 	opts := CreateKeyedTransactor(c.privateKey)
 	var root [32]byte
 	copy(root[:], merkleHash[:32])
-	tx, err := c.contract.SubmitBlock(opts, root)
+	tx, err := c.contract.SubmitBlock(opts, [][32]byte{root}, []*big.Int{txInBlock}, []*big.Int{feesInBlock}, big.NewInt(1))
 
 	if err != nil {
 		return err
@@ -59,15 +66,10 @@ func (c *clientState) Deposit(value *big.Int, t *chain.Transaction) error {
 }
 
 
-func (c *clientState) GetChildBlock(nonce *big.Int) ([32]byte, *big.Int, error) {
-	opts := CreateCallOpts(c.UserAddress())
-	return c.contract.GetChildBlock(opts, nonce)
-}
-
-func (c *clientState) StartDepositExit(nonce *big.Int) error {
+func (c *clientState) StartDepositExit(nonce, committedFee *big.Int) error {
 	auth := CreateKeyedTransactor(c.privateKey)
 
-	res, err := c.contract.StartDepositExit(auth, nonce)
+	res, err := c.contract.StartDepositExit(auth, nonce, committedFee)
 
 	if err != nil {
 		return err
@@ -86,7 +88,7 @@ func (c *clientState) StartTransactionExit(opts *StartExitOpts) error {
 	if err != nil {
 		return err
 	}
-	res, err := c.contract.StartTransactionExit(auth, txPos, encoded, opts.Proof, opts.Signature, opts.ConfirmSignature)
+	res, err := c.contract.StartTransactionExit(auth, txPos, encoded, opts.Proof, opts.Signature, opts.CommittedFee)
 	if err != nil {
 		return err
 	}
@@ -94,44 +96,55 @@ func (c *clientState) StartTransactionExit(opts *StartExitOpts) error {
 	return nil
 }
 
-func (c *clientState) ChallengeDepositExit(nonce *big.Int, opts *ChallengeExitOpts) error {
-	auth := CreateKeyedTransactor(c.privateKey)
-	var existingTxPos [3]*big.Int
-	existingTxPos[0] = opts.ExistingInput.BlkNum
-	existingTxPos[1] = opts.ExistingInput.TxIdx
-	existingTxPos[2] = opts.ExistingInput.OutIdx
-	encoded, err := rlp.EncodeToBytes(opts.Transaction)
-	if err != nil {
-		return err
-	}
-	res, err := c.contract.ChallengeDepositExit(auth, nonce, existingTxPos, encoded, opts.Signature, opts.Proof, opts.ConfirmSignature)
-	if err != nil {
-		return err
-	}
-	log.Printf("Challenge Deposit Exit pending: 0x%x\n", res.Hash())
+func (c *clientState) StartFeeExit(fee *big.Int) error {
+	// TODO: Implement this
 	return nil
 }
 
-func (c *clientState) ChallengeTransactionExit(opts *ChallengeExitOpts) error {
+func (c *clientState) ChallengeExit(nonce *big.Int, opts *ChallengeExitOpts) error {
 	auth := CreateKeyedTransactor(c.privateKey)
-	var existingTxPos, txPos [3]*big.Int
+	var existingTxPos [4]*big.Int
 	existingTxPos[0] = opts.ExistingInput.BlkNum
 	existingTxPos[1] = opts.ExistingInput.TxIdx
 	existingTxPos[2] = opts.ExistingInput.OutIdx
-	txPos[0] = opts.Input.BlkNum
-	txPos[1] = opts.Input.TxIdx
-	txPos[2] = opts.Input.OutIdx
+	existingTxPos[3] = nonce
 	encoded, err := rlp.EncodeToBytes(opts.Transaction)
 	if err != nil {
 		return err
 	}
-	res, err := c.contract.ChallengeTransactionExit(auth, existingTxPos, txPos, encoded, opts.Signature, opts.Proof, opts.ConfirmSignature)
+	var challengingTxPos [2]*big.Int
+	challengingTxPos[0] = opts.Transaction.BlkNum
+	challengingTxPos[1] = opts.Transaction.TxIdx
+	res, err := c.contract.ChallengeExit(auth, existingTxPos, challengingTxPos, encoded, opts.Proof, opts.ConfirmSignature)
 	if err != nil {
 		return err
 	}
-	log.Printf("Challenge Transaction Exit pending: 0x%x\n", res.Hash())
+	log.Printf("Challenge Exit pending: 0x%x\n", res.Hash())
 	return nil
 }
+
+func (c *clientState) ChallengeFeeMismatch(nonce *big.Int, opts *ChallengeExitOpts) error {
+	auth := CreateKeyedTransactor(c.privateKey)
+	var existingTxPos [4]*big.Int
+	existingTxPos[0] = opts.ExistingInput.BlkNum
+	existingTxPos[1] = opts.ExistingInput.TxIdx
+	existingTxPos[2] = opts.ExistingInput.OutIdx
+	existingTxPos[3] = nonce
+	encoded, err := rlp.EncodeToBytes(opts.Transaction)
+	if err != nil {
+		return err
+	}
+	var challengingTxPos [2]*big.Int
+	challengingTxPos[0] = opts.Transaction.BlkNum
+	challengingTxPos[1] = opts.Transaction.TxIdx
+	res, err := c.contract.ChallengeFeeMismatch(auth, existingTxPos, challengingTxPos, encoded, opts.Proof)
+	if err != nil {
+		return err
+	}
+	log.Printf("Challenge Fee Mismatch pending: 0x%x\n", res.Hash())
+	return nil
+}
+
 
 func (c *clientState) FinalizeDepositExits() error {
 	auth := CreateKeyedTransactor(c.privateKey)

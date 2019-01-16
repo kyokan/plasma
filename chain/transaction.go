@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -18,47 +17,19 @@ type Deposit struct {
 	Amount       *big.Int
 }
 
-// JSON tags needed for test fixtures
 type Transaction struct {
-	Deposit	         `json:"Deposit"`
-	Input0  *Input   `json:"Input0"`
-	Sig0    []byte   `json:"Sig0"`
-	Input1  *Input   `json:"Input1"`
-	Sig1    []byte   `json:"Sig1"`
-	Output0 *Output  `json:"Output0"`
-	Output1 *Output  `json:"Output1"`
-	Fee     *big.Int `json:"Fee"`
-	BlkNum  *big.Int `json:"BlkNum"`
-	TxIdx   *big.Int `json:"TxIdx"`
+	Deposit
+	Input0  *Input
+	Sig0    Signature
+	Input1  *Input
+	Sig1    Signature
+	Output0 *Output
+	Output1 *Output
+	Fee     *big.Int
+	BlkNum  *big.Int
+	TxIdx   *big.Int
 }
 
-// Transaction encoding:
-// [Blknum0, TxIndex0, Oindex0, depositNonce0, Amount0, ConfirmSig0
-//  Blknum1, TxIndex1, Oindex1, depositNonce1, Amount1, ConfirmSig1
-//  NewOwner0, Denom0, NewOwner1, Denom1, Fee]
-type rlpHelper struct {
-	BlkNum0       big.Int
-	TxIdx0        big.Int
-	OutIdx0       big.Int
-	DepositNonce0 big.Int
-	Amount0       big.Int
-	Sig0          []byte
-
-	BlkNum1       big.Int
-	TxIdx1        big.Int
-	OutIdx1       big.Int
-	DepositNonce1 big.Int
-	Amount1       big.Int
-	Sig1          []byte
-
-	NewOwner0     common.Address
-	Denom0        big.Int
-
-	NewOwner1     common.Address
-	Denom1        big.Int
-
-	Fee           big.Int
-}
 
 func ZeroTransaction() *Transaction {
 	return &Transaction{
@@ -75,6 +46,10 @@ func (tx *Transaction) IsDeposit() bool {
 	return tx.DepositNonce != nil && tx.Amount != nil &&
 		   tx.DepositNonce.Cmp(Zero()) == 1 && // both greater than zero
 	       tx.Amount.Cmp(Zero()) == 1
+}
+
+func (tx *Transaction) GetFee() *big.Int {
+	return tx.Fee
 }
 
 func (tx *Transaction) IsZeroTransaction() bool {
@@ -139,7 +114,7 @@ func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
 }
 
-func (tx *Transaction) Hash() util.Hash {
+func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
 	values := []interface{}{
 		tx.Input0.Hash(),
 		tx.Sig0,
@@ -152,7 +127,7 @@ func (tx *Transaction) Hash() util.Hash {
 		tx.TxIdx,
 	}
 
-	return doHash(values)
+	return doHash(values, hasher)
 }
 
 func (tx *Transaction) SignatureHash() util.Hash {
@@ -164,10 +139,10 @@ func (tx *Transaction) SignatureHash() util.Hash {
 		tx.Fee,
 	}
 
-	return doHash(values)
+	return doHash(values, util.DoHash)
 }
 
-func doHash(values []interface{}) util.Hash {
+func doHash(values []interface{}, hasher util.Hasher) util.Hash {
 	buf := new(bytes.Buffer)
 
 	for _, component := range values {
@@ -189,68 +164,20 @@ func doHash(values []interface{}) util.Hash {
 			panic(err)
 		}
 	}
-	digest := util.DoHash(buf.Bytes())
-	return digest
+	return hasher(buf.Bytes())
 }
 
-func (tx *Transaction) RLPHash() util.Hash {
+func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
 	bytes, err := rlp.EncodeToBytes(tx)
 
 	if err != nil {
 		panic(err)
 	}
 
-	return util.DoHash(bytes)
+	return hasher(bytes)
 }
 
 func (tx *Transaction) SetIndex(index uint32) {
 	tx.TxIdx = big.NewInt(int64(index))
 }
 
-func (tx *Transaction) EncodeRLP(w io.Writer) error {
-	var itf rlpHelper
-	if tx.Input0 != nil {
-		itf.BlkNum0 = *tx.Input0.BlkNum
-		itf.TxIdx0  = *tx.Input0.TxIdx
-		itf.OutIdx0 = *tx.Input0.OutIdx
-		itf.Sig0    = tx.Sig0
-	}
-	if tx.Input1 != nil {
-		itf.BlkNum1 = *tx.Input1.BlkNum
-		itf.TxIdx1  = *tx.Input1.TxIdx
-		itf.OutIdx1 = *tx.Input1.OutIdx
-		itf.Sig1    = tx.Sig1
-	}
-	if tx.Output0 != nil {
-		itf.NewOwner0 = tx.Output0.NewOwner
-		itf.Amount0   = *tx.Output0.Denom
-	}
-	if tx.Output1 != nil {
-		itf.NewOwner1 = tx.Output1.NewOwner
-		itf.Amount1   = *tx.Output1.Denom
-	}
-	if tx.Fee != nil {
-		itf.Fee = *tx.Fee
-	}
-
-	return rlp.Encode(w, &itf)
-}
-
-func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	var itf rlpHelper
-	err := s.Decode(&itf)
-	if err != nil {
-		return err
-	}
-	tx.Input0  = NewInput(&itf.BlkNum0, &itf.TxIdx0, &itf.OutIdx0)
-	tx.Input1  = NewInput(&itf.BlkNum1, &itf.TxIdx1, &itf.OutIdx1)
-	tx.Output0 = NewOutput(itf.NewOwner0, &itf.Amount0)
-	tx.Output0.DepositNonce = &itf.DepositNonce0
-	tx.Output1 = NewOutput(itf.NewOwner1, &itf.Amount1)
-	tx.Output1.DepositNonce = &itf.DepositNonce1
-	tx.Sig0 = itf.Sig0
-	tx.Sig1 = itf.Sig1
-	tx.Fee  = big.NewInt(itf.Fee.Int64())
-
-	return nil
-}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/kyokan/plasma/util"
 	"math"
+	"math/big"
 	"sync"
 	"sync/atomic"
 )
@@ -19,6 +20,7 @@ type DualHashable interface {
 	util.Hashable
 	util.RLPHashable
 	SetIndex(uint32)
+	GetFee() *big.Int
 }
 
 type ElementWrapper struct {
@@ -26,13 +28,13 @@ type ElementWrapper struct {
 	posChan chan uint32
 }
 
-type Hasher func([]byte) util.Hash
+
 
 var precomputedHashes [maxDepth]util.Hash
 var once sync.Once
 
 // Initialized instead of hard-coded values as the hash function may change
-func precomputeHashes(hasher Hasher, sparse bool) {
+func precomputeHashes(hasher util.Hasher, sparse bool) {
 	emptyBuf := make([]byte, 32)
 	var index int
 	precomputedHashes[maxDepth - 1] = hasher(emptyBuf)
@@ -124,10 +126,12 @@ type merkleQueue struct {
 
 	queue chan ElementWrapper
 
-	hasher Hasher
+	hasher util.Hasher
+
+	fees *big.Int
 }
 
-func createMerkleQueue(hasher Hasher, depth, index int32, sparse bool) (*merkleQueue, error) {
+func createMerkleQueue(hasher util.Hasher, depth, index int32, sparse bool) (*merkleQueue, error) {
 	once.Do(func() {
 		precomputeHashes(hasher, sparse)
 	})
@@ -145,6 +149,7 @@ func createMerkleQueue(hasher Hasher, depth, index int32, sparse bool) (*merkleQ
 		proofIndex: index,
 		hasher:     hasher,
 		queue:      make(chan ElementWrapper),
+		fees:       big.NewInt(0),
 	}
 	result.context, result.cancel = context.WithCancel(context.Background())
 
@@ -248,7 +253,7 @@ func (merkle *merkleQueue) listen() {
 
 			atomic.AddUint32(&merkle.leafIndex, 1)
 
-			newElement := createQueueElement(merkle.depth, tx.Hash(), tx.RLPHash())
+			newElement := createQueueElement(merkle.depth, tx.Hash(merkle.hasher), tx.RLPHash(merkle.hasher))
 			merkle.proofState.store(newElement)
 			merkle.processElement(newElement)
 
@@ -321,7 +326,7 @@ func (merkle *merkleQueue) GetNumberOfLeafes() uint32 {
 	return atomic.LoadUint32(&merkle.leafIndex)
 }
 
-func doGetProof(transactions []DualHashable, hasher Hasher, depth, index int32) (util.Hash, error) {
+func doGetProof(transactions []DualHashable, hasher util.Hasher, depth, index int32) (util.Hash, error) {
 	queue, err := createMerkleQueue(hasher, depth, index, false)
 	if err != nil {
 		return nil, err

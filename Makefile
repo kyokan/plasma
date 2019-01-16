@@ -1,6 +1,6 @@
 deps:
-	@echo "--> Installing Plasma MVP Rootchain..."
-	git submodule update --init --recursive
+	@echo "--> Installing dependencies for Plasma MVP Rootchain..."
+	git submodule update --remote --recursive
 	npm install --prefix plasma-mvp-rootchain plasma-mvp-rootchain
 	@$(MAKE) -C ./rpc-test-client deps
 	@echo "--> Installing Go dependencies..."
@@ -28,8 +28,8 @@ abigen: deps
 	cd plasma-mvp-rootchain && \
 	truffle compile && \
 	mkdir -p abi/contracts gen/contracts && \
-	cat ./build/contracts/RootChain.json | jq ".abi" > abi/contracts/RootChain.abi && \
-	abigen --abi abi/contracts/RootChain.abi --pkg contracts --type Plasma --out gen/contracts/rootchain.go
+	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > abi/contracts/PlasmaMVP.abi && \
+	abigen --abi abi/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out gen/contracts/plasmamvp.go
 
 protogen:
 	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb

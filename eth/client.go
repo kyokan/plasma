@@ -30,6 +30,7 @@ type StartExitOpts struct {
 	Signature  		 []byte
 	Proof            []byte
 	ConfirmSignature []byte
+	CommittedFee     *big.Int
 }
 
 type ChallengeExitOpts struct {
@@ -42,16 +43,16 @@ type Client interface {
 	UserAddress() common.Address
 	Contract() *contracts.Plasma
 	SignData(data []byte) ([]byte, error)
-	SubmitBlock(merkleHash util.Hash) error
+	SubmitBlock(util.Hash, *big.Int, *big.Int) error
 	Deposit(value *big.Int, tx *chain.Transaction) error
+	GetChildBlock(uint64) (merkleRoot [32]byte, NumTxns *big.Int, FeeAmount *big.Int, CreatedAt *big.Int, err error)
 
-	GetChildBlock(*big.Int) ([32]byte, *big.Int, error)
-
-	StartDepositExit(nonce *big.Int) error
+	StartDepositExit(nonce, committedFee *big.Int) error
 	StartTransactionExit(opts *StartExitOpts) error
+	StartFeeExit(*big.Int) error
 
-	ChallengeDepositExit(nonce *big.Int, opts *ChallengeExitOpts) error
-	ChallengeTransactionExit(opts *ChallengeExitOpts) error
+	ChallengeExit(nonce *big.Int, opts *ChallengeExitOpts) error
+	ChallengeFeeMismatch(nonce *big.Int, opts *ChallengeExitOpts) error
 
 	FinalizeDepositExits() error
 	FinalizeTransactionExits() error
@@ -60,11 +61,9 @@ type Client interface {
 	BlockSubmittedFilter(uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error)
 	DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
-	ChallengedTransactionExitFilter(uint64) ([]contracts.PlasmaChallengedTransactionExit, uint64, error)
-	ChallengedDepositExitFilter(uint64) ([]contracts.PlasmaChallengedDepositExit, uint64, error)
+	ChallengedExitFilter(uint64) ([]contracts.PlasmaChallengedExit, uint64, error)
 
-	FinalizedTransactionExitFilter(uint64) ([]contracts.PlasmaFinalizedTransactionExit, uint64, error)
-	FinalizedDepositExitFilter(uint64) ([]contracts.PlasmaFinalizedDepositExit, uint64, error)
+	FinalizedExitFilter(uint64) ([]contracts.PlasmaFinalizedExit, uint64, error)
 
 	StartedTransactionExitFilter(uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
 	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)

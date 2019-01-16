@@ -2,32 +2,36 @@ package util
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
-
-	//"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 )
 
 type Hash []byte
 
+type Hasher func([]byte) Hash
+
 type Hashable interface {
-	Hash() Hash
+	Hash(Hasher) Hash
 }
 
 type RLPHashable interface {
-	RLPHash() Hash
+	RLPHash(Hasher) Hash
 }
 
 func DoHash(b []byte) Hash {
 	hash := sha3.NewLegacyKeccak256()
-	// hash := sha3.NewKeccak256()
 
 	var buf []byte
 	hash.Write(b)
 	buf = hash.Sum(buf)
 
 	return buf
+}
+
+func Sha256(b []byte) Hash {
+	hash := sha3.Sum256(b)
+	return hash[:]
 }
 
 func ValidateSignature(hash, signature []byte, address common.Address) error {

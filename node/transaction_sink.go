@@ -32,7 +32,7 @@ func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.Transaction) {
 			valid, err := sink.VerifyTransaction(&tx)
 
 			if !valid || err != nil {
-				log.Printf("Transaction with hash %s is not valid: %s", tx.Hash(), err)
+				log.Printf("Transaction with hash %s is not valid: %s", tx.Hash(util.Sha256), err)
 				continue
 			}
 
@@ -155,13 +155,13 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 		return false, errors.New("inputs and outputs do not have the same sum")
 	}
 
-	sig1Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig0)
+	sig1Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig0[:])
 
 	if err != nil {
 		return false, err
 	}
 
-	sig2Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig1)
+	sig2Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig1[:])
 
 	if err != nil {
 		return false, err

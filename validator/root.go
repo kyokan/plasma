@@ -59,8 +59,7 @@ func RootNodeListener(ctx context.Context, storage db.PlasmaStorage, ethClient e
 			log.Printf("Found block number: %d\n", blockNum)
 			plasmaBlock := rpc.DeserializeBlock(response.Block)
 
-			// Block number for the contract is off by one
-			root, created, err := ethClient.GetChildBlock(big.NewInt(int64(blockNum)))
+			root, _, _, created, err := ethClient.GetChildBlock(blockNum)
 			if err != nil {
 				log.Println("caught error getting block", err)
 			}
@@ -154,9 +153,10 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		for _, utxo := range utxos {
 			log.Printf("Exiting block: %s, tx: %s, output: %s\n", utxo.BlkNum.String(), utxo.TxIdx.String(), utxo.outputIdx.String())
 			proof, _ := merkle.GetProof(hashables, merkle.DefaultDepth, int32(utxo.TxIdx.Int64()))
+			var address common.Address
 			opts := &eth.StartExitOpts{
 				Transaction: utxo.Transaction,
-				Input: *chain.NewInput(utxo.BlkNum, utxo.TxIdx, utxo.outputIdx),
+				Input: *chain.NewInput(utxo.BlkNum, utxo.TxIdx, utxo.outputIdx, chain.Zero(), address),
 				Signature: []byte{}, // TODO: Fix this
 				ConfirmSignature: []byte{}, // TODO: Fix this
 				Proof: proof,
