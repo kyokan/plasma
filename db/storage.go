@@ -46,11 +46,16 @@ type PlasmaStorage interface {
     LastDepositEventIdx() (uint64, error)
     SaveDepositEventIdx(idx uint64) error
 
-    LastExitEventIdx() (uint64, error)
-    SaveExitEventIdx(idx uint64) error
+    LastTransactionExitEventIdx() (uint64, error)
+    SaveTransactionExitEventIdx(idx uint64) error
+
+    LastDepositExitEventIdx() (uint64, error)
+    SaveDepositExitEventIdx(idx uint64) error
 
     GetInvalidBlock(blkHash util.Hash) (*chain.Block, error)
     SaveInvalidBlock(blk *chain.Block) error
+
+    MarkExitsAsSpent([]chain.Input) error
 }
 
 type noopLock struct {
@@ -150,7 +155,7 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
         return nil, err
     }
 
-    hash := tx.Hash(util.Sha256)
+    hash := tx.RLPHash(util.Sha256)
     hexHash := hexutil.Encode(hash)
     hashKey := txPrefixKey("hash", hexHash)
 
@@ -164,12 +169,12 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     // Recording spends
     if tx.Input0.IsZeroInput() == false {
         input := tx.InputAt(0)
-        outputOwner := prevTxs[0].OutputAt(input.OutIdx).NewOwner
+        outputOwner := prevTxs[0].OutputAt(input.OutIdx).Owner
         batch.Put(spend(&outputOwner, tx.Input0), empty)
     }
     if tx.Input1.IsZeroInput() == false {
         input := tx.InputAt(0)
-        outputOwner := prevTxs[1].OutputAt(input.OutIdx).NewOwner
+        outputOwner := prevTxs[1].OutputAt(input.OutIdx).Owner
         batch.Put(spend(&outputOwner, tx.Input1), empty)
     }
 
@@ -177,15 +182,27 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     if tx.Output0.IsZeroOutput() == false {
         outIdx := big.NewInt(0)
         output := tx.OutputAt(outIdx)
-        batch.Put(earn(&output.NewOwner, tx, outIdx), empty)
+        batch.Put(earn(&output.Owner, tx, outIdx), empty)
     }
     if tx.Output1.IsZeroOutput() == false {
         outIdx := big.NewInt(1)
         output := tx.OutputAt(outIdx)
-        batch.Put(earn(&output.NewOwner, tx, outIdx), empty)
+        batch.Put(earn(&output.Owner, tx, outIdx), empty)
     }
 
     return &tx, batch.Replay(ps)
+}
+
+// TODO: Check for that exit spent keys when validating transactions and when computing balances
+func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
+    batch := new(leveldb.Batch)
+    for _, input := range inputs {
+        batch.Put(spendExit(&input.Owner, &input), []byte{})
+    }
+    ps.Lock()
+    defer ps.Unlock()
+
+    return batch.Replay(ps)
 }
 
 func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*BlockResult, error) {
@@ -281,7 +298,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
 
     signatureHash := eth.GethHash(tx.SignatureHash())
 
-    outputAddress := prevTx.OutputAt(tx.Input0.OutIdx).NewOwner
+    outputAddress := prevTx.OutputAt(tx.Input0.OutIdx).Owner
     err = util.ValidateSignature(signatureHash, tx.Sig0[:], outputAddress)
     if err != nil {
         return nil, err
@@ -289,6 +306,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
 
     result = append(result, prevTx)
     spendKeys = append(spendKeys, spend(&outputAddress, tx.Input0))
+    // TODO: use spendKeys to find double spends
 
     if tx.Input1.IsZeroInput() == false {
         // TODO: Use blkHash to validate confirmation signature
@@ -299,7 +317,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         if prevTx == nil {
             return nil, errors.New("Couldn't find transaction for input 1")
         }
-        outputAddress = prevTx.OutputAt(tx.Input1.OutIdx).NewOwner
+        outputAddress = prevTx.OutputAt(tx.Input1.OutIdx).Owner
         err = util.ValidateSignature(signatureHash, tx.Sig1[:], outputAddress)
         if err != nil {
             return nil, err
@@ -630,34 +648,43 @@ func (ps *Storage) createGenesisBlock() (*BlockResult, error) {
 }
 // Deposit
 func (ps *Storage) LastDepositEventIdx() (uint64, error) {
-    key := prefixKey(latestDepositIdxKey)
-    b, err := ps.DB.Get(key, nil)
-    if err != nil {
-        return 0, err
-    }
-    return bytesToUint64(b), nil
+    return ps.getMostRecentEventIdx(latestDepositIdxKey)
 }
 
 func (ps *Storage) SaveDepositEventIdx(idx uint64) error {
-    key := prefixKey(latestDepositIdxKey)
+    return ps.saveEventIdx(latestDepositIdxKey, idx)
+}
+
+// Exits
+func (ps *Storage) LastTransactionExitEventIdx() (uint64, error) {
+    return ps.getMostRecentEventIdx(latestTxExitIdxKey)
+}
+
+func (ps *Storage) SaveTransactionExitEventIdx(idx uint64) error {
+    return ps.saveEventIdx(latestTxExitIdxKey, idx)
+}
+
+func (ps *Storage) LastDepositExitEventIdx() (uint64, error) {
+    return ps.getMostRecentEventIdx(latestDepExitIdxKey)
+}
+
+func (ps *Storage) SaveDepositExitEventIdx(idx uint64) error {
+    return ps.saveEventIdx(latestDepExitIdxKey, idx)
+}
+
+func (ps *Storage) saveEventIdx(eventKey string, idx uint64) error {
+    key := prefixKey(eventKey)
     b := uint64ToBytes(idx)
     return ps.DB.Put(key, b, nil)
 }
 
-// Exit
-func (ps *Storage) LastExitEventIdx() (uint64, error) {
-    key := prefixKey(latestExitIdxKey)
+func (ps *Storage) getMostRecentEventIdx(eventKey string) (uint64, error) {
+    key := prefixKey(eventKey)
     b, err := ps.DB.Get(key, nil)
     if err != nil {
         return 0, err
     }
     return bytesToUint64(b), nil
-}
-
-func (ps *Storage) SaveExitEventIdx(idx uint64) error {
-    key := prefixKey(latestExitIdxKey)
-    b := uint64ToBytes(idx)
-    return ps.DB.Put(key, b, nil)
 }
 
 // Invalid block

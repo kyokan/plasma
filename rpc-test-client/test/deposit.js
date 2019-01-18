@@ -14,12 +14,12 @@ describe('Deposit (long test)', () => {
             if (err != null) {
                 return done(err);
             }
-            account.Deposit(amount, function (err) {
+            account.Deposit(amount, function (err, receipt) {
                 expect(err).to.equal(null);
                 if (err != null) {
                     return done(err);
                 }
-
+                console.log(`Deposit receipt: ${receipt}`);
                 let timeout;
                 let delayedBalanceFn = function() {
                     if (timeout != null && _.has(timeout, 'unref')) {

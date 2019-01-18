@@ -8,11 +8,14 @@ import (
 
 func RandomInput() *Input {
 	return &Input{
+		Output: Output{
+			DepositNonce: big.NewInt(rand.Int63()),
+			Owner: RandomAddress(),
+			Denom: Zero(),
+		},
 		BlkNum: big.NewInt(rand.Int63()),
 		TxIdx:  big.NewInt(rand.Int63()),
 		OutIdx: big.NewInt(rand.Int63n(2)),
-		DepositNonce: big.NewInt(0),
-		Owner: RandomAddress(),
 	}
 }
 
@@ -35,8 +38,8 @@ func RandomOutput() *Output {
 	result.DepositNonce = big.NewInt(0)
 	buf := make([]byte, 20)
 	rand.Read(buf)
-	for i := range result.NewOwner {
-		result.NewOwner[i] = buf[i]
+	for i := range result.Owner {
+		result.Owner[i] = buf[i]
 	}
 	return result
 }

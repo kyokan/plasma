@@ -125,7 +125,7 @@ class Account {
                 return cb(err);
             }
             return cb(null, {
-                gasEstimate: 2 * results[0],
+                gasEstimate: 4 * results[0],
                 gasPrice: results[1],
                 nonce: results[2]
             });
@@ -263,15 +263,13 @@ class Account {
 
     Deposit(amount, cb) {
         let self = this;
-        this.prepareEthCall( (err, result) => {
-            if (err != null) {
-                return cb(err, null);
-            }
-            let nonce = result.nonce;
-            // Retrying as sometimes the call fails with invalid RPC response error
-            let depositFn = function (callback) {
+        let depositFn = function (callback) {
+            self.prepareEthCall( (err, result) => {
+                if (err) {
+                    return callback(e);
+                }
                 let params = {
-                    nonce:    self.web3.utils.toHex(nonce),
+                    nonce:    self.web3.utils.toHex(result.nonce),
                     chainId:  15,
                     to:       self.contract.options.address,
                     value:    amount,
@@ -280,15 +278,12 @@ class Account {
                     from:     self.address
                 };
                 self.contract.methods.deposit(self.address).send(params, (error, receipt) => {
-                    if (error != null && !error.message.startsWith('Error: Invalid JSON RPC response')) {
-                        nonce++;
-                    }
                     callback(error, receipt);
                 });
-            };
-            async.retry({times: 3}, depositFn, (error, receipt) => {
-                return cb(error, receipt);
             });
+        };
+        async.retry({times: 5}, depositFn, (error, receipt) => {
+            return cb(error, receipt);
         });
     }
 

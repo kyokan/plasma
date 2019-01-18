@@ -12,13 +12,7 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
-type Deposit struct {
-	DepositNonce *big.Int
-	Amount       *big.Int
-}
-
 type Transaction struct {
-	Deposit
 	Input0  *Input
 	Sig0    Signature
 	Input1  *Input
@@ -33,7 +27,6 @@ type Transaction struct {
 
 func ZeroTransaction() *Transaction {
 	return &Transaction{
-		Deposit: Deposit{ DepositNonce: Zero(), Amount: Zero()},
 		Input0: ZeroInput(),
 		Input1: ZeroInput(),
 		Output0: ZeroOutput(),
@@ -43,9 +36,8 @@ func ZeroTransaction() *Transaction {
 }
 
 func (tx *Transaction) IsDeposit() bool {
-	return tx.DepositNonce != nil && tx.Amount != nil &&
-		   tx.DepositNonce.Cmp(Zero()) == 1 && // both greater than zero
-	       tx.Amount.Cmp(Zero()) == 1
+	return tx.Output0 != nil &&
+		tx.Output0.DepositNonce.Cmp(Zero()) == 1
 }
 
 func (tx *Transaction) GetFee() *big.Int {
@@ -85,13 +77,13 @@ func (tx *Transaction) OutputAt(idx *big.Int) *Output {
 func (tx *Transaction) OutputFor(addr *common.Address) *Output {
 	output := tx.OutputAt(big.NewInt(0))
 
-	if util.AddressesEqual(&output.NewOwner, addr) {
+	if util.AddressesEqual(&output.Owner, addr) {
 		return output
 	}
 
 	output = tx.OutputAt(big.NewInt(1))
 
-	if util.AddressesEqual(&output.NewOwner, addr) {
+	if util.AddressesEqual(&output.Owner, addr) {
 		return output
 	}
 
@@ -101,13 +93,13 @@ func (tx *Transaction) OutputFor(addr *common.Address) *Output {
 func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
 	output := tx.OutputAt(big.NewInt(0))
 
-	if util.AddressesEqual(&output.NewOwner, addr) {
+	if util.AddressesEqual(&output.Owner, addr) {
 		return big.NewInt(0)
 	}
 
 	output = tx.OutputAt(big.NewInt(1))
 
-	if util.AddressesEqual(&output.NewOwner, addr) {
+	if util.AddressesEqual(&output.Owner, addr) {
 		return big.NewInt(1)
 	}
 
@@ -117,9 +109,9 @@ func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
 func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
 	values := []interface{}{
 		tx.Input0.Hash(),
-		tx.Sig0,
+		tx.Sig0[:],
 		tx.Input1.Hash(),
-		tx.Sig1,
+		tx.Sig1[:],
 		tx.Output0.Hash(),
 		tx.Output1.Hash(),
 		tx.Fee,
@@ -157,7 +149,7 @@ func doHash(values []interface{}, hasher util.Hasher) util.Hash {
 		case uint64, uint32:
 			err = binary.Write(buf, binary.BigEndian, t)
 		default:
-			err = errors.New("invalid component type")
+			err = errors.New(fmt.Sprint("invalid component type %v", t))
 		}
 
 		if err != nil {

@@ -59,7 +59,6 @@ func (m BlockHeader) MarshalJSON() ([]byte, error) {
 
 // TODO: Please use the chain.Transaction as it already has the JSON annotations
 type rawTransaction struct {
-	Deposit  *Deposit`json:"Deposit"`
 	Input0   *Input  `json:"input0"`
 	Sig0     *string `json:"sig0"`
 	Input1   *Input  `json:"input1"`
@@ -73,19 +72,16 @@ type rawTransaction struct {
 }
 
 func (m Transaction) MarshalJSON() ([]byte, error) {
-	var result rawTransaction
-	result.Deposit = m.GetDeposit()
-	utxo := m.GetUtxo()
 	raw := &rawTransaction{
-		Input0:   utxo.Input0,
-		Sig0:     hexOrNil(utxo.Sig0),
-		Input1:   utxo.Input1,
-		Sig1:     hexOrNil(utxo.Sig1),
-		Output0:  utxo.Output0,
-		Output1:  utxo.Output1,
-		Fee:      utxo.Fee,
-		BlockNum: utxo.BlockNum,
-		TxIdx:    utxo.TxIdx,
+		Input0:   m.Input0,
+		Sig0:     hexOrNil(m.Sig0),
+		Input1:   m.Input1,
+		Sig1:     hexOrNil(m.Sig1),
+		Output0:  m.Output0,
+		Output1:  m.Output1,
+		Fee:      m.Fee,
+		BlockNum: m.BlockNum,
+		TxIdx:    m.TxIdx,
 	}
 	return json.Marshal(raw)
 }

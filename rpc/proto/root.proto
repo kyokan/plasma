@@ -22,9 +22,12 @@ message BigInt {
 }
 
 message Input {
-    BigInt blockNum = 1;
-    BigInt txIdx = 2;
-    BigInt outIdx = 3;
+    bytes owner = 1;
+    BigInt amount = 2;
+    BigInt depositNonce = 3;
+    BigInt blockNum = 4;
+    BigInt txIdx = 5;
+    BigInt outIdx = 6;
 }
 
 message Output {
@@ -45,7 +48,7 @@ message Block {
     bytes hash = 2;
 }
 
-message UTXO {
+message Transaction {
     Input input0 = 1;
     bytes sig0 = 2;
     Input input1 = 3;
@@ -55,18 +58,6 @@ message UTXO {
     BigInt fee = 7;
     BigInt blockNum = 8;
     BigInt txIdx = 9;
-}
-
-message Deposit {
-    BigInt depositNonce = 1;
-    BigInt amount = 2;
-}
-
-message Transaction {
-    oneof value {
-        UTXO utxo = 15;
-        Deposit deposit = 16;
-    }
 }
 
 message GetBalanceRequest {

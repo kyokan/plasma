@@ -15,12 +15,14 @@ import (
 const txKeyPrefix         = "tx"
 const earnKeyPrefix       = "earn"
 const spendKeyPrefix      = "spend"
+const spendExitKeyPrefix  = "spend_exit"
 const merkleKeyPrefix     = "merkle"
 const blockKeyPrefix      = "blk"
 const blockMetaKeyPrefix  = "blkmeta"
 const latestKey           = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
-const latestExitIdxKey    = "LATEST_EXIT_IDX"
+const latestTxExitIdxKey  = "LATEST_TRANSACTION_EXIT_IDX"
+const latestDepExitIdxKey = "LATEST_DEPOSIT_EXIT_IDX"
 const invalidKeyPrefix    = "invalid"
 
 // TODO: Read this from configuration
@@ -74,7 +76,16 @@ func spend(addr *common.Address, input *chain.Input) []byte {
     blkNum := fmt.Sprintf("%d", input.BlkNum)
     txIdx  := fmt.Sprintf("%d", input.TxIdx)
     outIdx := fmt.Sprintf("%d", input.OutIdx)
-    return prefixKey(spendKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx)
+    depositNonce := fmt.Sprintf("%d", input.DepositNonce)
+    return prefixKey(spendKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx, depositNonce)
+}
+
+func spendExit(addr *common.Address, input *chain.Input) []byte {
+    blkNum := fmt.Sprintf("%d", input.BlkNum)
+    txIdx  := fmt.Sprintf("%d", input.TxIdx)
+    outIdx := fmt.Sprintf("%d", input.OutIdx)
+    depositNonce := fmt.Sprintf("%d", input.DepositNonce)
+    return prefixKey(spendExitKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx, depositNonce)
 }
 
 func earn(addr *common.Address, tx chain.Transaction, outputIdx *big.Int) []byte {

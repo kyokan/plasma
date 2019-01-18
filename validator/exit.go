@@ -16,7 +16,7 @@ import (
 
 func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClient eth.Client, rootClient pb.RootClient) {
 	for {
-		idx, err := storage.LastExitEventIdx()
+		idx, err := storage.LastTransactionExitEventIdx()
 
 		if err != nil && err.Error() != "leveldb: not found" {
 			log.Fatalf("Failed to get last exit event idx: %v", err)
@@ -102,7 +102,7 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 
 			log.Printf("Found %d exit events at from blocks %d to %d.\n", count, idx, lastIdx)
 
-			storage.SaveExitEventIdx(lastIdx + 1)
+			storage.SaveTransactionExitEventIdx(lastIdx + 1)
 		} else {
 			log.Printf("No exit events at block %d.\n", idx)
 		}

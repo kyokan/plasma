@@ -11,29 +11,33 @@ import (
 
 // JSON tags needed for test fixtures
 type Input struct {
+	Output
 	BlkNum       *big.Int `json:"BlkNum"`
 	TxIdx        *big.Int `json:"TxIdx"`
 	OutIdx       *big.Int `json:"OutIdx"`
-	DepositNonce *big.Int
-	Owner        common.Address
 }
 
 func NewInput(blkNum, txIdx, outIdx, depositNonce *big.Int, owner common.Address) *Input {
 	return &Input{
+		Output: Output{
+			DepositNonce: depositNonce,
+			Owner:  owner,
+			Denom: Zero(),
+		},
 		BlkNum: blkNum,
 		TxIdx:  txIdx,
 		OutIdx: outIdx,
-		DepositNonce: depositNonce,
-		Owner:  owner,
 	}
 }
 
 func NewInputFromTransaction(tx Transaction, outIdx int64) *Input {
 	return &Input{
+		Output: Output{
+			DepositNonce: Zero(),
+		},
 		BlkNum: tx.BlkNum,
 		TxIdx:  tx.TxIdx,
 		OutIdx: big.NewInt(outIdx),
-		DepositNonce: Zero(),
 	}
 }
 
@@ -43,10 +47,11 @@ func ZeroInput() *Input {
 }
 
 func (in *Input) IsZeroInput() bool {
-	return in.BlkNum.Cmp(Zero()) == 0 &&
-			in.TxIdx.Cmp(Zero()) == 0 &&
-			in.OutIdx.Cmp(Zero()) == 0 &&
-			in.DepositNonce.Cmp(Zero()) == 0
+	return in == nil ||
+		(in.BlkNum.Cmp(Zero()) == 0 &&
+		in.TxIdx.Cmp(Zero()) == 0 &&
+		in.OutIdx.Cmp(Zero()) == 0 &&
+		in.DepositNonce.Cmp(Zero()) == 0)
 }
 
 func (in *Input) Hash() util.Hash {

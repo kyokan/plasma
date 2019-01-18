@@ -76,10 +76,24 @@ func Test_TransactionFullRLP(t *testing.T) {
 func Test_TransactionFirstInputRLP(t *testing.T) {
 	tx := Transaction{
 		Input0:  RandomInput(),
-		Input1:  ZeroInput(),
 		Sig0:    RandomConfirmationSig(),
+		Input1:  nil,
 		Output0: RandomOutput(),
-		Output1: ZeroOutput(),
+		Output1: nil,
+		Fee:     big.NewInt(rand.Int63()),
+		BlkNum:  nil,
+		TxIdx:   nil,
+	}
+	encodeAndDecode(t, &tx)
+}
+
+func Test_TransactionSecondInputRLP(t *testing.T) {
+	tx := Transaction{
+		Input0:  nil,
+		Input1:  RandomInput(),
+		Sig1:    RandomConfirmationSig(),
+		Output0: nil,
+		Output1: RandomOutput(),
 		Fee:     big.NewInt(rand.Int63()),
 		BlkNum:  nil,
 		TxIdx:   nil,
@@ -109,9 +123,8 @@ func Test_ConfirmedTransactionFirstInputRLP(t *testing.T) {
 	confirmed := ConfirmedTransaction{
 		Transaction: Transaction{
 			Input0:  RandomInput(),
-			Input1:  ZeroInput(),
 			Sig0:    RandomConfirmationSig(),
-			Sig1:    RandomConfirmationSig(),
+			Input1:  nil,
 			Output0: RandomOutput(),
 			Output1: RandomOutput(),
 			Fee:     big.NewInt(rand.Int63()),
@@ -125,22 +138,22 @@ func Test_ConfirmedTransactionFirstInputRLP(t *testing.T) {
 
 func Test_InputRLP(t *testing.T) {
 	input := RandomInput()
-	encodeAndDecode(t, &input)
+	encodeAndDecode(t, input)
 }
 
 func Test_ZeroInputRLP(t *testing.T) {
 	input := ZeroOutput()
-	encodeAndDecode(t, &input)
+	encodeAndDecode(t, input)
 }
 
 func Test_OuputRLP(t *testing.T) {
 	output := RandomOutput()
-	encodeAndDecode(t, &output)
+	encodeAndDecode(t, output)
 }
 
 func Test_ZeroOuputRLP(t *testing.T) {
 	output := ZeroOutput()
-	encodeAndDecode(t, &output)
+	encodeAndDecode(t, output)
 }
 
 func Test_BlockRLP(t *testing.T) {

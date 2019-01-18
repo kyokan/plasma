@@ -2,7 +2,7 @@ const W3 = require("web3");
 const _ = require('lodash');
 const plasma = require('../index');
 
-const plasmaJson = require('../../plasma-mvp-rootchain/build/contracts/RootChain');
+const plasmaJson = require('../../plasma-mvp-rootchain/build/contracts/PlasmaMVP');
 const contractItf = plasmaJson['abi'];
 const web3 = new W3(`http://localhost:8545`);
 
@@ -10,7 +10,7 @@ const web3 = new W3(`http://localhost:8545`);
 const ganacheAccountsInfo = require('../../test/test-accounts');
 let accounts = [];
 
-const contractAddress = '0x345ca3e014aaf5dca488057592ee47305d9b3e10';
+const contractAddress = '0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da';
 let contract;
 let client;
 

@@ -95,14 +95,10 @@ func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 			deposit = <-ch
 
 			tx = chain.Transaction{
-				Deposit: chain.Deposit{
-					Amount: deposit.Value,
-					DepositNonce: deposit.DepositNonce,
-				},
 				Input0: chain.ZeroInput(),
 				Input1: chain.ZeroInput(),
 				Output0: &chain.Output{
-					NewOwner:     deposit.Sender,
+					Owner:        deposit.Sender,
 					Denom:        deposit.Value,
 					DepositNonce: deposit.DepositNonce,
 				},
@@ -170,11 +166,11 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 	sig1Addr := common.BytesToAddress(sig1Bytes)
 	sig2Addr := common.BytesToAddress(sig2Bytes)
 
-	if !util.AddressesEqual(&prevOutput1.NewOwner, &sig1Addr) {
+	if !util.AddressesEqual(&prevOutput1.Owner, &sig1Addr) {
 		return false, errors.New("input 1 signature is not valid")
 	}
 
-	if !util.AddressesEqual(&prevOutput2.NewOwner, &sig2Addr) {
+	if !util.AddressesEqual(&prevOutput2.Owner, &sig2Addr) {
 		return false, errors.New("input 2 signature is not valid")
 	}
 

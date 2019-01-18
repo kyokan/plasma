@@ -242,8 +242,8 @@ func createDepositTx(userAddress common.Address, value *big.Int) chain.Transacti
 		Input0: chain.ZeroInput(),
 		Input1: chain.ZeroInput(),
 		Output0: &chain.Output{
-			NewOwner: userAddress,
-			Denom:    value,
+			Owner: userAddress,
+			Denom: value,
 		},
 		Output1: chain.ZeroOutput(),
 		Fee:     big.NewInt(0),
@@ -279,9 +279,9 @@ func txsTable(txs []chain.Transaction) *tablewriter.Table {
 			tx.Input1.TxIdx.String(),
 			tx.Input1.OutIdx.String(),
 			hexutil.Encode(tx.Sig1[:]),
-			tx.Output0.NewOwner.Hex(),
+			tx.Output0.Owner.Hex(),
 			tx.Output0.Denom.Text(10),
-			tx.Output1.NewOwner.Hex(),
+			tx.Output1.Owner.Hex(),
 			tx.Output1.Denom.Text(10),
 			tx.Fee.Text(10),
 		})

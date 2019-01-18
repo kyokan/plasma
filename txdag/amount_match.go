@@ -98,8 +98,8 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
     }
     if totalAmount.Cmp(amount) == 1 { // totalAmount > amount
         output1 = &chain.Output{
-            NewOwner: from,
-            Denom:    big.NewInt(0).Sub(totalAmount, amount),
+            Owner: from,
+            Denom: big.NewInt(0).Sub(totalAmount, amount),
         }
     } else {
         output1 = chain.ZeroOutput()
@@ -113,8 +113,8 @@ func PrepareSendTransaction(from, to common.Address, amount *big.Int, utxoTxs []
         },
         Input1: input1,
         Output0: &chain.Output{
-            NewOwner: to,
-            Denom:    amount,
+            Owner: to,
+            Denom: amount,
         },
         Output1: output1,
         Fee:     big.NewInt(0),

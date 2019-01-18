@@ -120,9 +120,9 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		// Collect a list of outputs because technically both can belong to the user.
 		var outputIdxs []*big.Int
 
-		if tx.Output0.NewOwner == userAddress {
+		if tx.Output0.Owner == userAddress {
 			outputIdxs = append(outputIdxs, chain.Zero())
-		} else if tx.Output1.NewOwner == userAddress {
+		} else if tx.Output1.Owner == userAddress {
 			outputIdxs = append(outputIdxs, chain.One())
 		} else {
 			log.Fatalf("Transaction must have at least one output that belongs to address: %s\n", userAddress)

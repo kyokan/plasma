@@ -37,58 +37,34 @@ func DeserializeTxs(txs []*pb.Transaction) ([]chain.Transaction) {
 }
 
 func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
-	var result pb.Transaction
-	if tx.IsDeposit() {
-		result.Value = &pb.Transaction_Deposit{
-			Deposit: &pb.Deposit{
-				DepositNonce: SerializeBig(tx.DepositNonce),
-				Amount:       SerializeBig(tx.Amount),
-		}}
-		return &result
-	}
-	result.Value = &pb.Transaction_Utxo{
-		Utxo: &pb.UTXO{
-		Input0:   SerializeInput(tx.Input0),
-		Sig0:     tx.Sig0[:],
-		Input1:   SerializeInput(tx.Input1),
-		Sig1:     tx.Sig1[:],
-		Output0:  SerializeOutput(tx.Output0),
-		Output1:  SerializeOutput(tx.Output1),
-		Fee:      SerializeBig(tx.Fee),
+	return &pb.Transaction{
+		Input0: SerializeInput(tx.Input0),
+		Sig0: tx.Sig0[:],
+		Input1: SerializeInput(tx.Input1),
+		Sig1: tx.Sig1[:],
+		Output0: SerializeOutput(tx.Output0),
+		Output1: SerializeOutput(tx.Output1),
+		Fee: SerializeBig(tx.Fee),
 		BlockNum: SerializeBig(tx.BlkNum),
-		TxIdx:    SerializeBig(tx.TxIdx), 
-	}}
-	return &result;
+		TxIdx: SerializeBig(tx.TxIdx),
+	}
 }
 
 func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
-	if tx == nil {
-		return chain.ZeroTransaction()
+	result := chain.ZeroTransaction()
+	if tx != nil {
+		result.Input0  = DeserializeInput(tx.Input0)
+		copy(result.Sig0[:], tx.Sig0)
+		result.Input1  = DeserializeInput(tx.Input1)
+		copy(result.Sig1[:], tx.Sig1)
+		result.Output0 = DeserializeOutput(tx.Output0)
+		result.Output1 = DeserializeOutput(tx.Output1)
+		result.Fee     = DeserializeBig(tx.Fee)
+		result.BlkNum  = DeserializeBig(tx.BlockNum)
+		result.TxIdx   = DeserializeBig(tx.TxIdx)
+		copy(result.Sig0[:], tx.Sig0)
 	}
-	var result chain.Transaction
-	deposit := tx.GetDeposit()
-	if deposit != nil {
-		result.Deposit = chain.Deposit{
-			DepositNonce: DeserializeBig(deposit.DepositNonce), 
-			Amount: DeserializeBig(deposit.Amount),
-		}
-		return &result
-	}
-	utxo := tx.GetUtxo()
-	if utxo != nil {
-		result.Input0  = DeserializeInput(utxo.Input0)
-		copy(result.Sig0[:], utxo.Sig0)
-		result.Input1  = DeserializeInput(utxo.Input1)
-		copy(result.Sig1[:], utxo.Sig1)
-		result.Output0 = DeserializeOutput(utxo.Output0)
-		result.Output1 = DeserializeOutput(utxo.Output1)
-		result.Fee     = DeserializeBig(utxo.Fee)
-		result.BlkNum  = DeserializeBig(utxo.BlockNum)
-		result.TxIdx   = DeserializeBig(utxo.TxIdx)
-		copy(result.Sig0[:], utxo.Sig0)
-		return &result
-	}
-	return chain.ZeroTransaction()
+	return result
 }
 
 func SerializeInput(in *chain.Input) (*pb.Input) {
@@ -109,7 +85,7 @@ func DeserializeInput(in *pb.Input) (*chain.Input) {
 
 func SerializeOutput(out *chain.Output) (*pb.Output) {
 	return &pb.Output{
-		NewOwner:     out.NewOwner.Bytes(),
+		NewOwner:     out.Owner.Bytes(),
 		Amount:       SerializeBig(out.Denom),
 		DepositNonce: SerializeBig(out.DepositNonce),
 	}
@@ -117,7 +93,7 @@ func SerializeOutput(out *chain.Output) (*pb.Output) {
 
 func DeserializeOutput(out *pb.Output) (*chain.Output) {
 	return &chain.Output{
-		NewOwner:     common.BytesToAddress(out.NewOwner),
+		Owner:        common.BytesToAddress(out.NewOwner),
 		Denom:        DeserializeBig(out.Amount),
 		DepositNonce: DeserializeBig(out.DepositNonce),
 	}
