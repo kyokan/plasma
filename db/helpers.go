@@ -1,7 +1,6 @@
 package db
 
 import (
-    "fmt"
     "math/big"
     "strconv"
     "strings"
@@ -19,14 +18,12 @@ const spendExitKeyPrefix  = "spend_exit"
 const merkleKeyPrefix     = "merkle"
 const blockKeyPrefix      = "blk"
 const blockMetaKeyPrefix  = "blkmeta"
+const depositPrefix       = "deposit_nonce"
 const latestKey           = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
 const latestTxExitIdxKey  = "LATEST_TRANSACTION_EXIT_IDX"
 const latestDepExitIdxKey = "LATEST_DEPOSIT_EXIT_IDX"
 const invalidKeyPrefix    = "invalid"
-
-// TODO: Read this from configuration
-const blockSize           = uint32(100)
 
 func merklePrefixKey(parts ...string) []byte {
     return prefixKey(merkleKeyPrefix, parts...)
@@ -64,6 +61,16 @@ func blkNumTxIdxKey(blkNum, txIdx *big.Int) []byte {
     return txPrefixKey("blkNum", blkNum.String(), "txIdx", txIdx.String())
 }
 
+// Used to lookup transaction associated with a deposit
+// for handling deposit exit
+func depositKey(tx *chain.Transaction) []byte {
+    return prefixKey(depositPrefix, tx.Output0.DepositNonce.String(), tx.BlkNum.String(), tx.TxIdx.String())
+}
+
+func depositPrefixKey(nonce *big.Int) []byte {
+    return prefixKey(depositPrefix, nonce.String())
+}
+
 func invalidPrefixKey(parts ...string) []byte {
     return prefixKey(invalidKeyPrefix, parts...)
 }
@@ -73,19 +80,19 @@ func txPrefixKey(parts ...string) []byte {
 }
 
 func spend(addr *common.Address, input *chain.Input) []byte {
-    blkNum := fmt.Sprintf("%d", input.BlkNum)
-    txIdx  := fmt.Sprintf("%d", input.TxIdx)
-    outIdx := fmt.Sprintf("%d", input.OutIdx)
-    depositNonce := fmt.Sprintf("%d", input.DepositNonce)
-    return prefixKey(spendKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx, depositNonce)
+    return prefixKey(spendKeyPrefix, util.AddressToHex(addr),
+        input.BlkNum.Text(10),
+        input.TxIdx.Text(10),
+        input.OutIdx.Text(10),
+        input.DepositNonce.Text(10))
 }
 
 func spendExit(addr *common.Address, input *chain.Input) []byte {
-    blkNum := fmt.Sprintf("%d", input.BlkNum)
-    txIdx  := fmt.Sprintf("%d", input.TxIdx)
-    outIdx := fmt.Sprintf("%d", input.OutIdx)
-    depositNonce := fmt.Sprintf("%d", input.DepositNonce)
-    return prefixKey(spendExitKeyPrefix, util.AddressToHex(addr), blkNum, txIdx, outIdx, depositNonce)
+    return prefixKey(spendExitKeyPrefix, util.AddressToHex(addr),
+        input.BlkNum.Text(10),
+        input.TxIdx.Text(10),
+        input.OutIdx.Text(10),
+        input.DepositNonce.Text(10))
 }
 
 func earn(addr *common.Address, tx chain.Transaction, outputIdx *big.Int) []byte {

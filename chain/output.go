@@ -29,11 +29,24 @@ func ZeroOutput() *Output {
 	}
 }
 
+func (out *Output) IsExit() bool {
+	if out == nil {
+		return false
+	}
+	exit := ExitOutput()
+	for i := 0; i != len(out.Owner); i++ {
+		if out.Owner[i] != exit.Owner[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (out *Output) IsDeposit() bool {
 	if out == nil {
 		return false
 	}
-	return out.DepositNonce == nil || out.DepositNonce.Cmp(Zero()) == 0
+	return out.DepositNonce != nil && out.DepositNonce.Cmp(Zero()) != 0
 }
 
 func (out *Output) IsZeroOutput() bool {

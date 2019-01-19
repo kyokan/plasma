@@ -356,6 +356,39 @@ class Account {
             });
         });
     }
+
+    ExitDeposit(depositNonce, committedFee, cb) {
+        let self = this;
+        let exitDepositFn = function (callback) {
+            self.prepareEthCall( (err, result) => {
+                if (err != null) {
+                    return cb(err);
+                }
+
+                let nonce = result.nonce;
+                const encodedNonce = self.web3.eth.abi.encodeParameter('uint256', depositNonce);
+                const encodedFee = self.web3.eth.abi.encodeParameter('uint256', committedFee);
+                const value = web3.utils.toBN(web3.utils.toWei(committedFee, 'wei'));
+
+                let params = {
+                    nonce: self.web3.utils.toHex(nonce),
+                    chainId: 15,
+                    to: self.contract.options.address,
+                    value: value,
+                    gasPrice: self.web3.utils.toHex(result.gasPrice),
+                    gas: self.web3.utils.toHex(5 * result.gasEstimate),
+                    from: self.address
+                };
+                self.contract.methods.startDepositExit(encodedNonce, encodedFee)
+                    .send(params, (error, exitResult) => {
+                        callback(error, exitResult);
+                    });
+            });
+        };
+        async.retry({times: 5}, exitDepositFn, (error, exitResult) => {
+            return cb(error, exitResult);
+        });
+    }
 }
 
 function doHash(input) {

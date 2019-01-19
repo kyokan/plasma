@@ -40,6 +40,13 @@ func (tx *Transaction) IsDeposit() bool {
 		tx.Output0.DepositNonce.Cmp(Zero()) == 1
 }
 
+func (tx *Transaction) IsExit() bool {
+	return tx != nil &&
+		tx.Input1.IsZeroInput() &&
+		tx.Output1.IsZeroOutput() &&
+		tx.Output0.IsExit()
+}
+
 func (tx *Transaction) GetFee() *big.Int {
 	return tx.Fee
 }

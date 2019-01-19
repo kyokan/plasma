@@ -40,6 +40,8 @@ start: deps build
 	@./bin/start
 
 setup: build
+	rm -rf ./test/storage/ganache/*
+	rm -rf ./test/storage/root
 	@./bin/setup
 
 clean:

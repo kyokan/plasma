@@ -6,7 +6,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/util"
 	"math/big"
-	"sync"
 )
 
 // JSON tags needed for test fixtures
@@ -63,23 +62,5 @@ func (in *Input) Hash() util.Hash {
 	binary.Write(buf, binary.BigEndian, in.Owner)
 	digest := util.DoHash(buf.Bytes())
 	return digest
-}
-
-var zero, one *big.Int
-var once sync.Once
-
-func initialize() {
-	zero = big.NewInt(0)
-	one  = big.NewInt(1)
-}
-
-func Zero() *big.Int {
-	once.Do(initialize)
-	return zero
-}
-
-func One() *big.Int {
-	once.Do(initialize)
-	return one
 }
 

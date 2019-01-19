@@ -1,11 +1,13 @@
 package db
 
 import (
+    "fmt"
     "github.com/kyokan/plasma/merkle"
     "github.com/syndtr/goleveldb/leveldb/iterator"
     "log"
     "math/big"
     "strconv"
+    "strings"
     "sync"
     "sync/atomic"
 
@@ -145,7 +147,10 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     if err != nil {
         return nil, err
     }
+    return ps.saveTransaction(tx, prevTxs)
+}
 
+func (ps *Storage) saveTransaction(tx chain.Transaction, prevTxs []*chain.Transaction) (*chain.Transaction, error) {
     tx.TxIdx = big.NewInt(atomic.AddInt64(&ps.CurrentTxIdx, 1) - 1)
     tx.BlkNum = big.NewInt(int64(ps.CurrentBlock))
     ps.Transactions = append(ps.Transactions, &tx)
@@ -169,8 +174,13 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     // Recording spends
     if tx.Input0.IsZeroInput() == false {
         input := tx.InputAt(0)
-        outputOwner := prevTxs[0].OutputAt(input.OutIdx).Owner
-        batch.Put(spend(&outputOwner, tx.Input0), empty)
+        prevOutput := prevTxs[0].OutputAt(input.OutIdx)
+        outputOwner := prevOutput.Owner
+        if tx.Output0.IsExit() {
+            batch.Put(spendExit(&outputOwner, tx.Input0), empty)
+        } else {
+            batch.Put(spend(&outputOwner, tx.Input0), empty)
+        }
     }
     if tx.Input1.IsZeroInput() == false {
         input := tx.InputAt(0)
@@ -180,6 +190,9 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
 
     // Recording earns
     if tx.Output0.IsZeroOutput() == false {
+        if tx.Output0.IsDeposit() { // Only first output can be a deposit
+            batch.Put(depositKey(&tx), txEnc)
+        }
         outIdx := big.NewInt(0)
         output := tx.OutputAt(outIdx)
         batch.Put(earn(&output.Owner, tx, outIdx), empty)
@@ -193,16 +206,28 @@ func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*
     return &tx, batch.Replay(ps)
 }
 
-// TODO: Check for that exit spent keys when validating transactions and when computing balances
 func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
-    batch := new(leveldb.Batch)
-    for _, input := range inputs {
-        batch.Put(spendExit(&input.Owner, &input), []byte{})
-    }
     ps.Lock()
     defer ps.Unlock()
+    for _, input := range inputs {
+        tx := chain.ZeroTransaction()
+        tx.Input0 = &input
+        tx.Output0 = chain.ExitOutput()
+        var prevTx *chain.Transaction
+        var err error
+        if input.IsDeposit() { // this is a deposit exit
+            prevTx, _, err = ps.findTransactionByDepositNonce(input.DepositNonce, noopLock{})
+        } else {
+            prevTx, _, err = ps.findTransactionByBlockNumTxIdx(input.BlkNum, input.TxIdx, noopLock{})
+        }
+        if err != nil {
+            log.Printf("Failed to find previous transaction(s) for exit: %s", err)
+        }
 
-    return batch.Replay(ps)
+        ps.saveTransaction(*tx, []*chain.Transaction{prevTx})
+    }
+
+    return nil
 }
 
 func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*BlockResult, error) {
@@ -262,8 +287,6 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*BlockResu
     }
     batch.Put(blockMetaPrefixKey(block.Header.Number), enc)
 
-    locker.Unlock()
-
     return &BlockResult{
         MerkleRoot: rlpMerklepHash,
         NumberTransactions: big.NewInt(numberOfTransactions),
@@ -286,7 +309,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
     }
 
     result := make([]*chain.Transaction, 0, 2)
-    spendKeys := make([][]byte, 0, 2)
+    spendKeys := make([][]byte, 0, 4)
     // TODO: Use blkHash to validate confirmation signature
     prevTx, _, err := ps.findPreviousTx(&tx, 0)
     if err != nil {
@@ -306,7 +329,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
 
     result = append(result, prevTx)
     spendKeys = append(spendKeys, spend(&outputAddress, tx.Input0))
-    // TODO: use spendKeys to find double spends
+    spendKeys = append(spendKeys, spendExit(&outputAddress, tx.Input0))
 
     if tx.Input1.IsZeroInput() == false {
         // TODO: Use blkHash to validate confirmation signature
@@ -324,6 +347,16 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         }
         result = append(result, prevTx)
         spendKeys = append(spendKeys, spend(&outputAddress, tx.Input1))
+        spendKeys = append(spendKeys, spendExit(&outputAddress, tx.Input1))
+    }
+
+    for _, spendKey := range spendKeys {
+        found, _ :=ps.DB.Has(spendKey, nil)
+        if found {
+            msg := fmt.Sprintf("Error: Found double spend for key %s", string(spendKey))
+            log.Printf(msg)
+            return nil, errors.New(msg)
+        }
     }
 
     totalInput := result[0].OutputAt(tx.Input0.OutIdx).Denom
@@ -402,12 +435,45 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
     }
 
     txs := make([]chain.Transaction, len(buffer))
-    // TODO: Do transactions have to be in index order?
     for _, tx := range buffer {
         txs[tx.TxIdx.Int64()] = tx
     }
 
     return txs, nil
+}
+
+func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int, locker sync.Locker) (*chain.Transaction, util.Hash, error) {
+    locker.Lock()
+    defer locker.Unlock()
+
+    keyPrefix := depositPrefixKey(nonce)
+    iter := ps.DB.NewIterator(levelutil.BytesPrefix(keyPrefix), nil)
+    defer iter.Release()
+
+    for iter.Next() {
+        var tx chain.Transaction
+        key := string(iter.Key())
+        keyParts := strings.Split(key, "::")
+        if len(keyParts) != 4 {
+            return nil, nil, errors.New(fmt.Sprintf("Failed to parse deposit transaction position from key %s", key))
+        }
+        blkNum, success := new(big.Int).SetString(keyParts[2], 10)
+        if success == false {
+            return nil, nil, errors.New(fmt.Sprintf("Failed to parse block number from key %s", key))
+        }
+        txIdx, success := new(big.Int).SetString(keyParts[3], 10)
+        if success == false {
+            return nil, nil, errors.New(fmt.Sprintf("Failed to parse transaction index from key %s", key))
+        }
+        err := rlp.DecodeBytes(iter.Value(), &tx)
+        if err != nil {
+            return nil, nil, err
+        }
+        tx.BlkNum = blkNum
+        tx.TxIdx = txIdx
+        return &tx, nil, nil
+    }
+    return nil, nil, errors.New(fmt.Sprintf("Failed to find deposit for deposit nonce %s", nonce.String()))
 }
 
 func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int, locker sync.Locker) (*chain.Transaction, util.Hash, error) {
