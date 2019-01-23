@@ -23,6 +23,8 @@ import (
     "time"
 )
 
+const FeeTxIdx = 65535 // 2^16 - 1
+
 type BlockResult struct {
     MerkleRoot         util.Hash
     NumberTransactions *big.Int
@@ -170,7 +172,7 @@ func (ps *Storage) saveTransaction(confirmed chain.ConfirmedTransaction, prevTxs
     batch.Put(hashKey, txEnc)
     batch.Put(blkNumHashkey(confirmed.Transaction.BlkNum, hexHash), txEnc)
     batch.Put(blkNumTxIdxKey(confirmed.Transaction.BlkNum, confirmed.Transaction.TxIdx), txEnc)
-    batch.Put(blockFeesPrefix(ps.CurrentBlock), ps.CurrentBlockFees.Bytes())
+    batch.Put(blockFeesKey(ps.CurrentBlock), ps.CurrentBlockFees.Bytes())
 
     var empty []byte
 
@@ -214,6 +216,14 @@ func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
     ps.Lock()
     defer ps.Unlock()
     for _, input := range inputs {
+        if input.TxIdx.Cmp(big.NewInt(FeeTxIdx)) == 0 { // fee exit
+            blkNum := input.BlkNum.Uint64()
+            err := ps.DB.Put(blockFeesExitKey(blkNum), input.Denom.Bytes(), nil)
+            if err != nil {
+                log.Printf("Error: Failed to exit fees for block %v", blkNum)
+            }
+            continue
+        }
     	confirmed := chain.ConfirmedTransaction{
     		Transaction: *chain.ZeroTransaction(),
 		}
@@ -228,6 +238,7 @@ func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
         }
         if err != nil {
             log.Printf("Failed to find previous transaction(s) for exit: %s", err)
+            continue
         }
 
         ps.saveTransaction(confirmed, []*chain.ConfirmedTransaction{prevTx})

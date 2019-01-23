@@ -19,6 +19,7 @@ const merkleKeyPrefix     = "merkle"
 const blockKeyPrefix      = "blk"
 const blockMetaKeyPrefix  = "blkmeta"
 const blockFees           = "blk_fees"
+const blockFeesExit       = "blk_fees_exit"
 const depositPrefix       = "deposit_nonce"
 const latestKey           = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
@@ -42,8 +43,12 @@ func blockMetaPrefixKey(number uint64) []byte {
 	return prefixKey(blockMetaKeyPrefix, strconv.FormatUint(number, 10))
 }
 
-func blockFeesPrefix(number uint64) []byte {
+func blockFeesKey(number uint64) []byte {
     return prefixKey(blockFees, strconv.FormatUint(number, 10))
+}
+
+func blockFeesExitKey(number uint64) []byte {
+    return prefixKey(blockFeesExit, strconv.FormatUint(number, 10))
 }
 
 func extractAmount(tx *chain.Transaction, addr *common.Address) *big.Int {
