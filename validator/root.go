@@ -101,7 +101,7 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		return err
 	}
 
-	txs := rpc.DeserializeTxs(res.Transactions)
+	confirmedTransactions := rpc.DeserializeConfirmedTxs(res.ConfirmedTransactions)
 
 	type UTXO struct {
 		chain.Transaction
@@ -110,8 +110,8 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 
 	utxosByBlock := make(map[*big.Int][]UTXO)
 
-	for _, tx := range txs {
-		utxos := utxosByBlock[tx.BlkNum]
+	for _, confirmed := range confirmedTransactions {
+		utxos := utxosByBlock[confirmed.Transaction.BlkNum]
 
 		if utxos == nil {
 			utxos = []UTXO{}
@@ -120,9 +120,9 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		// Collect a list of outputs because technically both can belong to the user.
 		var outputIdxs []*big.Int
 
-		if tx.Output0.Owner == userAddress {
+		if confirmed.Transaction.Output0.Owner == userAddress {
 			outputIdxs = append(outputIdxs, chain.Zero())
-		} else if tx.Output1.Owner == userAddress {
+		} else if confirmed.Transaction.Output1.Owner == userAddress {
 			outputIdxs = append(outputIdxs, chain.One())
 		} else {
 			log.Fatalf("Transaction must have at least one output that belongs to address: %s\n", userAddress)
@@ -130,11 +130,11 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 
 		for _, outputIdx := range outputIdxs {
 			utxo := UTXO{outputIdx: outputIdx}
-			utxo.Transaction = tx
+			utxo.Transaction = confirmed.Transaction
 			utxos = append(utxos, utxo)
 		}
 
-		utxosByBlock[tx.BlkNum] = utxos
+		utxosByBlock[confirmed.Transaction.BlkNum] = utxos
 	}
 
 	// TODO: This is highly inefficient, needs to be fixed
@@ -145,7 +145,7 @@ func ExitUTXOs(ctx context.Context, ethClient eth.Client, rootClient pb.RootClie
 		if err != nil {
 			return err
 		}
-		transactions := rpc.DeserializeTxs(res2.Transactions)
+		transactions := rpc.DeserializeConfirmedTxs(res2.ConfirmedTransactions)
 		hashables := make([]merkle.DualHashable, len(transactions))
 		for i := 0; i < len(transactions); i++ {
 			hashables[i] = &transactions[i]

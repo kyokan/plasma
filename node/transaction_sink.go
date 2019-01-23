@@ -16,15 +16,15 @@ import (
 )
 
 type TransactionSink struct {
-	c       chan chain.Transaction
+	c       chan chain.ConfirmedTransaction
 	storage db.PlasmaStorage
 }
 
 func NewTransactionSink(storage db.PlasmaStorage) *TransactionSink {
-	return &TransactionSink{c: make(chan chain.Transaction), storage: storage}
+	return &TransactionSink{c: make(chan chain.ConfirmedTransaction), storage: storage}
 }
 
-func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.Transaction) {
+func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.ConfirmedTransaction) {
 	go func() {
 		for {
 			tx := <-ch
@@ -64,7 +64,7 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.Tr
 				sendErrorResponse(ch, &req, errors.New("insufficient funds"))
 				return
 			}
-			var tx *chain.Transaction
+			var tx *chain.ConfirmedTransaction
 			if req.Transaction.IsZeroTransaction() {
 				tx, err = txdag.FindBestUTXOs(req.From, req.To, req.Amount, txs)
 
@@ -73,13 +73,13 @@ func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.Tr
 					return
 				}
 			} else {
-				tx = &req.Transaction
+				tx = &req.ConfirmedTransaction
 			}
 
 			sink.c <- *tx
 
 			req.Response = &types.TransactionResponse{
-				Transaction: tx,
+				ConfirmedTransaction: tx,
 			}
 
 			ch <- req
@@ -105,13 +105,13 @@ func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
 				Output1: chain.ZeroOutput(),
 				Fee:     big.NewInt(0),
 			}
-			sink.c <- tx
+			sink.c <- chain.ConfirmedTransaction{Transaction: tx,}
 		}
 	}()
 }
 
-func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, error) {
-	inputTx1, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Input0.BlkNum, tx.Input0.TxIdx)
+func (sink *TransactionSink) VerifyTransaction(tx *chain.ConfirmedTransaction) (bool, error) {
+	inputTx1, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Transaction.Input0.BlkNum, tx.Transaction.Input0.TxIdx)
 
 	if err != nil {
 		return false, err
@@ -121,7 +121,7 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 		return false, errors.New("input 1 not found")
 	}
 
-	inputTx2, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Input1.BlkNum, tx.Input1.TxIdx)
+	inputTx2, err := sink.storage.FindTransactionByBlockNumTxIdx(tx.Transaction.Input1.BlkNum, tx.Transaction.Input1.TxIdx)
 
 	if err != nil {
 		return false, err
@@ -129,35 +129,35 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.Transaction) (bool, err
 
 	var prevOutput1 *chain.Output
 
-	if tx.Input0.OutIdx.Cmp(chain.Zero()) == 0 {
-		prevOutput1 = inputTx1.Output0
+	if tx.Transaction.Input0.OutIdx.Cmp(chain.Zero()) == 0 {
+		prevOutput1 = inputTx1.Transaction.Output0
 	} else {
-		prevOutput1 = inputTx1.Output1
+		prevOutput1 = inputTx1.Transaction.Output1
 	}
 
 	var prevOutput2 *chain.Output
 
-	if tx.Input1.OutIdx.Cmp(chain.Zero()) == 0 {
-		prevOutput2 = inputTx2.Output0
+	if tx.Transaction.Input1.OutIdx.Cmp(chain.Zero()) == 0 {
+		prevOutput2 = inputTx2.Transaction.Output0
 	} else {
-		prevOutput2 = inputTx2.Output1
+		prevOutput2 = inputTx2.Transaction.Output1
 	}
 
 	totalInput := big.NewInt(0).Add(prevOutput1.Denom, prevOutput2.Denom)
-	totalOutput := big.NewInt(0).Add(tx.Output0.Denom, tx.Output1.Denom)
-	totalOutput = totalOutput.Add(totalOutput, tx.Fee)
+	totalOutput := big.NewInt(0).Add(tx.Transaction.Output0.Denom, tx.Transaction.Output1.Denom)
+	totalOutput = totalOutput.Add(totalOutput, tx.Transaction.Fee)
 
 	if totalInput.Cmp(totalOutput) != 0 {
 		return false, errors.New("inputs and outputs do not have the same sum")
 	}
 
-	sig1Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig0[:])
+	sig1Bytes, err := crypto.Ecrecover(tx.Transaction.Input0.SignatureHash(), tx.Transaction.Sig0[:])
 
 	if err != nil {
 		return false, err
 	}
 
-	sig2Bytes, err := crypto.Ecrecover(tx.SignatureHash(), tx.Sig1[:])
+	sig2Bytes, err := crypto.Ecrecover(tx.Transaction.Input1.SignatureHash(), tx.Transaction.Sig1[:])
 
 	if err != nil {
 		return false, err

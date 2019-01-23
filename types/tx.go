@@ -7,7 +7,7 @@ import (
 )
 
 type TransactionRequest struct {
-	chain.Transaction
+	chain.ConfirmedTransaction
 	From     common.Address
 	To       common.Address
 	Amount   *big.Int
@@ -16,6 +16,6 @@ type TransactionRequest struct {
 
 type TransactionResponse struct {
 	Error       error
-	Transaction *chain.Transaction
+	ConfirmedTransaction *chain.ConfirmedTransaction
 }
 

@@ -62,7 +62,7 @@ class PlasmaClient {
     }
 
     GetUTXOs(address, cb) {
-        this.client.GetUTXOs({address: address, spendable: true}, cb);
+        this.client.getOutputs({address: address, spendable: true}, cb);
     }
 
     GetBlock(number, cb) {
@@ -138,16 +138,17 @@ class Account {
             if (err != null) {
                 return cb(err);
             }
-            const utxos = result.transactions;
-            let tx = self.transactionForAmount(to, amount, utxos);
+            const utxos = result.confirmedTransactions;
+            // const amountFees = amount.
+            let tx = self.transactionForAmount(to, amount, self.web3.utils.toBN(10000), utxos);
             const signedTransaction = self.signTransaction(tx);
             try {
                 const rpcTx = signedTransaction.toRpc();
-                self.client.Send({transaction: rpcTx}, (sendErr, sendRes) => {
+                self.client.Send({confirmed: rpcTx}, (sendErr, sendRes) => {
                     if (sendErr != null) {
                         return cb(sendErr);
                     }
-                    return cb(null, new Transaction(sendRes.transaction));
+                    return cb(null, new Transaction(sendRes.confirmed.transaction));
                 });
             }
             catch (e) {
@@ -159,22 +160,35 @@ class Account {
     signTransaction(tx) {
         let result = new Transaction(tx);
         // This will throw if key is invalid
+        result.sig0 = this.signInput(result.input0);
+        result.sig1 = this.signInput(result.input1);
         const signatureHash = result.SignatureHash();
         const signed = ejs.ecsign(signatureHash, this.privateKey);
         const v = Buffer.from([signed.v]);
         const sig = Buffer.concat([signed.r, signed.s, v]);
-        result.sig0 = sig;
-        result.sig1 = sig;
+        result.signatures.push(sig);
+        result.signatures.push(sig);
+
         return result;
     }
 
-    transactionForAmount(to, amount, utxos) {
+    signInput(input) {
+        // This will throw if key is invalid
+        const signatureHash = input.SignatureHash();
+        const signed = ejs.ecsign(signatureHash, this.privateKey);
+        const v = Buffer.from([signed.v]);
+        const sig = Buffer.concat([signed.r, signed.s, v]);
+        return sig;
+    }
+
+    transactionForAmount(to, transfer, fee, utxos) {
         if (!_.isArray(utxos) || utxos.length == 0) {
             throw new Error('Invalid input');
         }
+        let amount = transfer.add(fee);
         let result = new Transaction();
         // Construct first output
-        result.output0 = new Output(to, amount);
+        result.output0 = new Output(to, transfer, toBN());
         let transactions = new Array(utxos.length);
         let sorter = [];
         for (let index = 0; index < utxos.length; index++) {
@@ -184,14 +198,16 @@ class Account {
             const addr1 = ejs.bufferToHex(tx.output1.newOwner);
             if (addr0 === this.address) {
                 if (tx.output0.amount.cmp(amount) == 0) {
-                    result.input0 = new Input(tx.BlockNum, tx.TxIdx, 0);
+                    result.input0 = new Input(tx.blockNum, tx.txIdx, 0);
+                    result.fee = fee;
                     return result;
                 }
                 sorter = sorter.concat([{amount: tx.output0.amount, index: index, outIdx: 0}]);
             }
             if (addr1 === this.address) {
                 if (tx.output1.amount.cmp(amount) == 0) {
-                    result.input0 = new Input(tx.BlockNum, tx.TxIdx, 1);
+                    result.input0 = new Input(tx.blockNum, tx.txIdx, 1);
+                    result.fee = fee;
                     return result;
                 }
                 sorter = sorter.concat([{amount: tx.output1.amount, index: index, outIdx: 1}]);
@@ -208,8 +224,10 @@ class Account {
             if (min.outIdx == 1) {
                 inputAmount = inputTx.output1.amount;
             }
-            result.output1 = new Output(this.address, inputAmount.sub(amount));
-            result.input0 = new Input(inputTx.BlockNum, inputTx.TxIdx, min.outIdx);
+            let outputAmount = inputAmount.sub(amount); // outputAmount is inputAmount - transfer - fee
+            result.output1 = new Output(this.address, outputAmount, toBN());
+            result.input0 = new Input(inputTx.blockNum, inputTx.txIdx, min.outIdx, this.address, inputAmount, toBN());
+            result.fee = fee;
             return result;
         }
         let leftBound = 0;
@@ -234,16 +252,16 @@ class Account {
         if (leftBound < rightBound) { // found a pair that sums to amount
             const inputTx0 = transactions[sorter[leftBound].index];
             const inputTx1 = transactions[sorter[rightBound].index];
-            result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, sorter[leftBound].outIdx);
-            result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, sorter[rightBound].outIdx);
+            result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, this.address, sorter[leftBound].amount, toBN());
+            result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, this.address, sorter[rightBound].amount, toBN());
 
             return result;
         }
         if (lhs >= 0 && rhs >= 0) {
             const inputTx0 = transactions[sorter[lhs].index];
             const inputTx1 = transactions[sorter[lhs].index];
-            result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, sorter[lhs].outIdx);
-            result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, sorter[rhs].outIdx);
+            result.input0 = new Input(inputTx0.BlockNum, inputTx0.TxIdx, sorter[lhs].outIdx, this.address, sorter[leftBound].amount, toBN());
+            result.input1 = new Input(inputTx1.BlockNum, inputTx1.TxIdx, sorter[rhs].outIdx, this.address, sorter[leftBound].amount, toBN());
             let inputAmount = inputTx0.output0.amount;
             if (sorter[lhs].outIdx == 1) {
                 inputAmount = inputTx0.output1.amount;
@@ -253,7 +271,7 @@ class Account {
             } else {
                 inputAmount = inputAmount.add(inputTx1.output1.amount);
             }
-            result.output1 = new Output(this.address, inputAmount.sub(amount));
+            result.output1 = new Output(this.address, inputAmount.sub(amount), toBN());
 
             return result;
         }
@@ -398,9 +416,12 @@ function doHash(input) {
 
 class Input {
     zero() {
-        this.blockNum = 0;
-        this.txIdx    = 0;
-        this.outIdx   = 0;
+        this.blockNum     = 0;
+        this.txIdx        = 0;
+        this.outIdx       = 0;
+        this.owner        = Buffer.from(new Uint8Array(20));
+        this.amount       = Buffer.from(new Uint8Array(0));
+        this.depositNonce = Buffer.from(new Uint8Array(0));
     }
 
     constructor (...args) {
@@ -413,25 +434,21 @@ class Input {
             if (_.isEmpty(other)) {
                 return;
             }
-            if (_.isNumber(other.blockNum)) {
-                this.blockNum = other.blockNum;
-            } else {
-                this.blockNum = parseInt(other.blockNum, 16);
-            }
+            this.blockNum = other.blockNum;
             this.txIdx    = other.txIdx;
             this.outIdx   = other.outIdx;
+            this.owner    = other.owner;
+            this.amount   = other.amount;
+            this.depositNonce = other.depositNonce;
             return;
         }
-        if (args.length == 3) {
-            if (_.isNumber(args[0])) {
-                this.blockNum = args[0];
-            }
-            else {
-                this.blockNum = parseInt(args[0], 16);
-            }
-
-            this.txIdx    = args[1];
-            this.outIdx   = args[2];
+        if (args.length == 6) {
+            this.blockNum     = args[0];
+            this.txIdx        = args[1];
+            this.outIdx       = args[2];
+            this.owner        = args[3];
+            this.amount       = toBN(args[4]);
+            this.depositNonce = toBN(args[5]);
             return;
         }
         throw new Error("Invalid number of arguments for constructing Input instance");
@@ -448,11 +465,38 @@ class Input {
     }
 
     toRpc() {
-        return {
-            blockNum: this.blockNum.toString(),
-            txIdx: this.txIdx,
-            outIdx: this.outIdx
+        const res = {
+            blockNum: toRPC(this.blockNum),
+            txIdx: toRPC(this.txIdx),
+            outIdx: toRPC(this.outIdx),
+            owner: ejs.toBuffer(this.owner),
+            amount: toRPC(this.amount),
+            depositNonce: toRPC(this.depositNonce)
         };
+        return res;
+    }
+
+    toArray() {
+        const res = [
+            toBuffer(this.blockNum),
+            toBuffer(this.txIdx),
+            toBuffer(this.outIdx),
+            toBuffer(this.depositNonce),
+            toBuffer(this.owner, 20),];
+        return res;
+    }
+
+    RLPEncode() {
+        const encoded = ejs.rlp.encode(this.toArray());
+        return encoded;
+    }
+
+    SignatureHash() {
+        const rlp = this.RLPEncode();
+
+        const digest = doHash(rlp);
+        //const hash = ejs.hashPersonalMessage(digest);
+        return digest;
     }
 
     toString() {
@@ -463,8 +507,9 @@ class Input {
 
 class Output {
     zero() {
-        this.newOwner = Buffer.from(new Uint8Array(20));
-        this.amount   = Buffer.from(new Uint8Array(0));
+        this.newOwner     = Buffer.from(new Uint8Array(20));
+        this.amount       = Buffer.from(new Uint8Array(0));
+        this.depositNonce = Buffer.from(new Uint8Array(0));
     }
 
     constructor(...args) {
@@ -477,14 +522,16 @@ class Output {
             if (_.isEmpty(other)) {
                 return;
             }
-            this.newOwner = other.newOwner;
-            this.amount   = toBN(other.amount);
+            this.newOwner       = other.newOwner;
+            this.amount         = toBN(other.amount);
+            this.depositNonce   = toBN(other.depositNonce);
 
             return;
         }
-        if (args.length == 2) {
-            this.newOwner = args[0];
-            this.amount   = args[1];
+        if (args.length == 3) {
+            this.newOwner     = args[0];
+            this.amount       = args[1];
+            this.depositNonce = args[2];
             return;
         }
         throw new Error("Invalid number of arguments for constructing Output instance");
@@ -493,7 +540,8 @@ class Output {
     Hash() {
         const newOwnerBuf = ejs.toBuffer(this.newOwner);
         const amountBuf   = this.amount.toBuffer('be', this.amount.byteLength());
-        const buf = Buffer.concat([newOwnerBuf, amountBuf], newOwnerBuf.length + amountBuf.length);
+        const nonceBuf    = this.depositNonce.toBuffer('be', this.depositNonce.byteLength());
+        const buf = Buffer.concat([newOwnerBuf, amountBuf, nonceBuf], newOwnerBuf.length + amountBuf.length + nonceBuf.length);
         const digest = doHash(buf);
         return digest;
     }
@@ -501,16 +549,16 @@ class Output {
     toRpc() {
         return {
             newOwner: ejs.toBuffer(this.newOwner),
-            amount: {
-                values: this.amount.toBuffer('be', this.amount.byteLength())
-            }
+            amount: toRPC(this.amount),
+            depositNonce: toRPC(this.depositNonce)
         };
     }
 
     toString() {
         return {
             newOwner: this.newOwner,
-            amount: this.amount.toString(10)
+            amount: this.amount.toString(10),
+            depositNonce: this.depositNonce.toString(10),
         };
     }
 }
@@ -523,12 +571,12 @@ class Transaction {
         this.output0 = new Output();
         this.output1 = new Output();
 
-        this.BlockNum = "0";
-        this.TxIdx = 0;
+        this.blockNum = "0";
+        this.txIdx = 0;
         this.sig0 = Buffer.from("");
         this.sig1 = Buffer.from("");
-        this.RootSig = Buffer.from("");
         this.fee = Buffer.from("");
+        this.signatures = [];
     }
 
     constructor(other) {
@@ -536,42 +584,50 @@ class Transaction {
         if (_.isEmpty(other)) {
             return;
         }
-        this.input0 = new Input(other.input0);
-        this.input1 = new Input(other.input1);
-        this.output0 = new Output(other.output0);
-        this.output1 = new Output(other.output1);
+        let tx = other;
+        if (!_.isEmpty(other.transaction )) {
+            tx = other.transaction;
+        }
+        this.input0 = new Input(tx.input0);
+        this.input1 = new Input(tx.input1);
+        this.output0 = new Output(tx.output0);
+        this.output1 = new Output(tx.output1);
 
-        this.BlockNum = other.BlockNum;
-        this.TxIdx = other.TxIdx;
-        this.sig0 = other.sig0;
-        this.sig1 = other.sig1;
-        this.fee = toBN(other.fee);
-        this.RootSig = other.RootSig;
+        this.blockNum = tx.blockNum;
+        this.txIdx = tx.txIdx;
+        this.sig0 = tx.sig0;
+        this.sig1 = tx.sig1;
+        this.fee = toBN(tx.fee);
+        this.signatures = other.signatures;
     }
 
     toRpc() {
-        return {
-            BlockNum: this.BlockNum,
-            TxIdx: this.TxIdx,
-            sig0: this.sig0,
-            sig1: this.sig1,
-            fee: this.fee,
-            RootSig: this.RootSig,
-            input0: this.input0.toRpc(),
-            input1: this.input1.toRpc(),
-            output0: this.output0.toRpc(),
-            output1: this.output1.toRpc()
+        let res = {
+            blockNum: this.blockNum,
+            txIdx: this.txIdx,
+            transaction: {
+                blockNum: toRPC(this.blockNum),
+                txIdx: toRPC(this.txIdx),
+                sig0: this.sig0,
+                sig1: this.sig1,
+                fee: toRPC(this.fee),
+                input0: this.input0.toRpc(),
+                input1: this.input1.toRpc(),
+                output0: this.output0.toRpc(),
+                output1: this.output1.toRpc(),
+            },
+            signatures: this.signatures
         };
+        return res;
     }
 
     toString() {
         return JSON.stringify({
-            BlockNum: this.BlockNum,
-            TxIdx: this.TxIdx,
+            blockNum: this.blockNum,
+            txIdx: this.txIdx,
             sig0: ejs.bufferToHex(this.sig0),
             sig1: ejs.bufferToHex(this.sig1),
             fee: this.fee.toString(10),
-            RootSig: ejs.bufferToHex(this.RootSig),
             input0: this.input0.toString(),
             input1: this.input1.toString(),
             output0: this.output0.toString(),
@@ -581,43 +637,40 @@ class Transaction {
 
     toArray() {
         return [
-            this.input0.blockNum,
-            this.input0.txIdx,
-            this.input0.outIdx,
-            this.sig0,
-            this.input1.blockNum,
-            this.input1.txIdx,
-            this.input1.outIdx,
-            this.sig1,
-            this.output0.newOwner,
-            this.output0.amount,
-            this.output1.newOwner,
-            this.output1.amount,
-            0, //this.fee,
-            this.RootSig
+            toBuffer(this.input0.blockNum),
+            toBuffer(this.input0.txIdx),
+            toBuffer(this.input0.outIdx),
+            toBuffer(this.input0.depositNonce),
+            toBuffer(this.input0.owner, 20),
+            toBuffer(this.sig0, 65),
+
+            toBuffer(this.input1.blockNum),
+            toBuffer(this.input1.txIdx),
+            toBuffer(this.input1.outIdx),
+            toBuffer(this.input1.depositNonce),
+            toBuffer(this.input1.owner, 20),
+            toBuffer(this.sig1, 65),
+
+            toBuffer(this.output0.newOwner, 20),
+            toBuffer(this.output0.amount),
+            toBuffer(this.output1.newOwner, 20),
+            toBuffer(this.output1.amount),
+            toBuffer(this.fee),
         ];
     }
 
     RLPEncode() {
-        const encoded = ejs.rlp.encode(this.toArray());
+        const rlpInput = this.toArray();
+        const encoded = ejs.rlp.encode(rlpInput);
         return encoded;
     }
 
     SignatureHash() {
-        const input0Buf  = this.input0.Hash();
-        const input1Buf  = this.input1.Hash();
-        const output0Buf = this.output0.Hash();
-        const output1Buf = this.output1.Hash();
-        let feeBuf = Buffer.from('');
-        if (this.fee.byteLength() > 0) {
-            feeBuf = this.fee.toBuffer('be', this.fee.byteLength());
-        }
+        const rlp = this.RLPEncode();
 
-        let size = input0Buf.length + input1Buf.length + output0Buf.length + output1Buf.length + feeBuf.length;
-        const buf = Buffer.concat([input0Buf, input1Buf, output0Buf, output1Buf, feeBuf], size);
-        const digest = doHash(buf);
-        const hash = ejs.hashPersonalMessage(digest);
-        return hash;
+        const digest = doHash(rlp);
+        //const hash = ejs.hashPersonalMessage(digest);
+        return digest;
     }
 }
 
@@ -632,6 +685,34 @@ function toBN(input) {
         return web3.utils.toBN(input.hex);
     }
     return BN.BN(input);
+}
+
+function toBuffer(input, bufferLength) {
+    let i = input;
+    if (_.has(i, 'hex')) {
+        i = input.hex;
+    }
+    let length = 32;
+    if (_.isNumber(bufferLength)) {
+        length = bufferLength;
+    }
+    let res = null;
+    if (_.has(i, 'toBuffer')) {
+        res = i.toBuffer('be', length);
+    } else {
+        const buf = ejs.toBuffer(i);
+        const diff = length - buf.length;
+        res = Buffer.concat([Buffer.from(new Uint8Array(diff)), buf]);
+    }
+    return res;
+
+}
+
+function toRPC(input) {
+    if (_.has(input, 'hex')) {
+        return input;
+    }
+    return { hex: '0x' + input.toString(16)}
 }
 
 module.exports = {

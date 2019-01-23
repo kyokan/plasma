@@ -12,6 +12,7 @@ import (
     "sync/atomic"
 
     "github.com/ethereum/go-ethereum/common"
+    "github.com/ethereum/go-ethereum/common/hexutil"
     "github.com/ethereum/go-ethereum/rlp"
     "github.com/kyokan/plasma/chain"
     "github.com/kyokan/plasma/eth"
@@ -19,7 +20,6 @@ import (
     "github.com/pkg/errors"
     "github.com/syndtr/goleveldb/leveldb"
     levelutil "github.com/syndtr/goleveldb/leveldb/util"
-    "github.com/ethereum/go-ethereum/common/hexutil"
     "time"
 )
 
@@ -27,17 +27,18 @@ type BlockResult struct {
     MerkleRoot         util.Hash
     NumberTransactions *big.Int
     BlockFees          *big.Int
+    BlockNumber        *big.Int
 }
 
 type PlasmaStorage interface {
-    StoreTransaction(tx chain.Transaction) (*chain.Transaction, error)
+    StoreTransaction(tx chain.ConfirmedTransaction) (*chain.ConfirmedTransaction, error)
     ProcessDeposit(tx chain.Transaction) (prev, deposit *BlockResult, err error)
-    FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error)
-    FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.Transaction, error)
+    FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error)
+    FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.ConfirmedTransaction, error)
 
     Balance(addr *common.Address) (*big.Int, error)
-    SpendableTxs(addr *common.Address) ([]chain.Transaction, error)
-    UTXOs(addr *common.Address) ([]chain.Transaction, error)
+    SpendableTxs(addr *common.Address) ([]chain.ConfirmedTransaction, error)
+    UTXOs(addr *common.Address) ([]chain.ConfirmedTransaction, error)
 
     BlockAtHeight(num uint64) (*chain.Block, error)
     BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error)
@@ -105,7 +106,7 @@ func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
             log.Panic("Failed to get last block:", err)
         }
         if client != nil {
-            client.SubmitBlock(genesisBlockResult.MerkleRoot, genesisBlockResult.NumberTransactions, genesisBlockResult.BlockFees)
+            client.SubmitBlock(genesisBlockResult.MerkleRoot, genesisBlockResult.NumberTransactions, genesisBlockResult.BlockFees, genesisBlockResult.BlockNumber)
         }
     } else {
         result.PrevBlockHash = lastBlock.BlockHash
@@ -123,7 +124,7 @@ func (ps *Storage) Delete(key []byte)  {
     ps.DB.Delete(key, nil)
 }
 
-func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain.Transaction, util.Hash, error) {
+func (ps *Storage) findPreviousTx(tx *chain.ConfirmedTransaction, inputIdx uint8) (*chain.ConfirmedTransaction, util.Hash, error) {
     var input *chain.Input
 
     if inputIdx != 0 && inputIdx != 1 {
@@ -131,89 +132,94 @@ func (ps *Storage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain
     }
 
     if inputIdx == 0 {
-        input = tx.Input0
+        input = tx.Transaction.Input0
     } else {
-        input = tx.Input1
+        input = tx.Transaction.Input1
     }
 
     return ps.findTransactionByBlockNumTxIdx(input.BlkNum, input.TxIdx, noopLock{})
 }
 
-func (ps *Storage) doStoreTransaction(tx chain.Transaction, lock sync.Locker) (*chain.Transaction, error) {
+func (ps *Storage) doStoreTransaction(confirmed chain.ConfirmedTransaction, lock sync.Locker) (*chain.ConfirmedTransaction, error) {
     lock.Lock()
     defer lock.Unlock()
 
-    prevTxs, err := ps.isTransactionValid(tx)
+    prevTxs, err := ps.isTransactionValid(confirmed)
     if err != nil {
         return nil, err
     }
-    return ps.saveTransaction(tx, prevTxs)
+    return ps.saveTransaction(confirmed, prevTxs)
 }
 
-func (ps *Storage) saveTransaction(tx chain.Transaction, prevTxs []*chain.Transaction) (*chain.Transaction, error) {
-    tx.TxIdx = big.NewInt(atomic.AddInt64(&ps.CurrentTxIdx, 1) - 1)
-    tx.BlkNum = big.NewInt(int64(ps.CurrentBlock))
-    ps.Transactions = append(ps.Transactions, &tx)
+func (ps *Storage) saveTransaction(confirmed chain.ConfirmedTransaction, prevTxs []*chain.ConfirmedTransaction) (*chain.ConfirmedTransaction, error) {
+    confirmed.Transaction.TxIdx = big.NewInt(atomic.AddInt64(&ps.CurrentTxIdx, 1) - 1)
+    confirmed.Transaction.BlkNum = big.NewInt(int64(ps.CurrentBlock))
 
-    txEnc, err := rlp.EncodeToBytes(&tx)
+    ps.CurrentBlockFees = big.NewInt(0).Add(ps.CurrentBlockFees, confirmed.Transaction.Fee)
+
+    txEnc, err := rlp.EncodeToBytes(&confirmed)
     if err != nil {
         return nil, err
     }
 
-    hash := tx.RLPHash(util.Sha256)
+    hash := confirmed.RLPHash(util.Sha256)
     hexHash := hexutil.Encode(hash)
     hashKey := txPrefixKey("hash", hexHash)
 
     batch := new(leveldb.Batch)
     batch.Put(hashKey, txEnc)
-    batch.Put(blkNumHashkey(tx.BlkNum, hexHash), txEnc)
-    batch.Put(blkNumTxIdxKey(tx.BlkNum, tx.TxIdx), txEnc)
+    batch.Put(blkNumHashkey(confirmed.Transaction.BlkNum, hexHash), txEnc)
+    batch.Put(blkNumTxIdxKey(confirmed.Transaction.BlkNum, confirmed.Transaction.TxIdx), txEnc)
+    batch.Put(blockFeesPrefix(ps.CurrentBlock), ps.CurrentBlockFees.Bytes())
 
     var empty []byte
 
     // Recording spends
-    if tx.Input0.IsZeroInput() == false {
-        input := tx.InputAt(0)
-        prevOutput := prevTxs[0].OutputAt(input.OutIdx)
+    if confirmed.Transaction.Input0.IsZeroInput() == false {
+        input := confirmed.Transaction.InputAt(0)
+        prevOutput := prevTxs[0].Transaction.OutputAt(input.OutIdx)
         outputOwner := prevOutput.Owner
-        if tx.Output0.IsExit() {
-            batch.Put(spendExit(&outputOwner, tx.Input0), empty)
+        if confirmed.Transaction.Output0.IsExit() {
+            batch.Put(spendExit(&outputOwner, confirmed.Transaction.Input0), empty)
         } else {
-            batch.Put(spend(&outputOwner, tx.Input0), empty)
+            batch.Put(spend(&outputOwner, confirmed.Transaction.Input0), empty)
         }
     }
-    if tx.Input1.IsZeroInput() == false {
-        input := tx.InputAt(0)
-        outputOwner := prevTxs[1].OutputAt(input.OutIdx).Owner
-        batch.Put(spend(&outputOwner, tx.Input1), empty)
+    if confirmed.Transaction.Input1.IsZeroInput() == false {
+        input := confirmed.Transaction.InputAt(1)
+        outputOwner := prevTxs[1].Transaction.OutputAt(input.OutIdx).Owner
+        batch.Put(spend(&outputOwner, confirmed.Transaction.Input1), empty)
     }
 
     // Recording earns
-    if tx.Output0.IsZeroOutput() == false {
-        if tx.Output0.IsDeposit() { // Only first output can be a deposit
-            batch.Put(depositKey(&tx), txEnc)
+    if confirmed.Transaction.Output0.IsZeroOutput() == false {
+        if confirmed.Transaction.Output0.IsDeposit() { // Only first output can be a deposit
+            batch.Put(depositKey(&confirmed), txEnc)
         }
         outIdx := big.NewInt(0)
-        output := tx.OutputAt(outIdx)
-        batch.Put(earn(&output.Owner, tx, outIdx), empty)
+        output := confirmed.Transaction.OutputAt(outIdx)
+        batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
     }
-    if tx.Output1.IsZeroOutput() == false {
+    if confirmed.Transaction.Output1.IsZeroOutput() == false {
         outIdx := big.NewInt(1)
-        output := tx.OutputAt(outIdx)
-        batch.Put(earn(&output.Owner, tx, outIdx), empty)
+        output := confirmed.Transaction.OutputAt(outIdx)
+        batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
     }
 
-    return &tx, batch.Replay(ps)
+    ps.Transactions = append(ps.Transactions, &confirmed)
+    return &confirmed, batch.Replay(ps)
 }
 
 func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
     ps.Lock()
     defer ps.Unlock()
     for _, input := range inputs {
-        tx := chain.ZeroTransaction()
-        tx.Input0 = &input
-        tx.Output0 = chain.ExitOutput()
-        var prevTx *chain.Transaction
+    	confirmed := chain.ConfirmedTransaction{
+    		Transaction: *chain.ZeroTransaction(),
+		}
+        confirmed.Transaction.Input0 = &input
+        confirmed.Transaction.Output0 = chain.ExitOutput()
+        var prevTx *chain.ConfirmedTransaction
         var err error
         if input.IsDeposit() { // this is a deposit exit
             prevTx, _, err = ps.findTransactionByDepositNonce(input.DepositNonce, noopLock{})
@@ -224,7 +230,7 @@ func (ps *Storage) MarkExitsAsSpent(inputs []chain.Input) error {
             log.Printf("Failed to find previous transaction(s) for exit: %s", err)
         }
 
-        ps.saveTransaction(*tx, []*chain.Transaction{prevTx})
+        ps.saveTransaction(confirmed, []*chain.ConfirmedTransaction{prevTx})
     }
 
     return nil
@@ -291,27 +297,28 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*BlockResu
         MerkleRoot: rlpMerklepHash,
         NumberTransactions: big.NewInt(numberOfTransactions),
         BlockFees: currentFees,
+        BlockNumber: big.NewInt(int64(block.Header.Number)),
     }, ps.DB.Write(batch, nil)
 }
 
-// TODO: This has to change to take into account confirmation signatures
-func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transaction, error) {
-    if tx.IsDeposit() {
-        return []*chain.Transaction{chain.ZeroTransaction()}, nil
+func (ps *Storage) isTransactionValid(confirmed chain.ConfirmedTransaction) ([]*chain.ConfirmedTransaction, error) {
+	empty := []*chain.ConfirmedTransaction{&chain.ConfirmedTransaction{Transaction: *chain.ZeroTransaction(), }}
+	if confirmed.Transaction.IsDeposit() {
+        return empty, nil
     }
 
-    if tx.IsZeroTransaction() { // This may be genesis
+    if confirmed.Transaction.IsZeroTransaction() { // This may be genesis
         if ps.CurrentBlock == 1 && ps.CurrentTxIdx == 0 {
-            return []*chain.Transaction{&tx}, nil
+            return empty, nil
         } else {
             return nil, errors.New("Failed to add an empty transaction")
         }
     }
-
-    result := make([]*chain.Transaction, 0, 2)
+    tx := confirmed.Transaction
+    result := make([]*chain.ConfirmedTransaction, 0, 2)
     spendKeys := make([][]byte, 0, 4)
-    // TODO: Use blkHash to validate confirmation signature
-    prevTx, _, err := ps.findPreviousTx(&tx, 0)
+
+    prevTx, _, err := ps.findPreviousTx(&confirmed, 0)
     if err != nil {
         return nil, err
     }
@@ -319,10 +326,13 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         return nil, errors.New("Couldn't find transaction for input 0")
     }
 
-    signatureHash := eth.GethHash(tx.SignatureHash())
-
-    outputAddress := prevTx.OutputAt(tx.Input0.OutIdx).Owner
-    err = util.ValidateSignature(signatureHash, tx.Sig0[:], outputAddress)
+    outputAddress := prevTx.Transaction.OutputAt(tx.Input0.OutIdx).Owner
+    signatureHash := tx.SignatureHash()
+    err = util.ValidateSignature(signatureHash, confirmed.Signatures[0][:], outputAddress)
+    if err != nil {
+        return nil, err
+    }
+    err = util.ValidateSignature(tx.Input0.SignatureHash(), tx.Sig0[:], outputAddress)
     if err != nil {
         return nil, err
     }
@@ -332,16 +342,19 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
     spendKeys = append(spendKeys, spendExit(&outputAddress, tx.Input0))
 
     if tx.Input1.IsZeroInput() == false {
-        // TODO: Use blkHash to validate confirmation signature
-        prevTx, _, err := ps.findPreviousTx(&tx, 1)
+        prevTx, _, err := ps.findPreviousTx(&confirmed, 1)
         if err != nil {
             return nil, err
         }
         if prevTx == nil {
             return nil, errors.New("Couldn't find transaction for input 1")
         }
-        outputAddress = prevTx.OutputAt(tx.Input1.OutIdx).Owner
-        err = util.ValidateSignature(signatureHash, tx.Sig1[:], outputAddress)
+        outputAddress = prevTx.Transaction.OutputAt(tx.Input1.OutIdx).Owner
+        err = util.ValidateSignature(signatureHash, confirmed.Signatures[1][:], outputAddress)
+        if err != nil {
+            return nil, err
+        }
+        err = util.ValidateSignature(tx.Input1.SignatureHash(), tx.Sig1[:], outputAddress)
         if err != nil {
             return nil, err
         }
@@ -351,7 +364,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
     }
 
     for _, spendKey := range spendKeys {
-        found, _ :=ps.DB.Has(spendKey, nil)
+        found, _ := ps.DB.Has(spendKey, nil)
         if found {
             msg := fmt.Sprintf("Error: Found double spend for key %s", string(spendKey))
             log.Printf(msg)
@@ -359,9 +372,9 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
         }
     }
 
-    totalInput := result[0].OutputAt(tx.Input0.OutIdx).Denom
+    totalInput := result[0].Transaction.OutputAt(tx.Input0.OutIdx).Denom
     if len(result) > 1 {
-        totalInput = big.NewInt(0).Add(totalInput, result[1].OutputAt(tx.Input1.OutIdx).Denom)
+        totalInput = big.NewInt(0).Add(totalInput, result[1].Transaction.OutputAt(tx.Input1.OutIdx).Denom)
     }
 
     totalOutput := big.NewInt(0).Add(tx.Output0.Denom, tx.Fee)
@@ -376,7 +389,7 @@ func (ps *Storage) isTransactionValid(tx chain.Transaction) ([]*chain.Transactio
     return result, nil
 }
 
-func (ps *Storage) StoreTransaction(tx chain.Transaction) (*chain.Transaction, error) {
+func (ps *Storage) StoreTransaction(tx chain.ConfirmedTransaction) (*chain.ConfirmedTransaction, error) {
     return ps.doStoreTransaction(tx, ps)
 }
 
@@ -388,14 +401,17 @@ func (ps *Storage) ProcessDeposit(tx chain.Transaction) (prev, deposit *BlockRes
     if err != nil {
         return nil, nil, err
     }
-    ps.doStoreTransaction(tx, noopLock{})
+    confirmed := chain.ConfirmedTransaction{
+        Transaction: tx,
+    }
+    ps.doStoreTransaction(confirmed, noopLock{})
     depositBlkResult, err := ps.doPackageBlock(ps.CurrentBlock, noopLock{})
     return prevBlkResult, depositBlkResult, err
 }
 
-func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transaction, error) {
+func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error) {
     if blkNum >= ps.CurrentBlock {
-        return []chain.Transaction{}, nil
+        return []chain.ConfirmedTransaction{}, nil
     }
     ps.RLock()
     defer ps.RUnlock()
@@ -411,11 +427,11 @@ func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.Transactio
     return findBlockTransactions(iter, prefix, blkNum)
 }
 
-func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64) ([]chain.Transaction, error) {
-    var buffer []chain.Transaction
+func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64) ([]chain.ConfirmedTransaction, error) {
+    var buffer []chain.ConfirmedTransaction
 
     for iter.Next() {
-        var tx chain.Transaction
+        var tx chain.ConfirmedTransaction
         // Extract transaction index
         // prefix looks like "tx::blkNum::1::txIdx::"
         // key looks like    "tx::blkNum::1::txIdx::20"
@@ -429,20 +445,20 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
             return nil, err
         }
         // RLP encoding for tranctions doesn't contain TxIdx or BlkNum
-        tx.TxIdx = txIdx
-        tx.BlkNum = big.NewInt(int64(blkNum))
+        tx.Transaction.TxIdx = txIdx
+        tx.Transaction.BlkNum = big.NewInt(int64(blkNum))
         buffer = append(buffer, tx)
     }
 
-    txs := make([]chain.Transaction, len(buffer))
+    txs := make([]chain.ConfirmedTransaction, len(buffer))
     for _, tx := range buffer {
-        txs[tx.TxIdx.Int64()] = tx
+        txs[tx.Transaction.TxIdx.Int64()] = tx
     }
 
     return txs, nil
 }
 
-func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int, locker sync.Locker) (*chain.Transaction, util.Hash, error) {
+func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int, locker sync.Locker) (*chain.ConfirmedTransaction, util.Hash, error) {
     locker.Lock()
     defer locker.Unlock()
 
@@ -451,7 +467,7 @@ func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int, locker sync.Loc
     defer iter.Release()
 
     for iter.Next() {
-        var tx chain.Transaction
+        var confirmed chain.ConfirmedTransaction
         key := string(iter.Key())
         keyParts := strings.Split(key, "::")
         if len(keyParts) != 4 {
@@ -465,18 +481,18 @@ func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int, locker sync.Loc
         if success == false {
             return nil, nil, errors.New(fmt.Sprintf("Failed to parse transaction index from key %s", key))
         }
-        err := rlp.DecodeBytes(iter.Value(), &tx)
+        err := rlp.DecodeBytes(iter.Value(), &confirmed)
         if err != nil {
             return nil, nil, err
         }
-        tx.BlkNum = blkNum
-        tx.TxIdx = txIdx
-        return &tx, nil, nil
+        confirmed.Transaction.BlkNum = blkNum
+        confirmed.Transaction.TxIdx = txIdx
+        return &confirmed, nil, nil
     }
     return nil, nil, errors.New(fmt.Sprintf("Failed to find deposit for deposit nonce %s", nonce.String()))
 }
 
-func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int, locker sync.Locker) (*chain.Transaction, util.Hash, error) {
+func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int, locker sync.Locker) (*chain.ConfirmedTransaction, util.Hash, error) {
     locker.Lock()
     defer locker.Unlock()
 
@@ -501,18 +517,18 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int, locker
         return nil, nil, err
     }
 
-    tx := chain.Transaction{}
+    tx := chain.ConfirmedTransaction{}
     err = rlp.DecodeBytes(data, &tx)
     if err != nil {
         return nil, nil, err
     }
-    tx.BlkNum = blkNum
-    tx.TxIdx  = txIdx
+    tx.Transaction.BlkNum = blkNum
+    tx.Transaction.TxIdx  = txIdx
 
     return &tx, block.BlockHash, nil
 }
 
-func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.Transaction, error) {
+func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.ConfirmedTransaction, error) {
     tx, _, err := ps.findTransactionByBlockNumTxIdx(blkNum, txIdx, ps.RLocker())
     return tx, err
 }
@@ -526,14 +542,14 @@ func (ps *Storage) Balance(addr *common.Address) (*big.Int, error) {
 
     total := big.NewInt(0)
 
-    for _, tx := range txs {
-        total = total.Add(total, extractAmount(&tx, addr))
+    for _, confirmed := range txs {
+        total = total.Add(total, extractAmount(&confirmed.Transaction, addr))
     }
 
     return total, nil
 }
 
-func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, error) {
+func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.ConfirmedTransaction, error) {
     earnPrefix := earnPrefixKey(addr)
     spendPrefix := spendPrefixKey(addr)
 
@@ -563,7 +579,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
         delete(earnMap, k)
     }
 
-    var ret []chain.Transaction
+    var ret []chain.ConfirmedTransaction
     for key := range earnMap {
         _, blkNum, txIdx, _, err := parseSuffix([]byte(key))
         if err != nil {
@@ -581,7 +597,7 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.Transaction, erro
     return ret, nil
 }
 
-func (ps *Storage) UTXOs(addr *common.Address) ([]chain.Transaction, error) {
+func (ps *Storage) UTXOs(addr *common.Address) ([]chain.ConfirmedTransaction, error) {
     earnPrefix := earnPrefixKey(addr)
     earnMap := make(map[string]uint8)
 
@@ -594,7 +610,7 @@ func (ps *Storage) UTXOs(addr *common.Address) ([]chain.Transaction, error) {
         earnMap[lookupKey] = 1
     }
 
-    var ret []chain.Transaction
+    var ret []chain.ConfirmedTransaction
     for key := range earnMap {
         _, blkNum, txIdx, _, err := parseSuffix([]byte(key))
         if err != nil {
@@ -704,9 +720,12 @@ func (ps *Storage) SaveBlock(blk *chain.Block) error {
 }
 
 func (ps *Storage) createGenesisBlock() (*BlockResult, error) {
-    tx := chain.ZeroTransaction()
+    confirmed := chain.ConfirmedTransaction{
+        Transaction: *chain.ZeroTransaction(),
+    }
+
     locker := noopLock{}
-    _, err := ps.doStoreTransaction(*tx, locker)
+    _, err := ps.doStoreTransaction(confirmed, locker)
     if err != nil {
         return nil, err
     }

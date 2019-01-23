@@ -18,6 +18,7 @@ const spendExitKeyPrefix  = "spend_exit"
 const merkleKeyPrefix     = "merkle"
 const blockKeyPrefix      = "blk"
 const blockMetaKeyPrefix  = "blkmeta"
+const blockFees           = "blk_fees"
 const depositPrefix       = "deposit_nonce"
 const latestKey           = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
@@ -39,6 +40,10 @@ func blockPrefixKey(parts ...string) []byte {
 
 func blockMetaPrefixKey(number uint64) []byte {
 	return prefixKey(blockMetaKeyPrefix, strconv.FormatUint(number, 10))
+}
+
+func blockFeesPrefix(number uint64) []byte {
+    return prefixKey(blockFees, strconv.FormatUint(number, 10))
 }
 
 func extractAmount(tx *chain.Transaction, addr *common.Address) *big.Int {
@@ -63,7 +68,8 @@ func blkNumTxIdxKey(blkNum, txIdx *big.Int) []byte {
 
 // Used to lookup transaction associated with a deposit
 // for handling deposit exit
-func depositKey(tx *chain.Transaction) []byte {
+func depositKey(confirmed *chain.ConfirmedTransaction) []byte {
+    tx := &confirmed.Transaction
     return prefixKey(depositPrefix, tx.Output0.DepositNonce.String(), tx.BlkNum.String(), tx.TxIdx.String())
 }
 
@@ -95,7 +101,8 @@ func spendExit(addr *common.Address, input *chain.Input) []byte {
         input.DepositNonce.Text(10))
 }
 
-func earn(addr *common.Address, tx chain.Transaction, outputIdx *big.Int) []byte {
+func earn(addr *common.Address, confirmed chain.ConfirmedTransaction, outputIdx *big.Int) []byte {
+    tx := &confirmed.Transaction
     return prefixKey(earnKeyPrefix, util.AddressToHex(addr), tx.BlkNum.String(), tx.TxIdx.String(), outputIdx.String())
 }
 

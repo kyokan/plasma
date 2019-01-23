@@ -155,7 +155,7 @@ func (r *Server) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb
 
 func (r *Server) GetOutputs(ctx context.Context, req *pb.GetOutputsRequest) (*pb.GetOutputsResponse, error) {
 	addr := common.BytesToAddress(req.Address)
-	var txs []chain.Transaction
+	var txs []chain.ConfirmedTransaction
 	var err error
 	if req.Spendable {
 		txs, err = r.storage.SpendableTxs(&addr)
@@ -168,7 +168,7 @@ func (r *Server) GetOutputs(ctx context.Context, req *pb.GetOutputsRequest) (*pb
 	}
 
 	return &pb.GetOutputsResponse{
-		Transactions: rpc.SerializeTxs(txs),
+		ConfirmedTransactions: rpc.SerializeConfirmedTxs(txs),
 	}, nil
 }
 
@@ -196,7 +196,7 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 			},
 			Hash: block.BlockHash,
 		},
-		Transactions: rpc.SerializeTxs(txs),
+		ConfirmedTransactions: rpc.SerializeConfirmedTxs(txs),
 		Metadata: &pb.GetBlockResponse_BlockMeta{
 			CreatedAt: meta.CreatedAt,
 		},
@@ -206,14 +206,14 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 }
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
-	tx := rpc.DeserializeTx(req.Transaction)
+	confirmed := rpc.DeserializeConfirmedTx(req.Confirmed)
 
-	signedTx, storeErr := r.storage.StoreTransaction(*tx)
+	signedTx, storeErr := r.storage.StoreTransaction(*confirmed)
 	if storeErr != nil {
 		return nil, storeErr
 	}
 	return &pb.SendResponse{
-		Transaction: rpc.SerializeTx(signedTx),
+		Confirmed: rpc.SerializeConfirmedTx(signedTx),
 	}, nil
 }
 

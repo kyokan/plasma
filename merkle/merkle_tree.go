@@ -15,7 +15,7 @@ func getMerkleRoot(hasher util.Hasher, leaves []DualHashable) ([]byte, []byte) {
 		mid := (1 + len(leaves))/2
 		lhsRLP, lhs := getMerkleRoot(hasher, leaves[:mid])
 		rhsRLP, rhs := getMerkleRoot(hasher, leaves[mid:])
-		return encodeLength(lhsRLP, rhsRLP), encodeLength(lhs, rhs)
+		return hasher(encodeLength(lhsRLP, rhsRLP)), hasher(encodeLength(lhs, rhs))
 	}
 }
 

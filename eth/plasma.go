@@ -38,11 +38,28 @@ func (c *clientState) GetChildBlock(blkNum uint64) ([32]byte, *big.Int, *big.Int
 	return tmp.Root, tmp.NumTxns, tmp.FeeAmount, tmp.CreatedAt, err
 }
 
-func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock, feesInBlock *big.Int) error {
+func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock, feesInBlock, blkNum *big.Int) error {
 	opts := CreateKeyedTransactor(c.privateKey)
 	var root [32]byte
 	copy(root[:], merkleHash[:32])
-	tx, err := c.contract.SubmitBlock(opts, [][32]byte{root}, []*big.Int{txInBlock}, []*big.Int{feesInBlock}, big.NewInt(1))
+	tx, err := c.contract.SubmitBlock(opts, [][32]byte{root}, []*big.Int{txInBlock}, []*big.Int{feesInBlock}, blkNum)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Submit block pending: 0x%x\n", tx.Hash())
+	return nil
+}
+
+func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks, feesInBlocks []*big.Int, firstBlkNum *big.Int) error {
+	opts := CreateKeyedTransactor(c.privateKey)
+	hashes := make([][32]byte, len(merkleHashes))
+	for i := 0; i != len(merkleHashes); i++ {
+		copy(hashes[i][:], merkleHashes[i][:32])
+	}
+
+	tx, err := c.contract.SubmitBlock(opts, hashes, txInBlocks, feesInBlocks, firstBlkNum)
 
 	if err != nil {
 		return err

@@ -23,7 +23,6 @@ message BigInt {
 
 message Input {
     bytes owner = 1;
-    BigInt amount = 2;
     BigInt depositNonce = 3;
     BigInt blockNum = 4;
     BigInt txIdx = 5;
@@ -60,6 +59,11 @@ message Transaction {
     BigInt txIdx = 9;
 }
 
+message ConfirmedTransaction {
+    Transaction transaction = 1;
+    repeated bytes signatures = 2;
+}
+
 message GetBalanceRequest {
     bytes address = 1;
 }
@@ -74,7 +78,7 @@ message GetOutputsRequest {
 }
 
 message GetOutputsResponse {
-    repeated Transaction transactions = 1;
+    repeated ConfirmedTransaction confirmedTransactions = 1;
 }
 
 message GetBlockRequest {
@@ -83,7 +87,7 @@ message GetBlockRequest {
 
 message GetBlockResponse {
     Block block = 1;
-    repeated Transaction transactions = 2;
+    repeated ConfirmedTransaction confirmedTransactions = 2;
     BlockMeta metadata = 3;
 
     message BlockMeta {
@@ -92,11 +96,11 @@ message GetBlockResponse {
 }
 
 message SendRequest {
-    Transaction transaction = 1;
+    ConfirmedTransaction confirmed = 1;
 }
 
 message SendResponse {
-    Transaction transaction = 1;
+    ConfirmedTransaction confirmed = 1;
 }
 
 message BlockHeightResponse {

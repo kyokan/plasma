@@ -43,7 +43,8 @@ type Client interface {
 	UserAddress() common.Address
 	Contract() *contracts.Plasma
 	SignData(data []byte) ([]byte, error)
-	SubmitBlock(util.Hash, *big.Int, *big.Int) error
+	SubmitBlock(util.Hash, *big.Int, *big.Int, *big.Int) error
+	SubmitBlocks([]util.Hash, []*big.Int, []*big.Int, *big.Int) error
 	Deposit(value *big.Int, tx *chain.Transaction) error
 	GetChildBlock(uint64) (merkleRoot [32]byte, NumTxns *big.Int, FeeAmount *big.Int, CreatedAt *big.Int, err error)
 

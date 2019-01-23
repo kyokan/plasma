@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
 	"math/big"
 )
@@ -62,5 +63,31 @@ func (in *Input) Hash() util.Hash {
 	binary.Write(buf, binary.BigEndian, in.Owner)
 	digest := util.DoHash(buf.Bytes())
 	return digest
+}
+
+type rlpInputHelper struct {
+	BlkNum       *UInt256
+	TxIdx        *UInt256
+	OutIdx       *UInt256
+	DepositNonce *UInt256
+	Owner        common.Address
+}
+
+func (in *Input) SignatureHash() util.Hash {
+	var itf rlpInputHelper
+	if in != nil {
+		itf.BlkNum = NewUint256(in.BlkNum)
+		itf.TxIdx = NewUint256(in.TxIdx)
+		itf.OutIdx = NewUint256(in.OutIdx)
+		itf.DepositNonce = NewUint256(in.DepositNonce)
+		itf.Owner = in.Owner
+	} else {
+		itf.BlkNum = NewUint256(nil)
+		itf.TxIdx = NewUint256(nil)
+		itf.OutIdx = NewUint256(nil)
+		itf.DepositNonce = NewUint256(nil)
+	}
+	encoded, _ := rlp.EncodeToBytes(&itf)
+	return util.DoHash(encoded)
 }
 

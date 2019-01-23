@@ -16,6 +16,7 @@ func (m *Input) MarshalJSON() ([]byte, error) {
 	blkNum, _ := new(big.Int).SetString(m.BlockNum.Hex, 16)
 	txIdx, _ := new(big.Int).SetString(m.TxIdx.Hex, 16)
 	outIdx, _ := new(big.Int).SetString(m.OutIdx.Hex, 16)
+
 	if txIdx.Cmp(zero) == 0 && blkNum.Cmp(zero) == 0 && outIdx.Cmp(zero) == 0 {
 		return []byte("null"), nil
 	}
@@ -100,12 +101,12 @@ func (m Block) MarshalJSON() ([]byte, error) {
 }
 
 type rawGetOutputsResponse struct {
-	Transactions []*Transaction `json:"transactions"`
+	ConfirmedTransactions []*ConfirmedTransaction `json:"confirmedTransactions"`
 }
 
 func (m GetOutputsResponse) MarshalJSON() ([]byte, error) {
 	raw := &rawGetOutputsResponse{
-		Transactions:m.Transactions,
+		ConfirmedTransactions: m.ConfirmedTransactions,
 	}
 	return json.Marshal(raw)
 }

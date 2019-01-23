@@ -77,9 +77,9 @@ func Test_TransactionFirstInputRLP(t *testing.T) {
 	tx := Transaction{
 		Input0:  RandomInput(),
 		Sig0:    RandomConfirmationSig(),
-		Input1:  nil,
+		Input1:  ZeroInput(),
 		Output0: RandomOutput(),
-		Output1: nil,
+		Output1: ZeroOutput(),
 		Fee:     big.NewInt(rand.Int63()),
 		BlkNum:  nil,
 		TxIdx:   nil,
@@ -89,10 +89,10 @@ func Test_TransactionFirstInputRLP(t *testing.T) {
 
 func Test_TransactionSecondInputRLP(t *testing.T) {
 	tx := Transaction{
-		Input0:  nil,
+		Input0:  ZeroInput(),
 		Input1:  RandomInput(),
 		Sig1:    RandomConfirmationSig(),
-		Output0: nil,
+		Output0: ZeroOutput(),
 		Output1: RandomOutput(),
 		Fee:     big.NewInt(rand.Int63()),
 		BlkNum:  nil,
@@ -124,7 +124,7 @@ func Test_ConfirmedTransactionFirstInputRLP(t *testing.T) {
 		Transaction: Transaction{
 			Input0:  RandomInput(),
 			Sig0:    RandomConfirmationSig(),
-			Input1:  nil,
+			Input1:  ZeroInput(),
 			Output0: RandomOutput(),
 			Output1: RandomOutput(),
 			Fee:     big.NewInt(rand.Int63()),

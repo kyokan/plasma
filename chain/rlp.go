@@ -37,16 +37,11 @@ func (uint *UInt256) ToBig() *big.Int {
 	return result
 }
 
-type ConfirmedTransaction struct {
-	Transaction Transaction
-	Signatures  [2]Signature
-}
-
 // Transaction encoding:
 // [Blknum1, TxIndex1, Oindex1, DepositNonce1, Owner1, Input1ConfirmSig,
 //  Blknum2, TxIndex2, Oindex2, DepositNonce2, Owner2, Input2ConfirmSig,
 //  Owner, Denom1, Owner, Denom2, Fee]
-type rlpHelper struct {
+type rlpTransactionHelper struct {
 	BlkNum0       *UInt256        // input0
 	TxIdx0        *UInt256        // input0
 	OutIdx0       *UInt256        // input0
@@ -71,7 +66,7 @@ type rlpHelper struct {
 }
 
 func (tx *Transaction) EncodeRLP(w io.Writer) error {
-	var itf rlpHelper
+	var itf rlpTransactionHelper
 	if tx.Input0 != nil {
 		itf.BlkNum0 = NewUint256(tx.Input0.BlkNum)
 		itf.TxIdx0  = NewUint256(tx.Input0.TxIdx)
@@ -116,27 +111,15 @@ func (tx *Transaction) EncodeRLP(w io.Writer) error {
 }
 
 func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
-	var itf rlpHelper
+	var itf rlpTransactionHelper
 	err := s.Decode(&itf)
 	if err != nil {
 		return err
 	}
 	tx.Input0  = NewInput(itf.BlkNum0.ToBig(), itf.TxIdx0.ToBig(), itf.OutIdx0.ToBig(), itf.DepositNonce0.ToBig(), itf.Owner0)
-	if tx.Input0.IsZeroInput() {
-		tx.Input0 = nil
-	}
 	tx.Input1  = NewInput(itf.BlkNum1.ToBig(), itf.TxIdx1.ToBig(), itf.OutIdx1.ToBig(), itf.DepositNonce1.ToBig(), itf.Owner1)
-	if tx.Input1.IsZeroInput() {
-		tx.Input1 = nil
-	}
 	tx.Output0 = NewOutput(itf.NewOwner0, itf.Denom0.ToBig(), Zero())
-	if tx.Output0.IsZeroOutput() {
-		tx.Output0 = nil
-	}
 	tx.Output1 = NewOutput(itf.NewOwner1, itf.Denom1.ToBig(), Zero())
-	if tx.Output1.IsZeroOutput() {
-		tx.Output1 = nil
-	}
 	tx.Sig0 = itf.Sig0
 	tx.Sig1 = itf.Sig1
 	tx.Fee  = itf.Fee.ToBig()

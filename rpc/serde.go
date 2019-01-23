@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"encoding/hex"
 	"github.com/kyokan/plasma/rpc/pb"
 	"math/big"
 	"github.com/kyokan/plasma/chain"
@@ -16,25 +17,30 @@ func SerializeBig(in *big.Int) (*pb.BigInt) {
 }
 
 func DeserializeBig(in *pb.BigInt) (*big.Int) {
-	b, _ := new(big.Int).SetString(in.Hex, 16)
+	s := hex.EncodeToString(common.FromHex(in.Hex)) // Ox trips big.Int.SetString
+	if len(s) == 0 {
+		return big.NewInt(0)
+	}
+	b, _ := new(big.Int).SetString(s, 16)
 	return b
 }
 
-func SerializeTxs(txs []chain.Transaction) ([]*pb.Transaction) {
-	out := make([]*pb.Transaction, len(txs), len(txs))
-	for i, tx := range txs {
-		out[i] = SerializeTx(&tx)
+func SerializeConfirmedTxs(confirmedTransactions []chain.ConfirmedTransaction) ([]*pb.ConfirmedTransaction) {
+	out := make([]*pb.ConfirmedTransaction, len(confirmedTransactions), len(confirmedTransactions))
+	for i, confirmed := range confirmedTransactions {
+		out[i] = SerializeConfirmedTx(&confirmed)
 	}
 	return out
 }
 
-func DeserializeTxs(txs []*pb.Transaction) ([]chain.Transaction) {
-	out := make([]chain.Transaction, len(txs), len(txs))
-	for i, tx := range txs {
-		out[i] = *DeserializeTx(tx)
+func DeserializeConfirmedTxs(confirmedTransactions []*pb.ConfirmedTransaction) ([]chain.ConfirmedTransaction) {
+	out := make([]chain.ConfirmedTransaction, len(confirmedTransactions), len(confirmedTransactions))
+	for i, confirmed := range confirmedTransactions {
+		out[i] = *DeserializeConfirmedTx(confirmed)
 	}
 	return out
 }
+
 
 func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 	return &pb.Transaction{
@@ -67,16 +73,50 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 	return result
 }
 
+func SerializeConfirmedTx(confirmed *chain.ConfirmedTransaction) (*pb.ConfirmedTransaction) {
+	result := &pb.ConfirmedTransaction{
+		Transaction: SerializeTx(&confirmed.Transaction),
+	}
+	result.Signatures = make([][]byte, 2)
+	result.Signatures[0] = append(result.Signatures[0], confirmed.Signatures[0][:]...)
+	result.Signatures[1] = append(result.Signatures[1], confirmed.Signatures[1][:]...)
+
+	return result;
+}
+
+func DeserializeConfirmedTx(confirmed *pb.ConfirmedTransaction) (*chain.ConfirmedTransaction) {
+	result := &chain.ConfirmedTransaction{
+		Transaction: *DeserializeTx(confirmed.Transaction),
+	}
+	copy(result.Signatures[0][:], confirmed.Signatures[0][0:65])
+	if len(confirmed.Signatures) > 1 {
+		copy(result.Signatures[1][:], confirmed.Signatures[1][0:65])
+	}
+	return result;
+}
+
 func SerializeInput(in *chain.Input) (*pb.Input) {
+	if in == nil {
+		return nil
+	}
 	return &pb.Input{
 		BlockNum: SerializeBig(in.BlkNum),
 		TxIdx:    SerializeBig(in.TxIdx),
 		OutIdx:   SerializeBig(in.OutIdx),
+		Owner:    in.Owner.Bytes(),
+		DepositNonce: SerializeBig(in.DepositNonce),
 	}
 }
 
 func DeserializeInput(in *pb.Input) (*chain.Input) {
+	if in == nil {
+		return chain.ZeroInput()
+	}
 	return &chain.Input{
+		Output: chain.Output{
+			DepositNonce: DeserializeBig(in.DepositNonce),
+			Owner: common.BytesToAddress(in.Owner),
+		},
 		BlkNum: DeserializeBig(in.BlockNum),
 		TxIdx:  DeserializeBig(in.TxIdx),
 		OutIdx: DeserializeBig(in.OutIdx),
@@ -84,6 +124,9 @@ func DeserializeInput(in *pb.Input) (*chain.Input) {
 }
 
 func SerializeOutput(out *chain.Output) (*pb.Output) {
+	if out == nil {
+		return nil
+	}
 	return &pb.Output{
 		NewOwner:     out.Owner.Bytes(),
 		Amount:       SerializeBig(out.Denom),
@@ -92,6 +135,9 @@ func SerializeOutput(out *chain.Output) (*pb.Output) {
 }
 
 func DeserializeOutput(out *pb.Output) (*chain.Output) {
+	if out == nil {
+		return chain.ZeroOutput()
+	}
 	return &chain.Output{
 		Owner:        common.BytesToAddress(out.NewOwner),
 		Denom:        DeserializeBig(out.Amount),

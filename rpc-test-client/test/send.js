@@ -34,11 +34,6 @@ describe('Send', () => {
             }
             expect(count).to.equal(1);
             expect(transaction.output0.amount.eq(amount)).to.equal(true);
-
-            const sig = ejs.fromRpcSig(`0x${transaction.RootSig.toString('hex')}`);
-            const pubKey = ejs.ecrecover(transaction.SignatureHash(), sig.v, sig.r, sig.s);
-            const rootAddress = ejs.publicToAddress(pubKey);
-            expect(accounts[0].address).to.equal(`0x${rootAddress.toString('hex')}`);
             done();
         });
     });

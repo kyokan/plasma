@@ -73,16 +73,16 @@ func Exit(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey, rootHost st
 	if res == nil {
 		return errors.New("block does not exist")
 	}
-	transactions := rpc.DeserializeTxs(res.Transactions)
-	hashables := make([]merkle.DualHashable, len(transactions))
-	for i := 0; i < len(transactions); i++ {
-		hashables[i] = &transactions[i]
+	confirmedTransactions := rpc.DeserializeConfirmedTxs(res.ConfirmedTransactions)
+	hashables := make([]merkle.DualHashable, len(confirmedTransactions))
+	for i := 0; i < len(confirmedTransactions); i++ {
+		hashables[i] = &confirmedTransactions[i]
 	}
 	proof, err := merkle.GetProof(hashables, merkle.DefaultDepth, int32(txIndex))
-	transaction := transactions[txIndex]
+	confirmed := confirmedTransactions[txIndex]
 	opts := &eth.StartExitOpts{
-		Transaction: transaction,
-		Input: *chain.NewInputFromTransaction(transaction, int64(oIndex)),
+		Transaction: confirmed.Transaction,
+		Input: *chain.NewInputFromTransaction(confirmed.Transaction, int64(oIndex)),
 		Signature: []byte{},
 		ConfirmSignature: []byte{},
 		Proof: proof,
@@ -155,7 +155,7 @@ func Block(rootHost string, blockNum uint64) error {
 		strconv.FormatUint(block.Header.Number, 10),
 	})
 
-	txs := rpc.DeserializeTxs(res.Transactions)
+	txs := rpc.DeserializeConfirmedTxs(res.ConfirmedTransactions)
 	txsTable := txsTable(txs)
 
 	blockTable.Render()
@@ -182,8 +182,8 @@ func UTXOs(rootHost string, address common.Address) error {
 		return err
 	}
 
-	txs := rpc.DeserializeTxs(res.Transactions)
-	table := txsTable(txs)
+	confirmedTransactions := rpc.DeserializeConfirmedTxs(res.ConfirmedTransactions)
+	table := txsTable(confirmedTransactions)
 	table.Render()
 	return nil
 }
@@ -205,7 +205,7 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 	if err != nil {
 		return err
 	}
-	utxos := rpc.DeserializeTxs(utxoResponse.Transactions)
+	utxos := rpc.DeserializeConfirmedTxs(utxoResponse.ConfirmedTransactions)
 	tx, err := txdag.FindBestUTXOs(from, to, amount, utxos)
 	if err != nil {
 		return err
@@ -213,24 +213,24 @@ func Send(privateKey *ecdsa.PrivateKey, rootHost string, from, to common.Address
 	j, _ := json.MarshalIndent(&tx, "", "\t")
 	fmt.Println(string(j))
 
-	hash := eth.GethHash(tx.SignatureHash())
+	hash := eth.GethHash(tx.Transaction.SignatureHash())
 	signature, err := crypto.Sign(hash, privateKey)
 	if err != nil {
 		return err
 	}
 
-	copy(tx.Sig0[:], signature)
-	if !tx.Input1.IsZeroInput() {
-		copy(tx.Sig1[:], signature)
+	copy(tx.Transaction.Sig0[:], signature)
+	if !tx.Transaction.Input1.IsZeroInput() {
+		copy(tx.Transaction.Sig1[:], signature)
 	}
 
 	res, err := rc.Send(ctx, &pb.SendRequest{
-		Transaction: rpc.SerializeTx(tx),
+		Confirmed: rpc.SerializeConfirmedTx(tx),
 	})
 	if err != nil {
 		return err
 	}
-	tx = rpc.DeserializeTx(res.Transaction)
+	tx = rpc.DeserializeConfirmedTx(res.Confirmed)
 	jsonTx, err := json.MarshalIndent(&tx, "", "\t")
 	fmt.Printf("Send results: %s", string(jsonTx))
 	return nil
@@ -250,7 +250,7 @@ func createDepositTx(userAddress common.Address, value *big.Int) chain.Transacti
 	}
 }
 
-func txsTable(txs []chain.Transaction) *tablewriter.Table {
+func txsTable(confirmedTransactions []chain.ConfirmedTransaction) *tablewriter.Table {
 	txsTable := tablewriter.NewWriter(os.Stdout)
 	txsTable.SetHeader([]string{
 		"Idx",
@@ -268,7 +268,8 @@ func txsTable(txs []chain.Transaction) *tablewriter.Table {
 		"Output1Amount",
 		"Fee",
 	})
-	for _, tx := range txs {
+	for _, confirmed := range confirmedTransactions {
+		tx := confirmed.Transaction
 		txsTable.Append([]string{
 			tx.TxIdx.String(),
 			tx.Input0.BlkNum.String(),

@@ -58,18 +58,18 @@ func EnsureNoDoubleSpend(txs []chain.Transaction) (okTxs []chain.Transaction, re
 	return ret, rej
 }
 
-func FindMatchingInputs(tx *chain.Transaction, txs []chain.Transaction) (rejections []chain.Transaction) {
-	usedKey0 := fmt.Sprintf("%d::%d::%d", tx.BlkNum, tx.TxIdx, 0)
-	usedKey1 := fmt.Sprintf("%d::%d::%d", tx.BlkNum, tx.TxIdx, 1)
+func FindMatchingInputs(tx *chain.ConfirmedTransaction, txs []chain.ConfirmedTransaction) (rejections []chain.ConfirmedTransaction) {
+	usedKey0 := fmt.Sprintf("%d::%d::%d", tx.Transaction.BlkNum, tx.Transaction.TxIdx, 0)
+	usedKey1 := fmt.Sprintf("%d::%d::%d", tx.Transaction.BlkNum, tx.Transaction.TxIdx, 1)
 
-	var used []chain.Transaction
+	var used []chain.ConfirmedTransaction
 
 	for _, currTx := range txs {
-		if currTx.IsDeposit() {
+		if currTx.Transaction.IsDeposit() {
 			continue
 		}
 
-		keys := txToKeys(&currTx)
+		keys := txToKeys(&currTx.Transaction)
 
 		for _, k := range keys {
 			if k == usedKey0 || k == usedKey1 {

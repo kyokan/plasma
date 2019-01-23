@@ -111,7 +111,7 @@ func ExitStartedListener(ctx context.Context, storage db.PlasmaStorage, ethClien
 	}
 }
 
-func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.Transaction, *big.Int, *big.Int, error) {
+func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.PlasmaStorage, exit *eth.Exit) ([]chain.ConfirmedTransaction, *big.Int, *big.Int, error) {
 	latestBlock, err := storage.LatestBlock()
 	if err != nil {
 		return nil, nil, nil, err
@@ -128,11 +128,11 @@ func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.P
 		return nil, nil, nil, err
 	}
 
-	if txIdx >= uint32(len(response.Transactions)) {
+	if txIdx >= uint32(len(response.ConfirmedTransactions)) {
 		log.Fatalln("The following exit does not exist within this block!")
 	}
 
-	exitTx := rpc.DeserializeTx(response.Transactions[exit.TxIndex])
+	exitTx := rpc.DeserializeConfirmedTx(response.ConfirmedTransactions[exit.TxIndex])
 	log.Printf("Finding spends from blocks %d to %d\n", currBlockHeight, lastBlockHeight)
 
 	// Find possible double spends in every block
@@ -146,13 +146,13 @@ func FindDoubleSpend(ctx context.Context, rootClient pb.RootClient, storage db.P
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		currTxs := rpc.DeserializeTxs(response.Transactions)
+		currTxs := rpc.DeserializeConfirmedTxs(response.ConfirmedTransactions)
 		rej := node.FindMatchingInputs(exitTx, currTxs)
 
 		if len(rej) > 0 {
 			log.Printf("Found %d double spends at block %d\n", len(rej), i)
 			// Always return the first one for now
-			return currTxs, big.NewInt(int64(i)), rej[0].TxIdx, nil
+			return currTxs, big.NewInt(int64(i)), rej[0].Transaction.TxIdx, nil
 		} else {
 			log.Printf("Found no double spends for block %d\n", i)
 		}

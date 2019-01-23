@@ -24,7 +24,6 @@ type Transaction struct {
 	TxIdx   *big.Int
 }
 
-
 func ZeroTransaction() *Transaction {
 	return &Transaction{
 		Input0: ZeroInput(),
@@ -36,8 +35,7 @@ func ZeroTransaction() *Transaction {
 }
 
 func (tx *Transaction) IsDeposit() bool {
-	return tx.Output0 != nil &&
-		tx.Output0.DepositNonce.Cmp(Zero()) == 1
+	return tx.Output0.IsDeposit()
 }
 
 func (tx *Transaction) IsExit() bool {
@@ -130,15 +128,8 @@ func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
 }
 
 func (tx *Transaction) SignatureHash() util.Hash {
-	values := []interface{}{
-		tx.Input0.Hash(),
-		tx.Input1.Hash(),
-		tx.Output0.Hash(),
-		tx.Output1.Hash(),
-		tx.Fee,
-	}
-
-	return doHash(values, util.DoHash)
+	encoded, _ := rlp.EncodeToBytes(tx)
+	return util.DoHash(encoded)
 }
 
 func doHash(values []interface{}, hasher util.Hasher) util.Hash {
