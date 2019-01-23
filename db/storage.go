@@ -4,6 +4,7 @@ import (
     "fmt"
     "github.com/kyokan/plasma/merkle"
     "github.com/syndtr/goleveldb/leveldb/iterator"
+    "github.com/syndtr/goleveldb/leveldb/opt"
     "log"
     "math/big"
     "strconv"
@@ -119,11 +120,11 @@ func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
 }
 
 func (ps *Storage) Put(key, value []byte) {
-    ps.DB.Put(key, value, nil)
+    ps.DB.Put(key, value, &opt.WriteOptions{ Sync: true})
 }
 
 func (ps *Storage) Delete(key []byte)  {
-    ps.DB.Delete(key, nil)
+    ps.DB.Delete(key, &opt.WriteOptions{ Sync: true})
 }
 
 func (ps *Storage) findPreviousTx(tx *chain.ConfirmedTransaction, inputIdx uint8) (*chain.ConfirmedTransaction, util.Hash, error) {

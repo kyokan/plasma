@@ -31,6 +31,7 @@ function init() {
         Contract: contract,
         Accounts: accounts,
         Client: client,
+        Keys: ganacheAccountsInfo.addresses, // used to lookup the keys for signing exits
         Web3: web3
     };
     return state;

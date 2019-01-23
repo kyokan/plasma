@@ -139,8 +139,7 @@ class Account {
                 return cb(err);
             }
             const utxos = result.confirmedTransactions;
-            // const amountFees = amount.
-            let tx = self.transactionForAmount(to, amount, self.web3.utils.toBN(10000), utxos);
+            let tx = self.transactionForAmount(to, amount, self.web3.utils.toBN(20000), utxos);
             const signedTransaction = self.signTransaction(tx);
             try {
                 const rpcTx = signedTransaction.toRpc();
@@ -305,7 +304,7 @@ class Account {
         });
     }
 
-    Exit(transaction, cb) {
+    ExitTransaction(transaction, block, txRlp, confirmationSignatures, committedFee, cb) {
         let self = this;
         const output0Address = self.web3.utils.bytesToHex(transaction.output0.newOwner);
         const output1Address = self.web3.utils.bytesToHex(transaction.output1.newOwner);
@@ -316,61 +315,53 @@ class Account {
         if (self.address === output1Address) {
             outputIdx = 1;
         }
-        self.GetPlasmaBlock(transaction.BlockNum, (err, block) => {
+
+        let leaves = [];
+        for (let i = 0; i < block.confirmedTransactions.length; i++) {
+            const elem = new Transaction(block.confirmedTransactions[i]);
+            leaves.push(ejs.sha256(elem.RLPEncode()));
+        }
+        let merkle = generateMerkleRootAndProof(leaves, parseInt(transaction.txIdx.hex));
+
+        const blkNum = self.web3.eth.abi.encodeParameter('uint256', parseInt(transaction.blockNum.hex, 16));
+        const txIdx  = self.web3.eth.abi.encodeParameter('uint256', parseInt(transaction.txIdx.hex, 16));
+        const outIdx = self.web3.eth.abi.encodeParameter('uint256', outputIdx);
+        let pos = [blkNum,  txIdx, outIdx];
+
+        const txBytes = self.web3.eth.abi.encodeParameter('bytes', txRlp);
+        const proof = self.web3.eth.abi.encodeParameter('bytes', Buffer.from(merkle[1]));
+        const encodedFee = self.web3.eth.abi.encodeParameter('uint256', committedFee);
+        const value = web3.utils.toBN(web3.utils.toWei(committedFee, 'wei'));
+
+        self.prepareEthCall( (err, result) => {
             if (err != null) {
-                return cb(err);
+                return cb(err, null);
             }
 
-            let elements = new Array(Math.pow(2, 16));
-            const zeroTx = doHash(Buffer.from(new Uint8Array(32)));
-            for (let i = 0; i < Math.pow(2, 16); i++) {
-                if (i < block.transactions.length) {
-                    const tx = new Transaction(block.transactions[i]);
-                    elements[i] = doHash(tx.RLPEncode());
-                }
-                else {
-                    elements[i] = zeroTx;
-                }
-            }
-            const merkleTree = new MerkleTree(elements, doHash);
-            const root = merkleTree.getRoot();
-            let proof = merkleTree.getProof(elements[transaction.TxIdx]);
-            let proofLength = 0;
-            let proofBuffer = Buffer.from('');
-            for (let i = 0; i < proof.length; i++) {
-                proofLength += proof[i].data.length;
-                proofBuffer = Buffer.concat([proofBuffer, proof[i].data], proofLength);
-            }
-
-            self.prepareEthCall( (err, result) => {
-                if (err != null) {
-                    return cb(err, null);
-                }
-
-                let nonce = result.nonce;
-                // Retrying as sometimes the call fails with invalid RPC response error
-                let exitFn = function (callback) {
-                    let params = {
-                        nonce:    self.web3.utils.toHex(nonce),
-                        chainId:  15,
-                        to:       self.contract.options.address,
-                        gasPrice: self.web3.utils.toHex(result.gasPrice),
-                        gas:      self.web3.utils.toHex(5 * result.gasEstimate),
-                        from:     self.address
-                    };
-                    self.contract.methods.startExit(
-                        transaction.BlockNum, // uint64
-                        transaction.TxIdx, // uint32
-                        outputIdx, // uint8
-                        transaction.RLPEncode(),
-                        proofBuffer
-                    ).send(params, (error, receipt) => {
-                        callback(error, receipt);
-                    });
+            let nonce = result.nonce;
+            // Retrying as sometimes the call fails with invalid RPC response error
+            let exitFn = function (callback) {
+                let params = {
+                    nonce:    self.web3.utils.toHex(nonce),
+                    chainId:  15,
+                    to:       self.contract.options.address,
+                    gasPrice: self.web3.utils.toHex(result.gasPrice),
+                    gas:      self.web3.utils.toHex(5 * result.gasEstimate),
+                    from:     self.address,
+                    value:    value
                 };
-                async.retry({times: 3}, exitFn, (error, receipt) => {
-                    return cb(error, receipt);
+                self.contract.methods.startTransactionExit(
+                    pos,
+                    txBytes,
+                    proof,
+                    self.web3.eth.abi.encodeParameter('bytes', confirmationSignatures),
+                    encodedFee
+                ).send(params, (error, receipt) => {
+                    callback(error, receipt);
                 });
+            };
+            async.retry({times: 3}, exitFn, (error, receipt) => {
+                return cb(error, receipt);
             });
         });
     }
@@ -659,8 +650,18 @@ class Transaction {
         ];
     }
 
-    RLPEncode() {
-        const rlpInput = this.toArray();
+    RLPEncode(isExit) {
+        let rlpInput = [];
+        if (isExit === true) {
+            rlpInput = [
+                this.toArray(),
+                this.signatures
+            ];
+        }
+        else {
+            rlpInput = this.toArray();
+        }
+
         const encoded = ejs.rlp.encode(rlpInput);
         return encoded;
     }
@@ -714,6 +715,59 @@ function toRPC(input) {
     }
     return { hex: '0x' + input.toString(16)}
 }
+
+let tendermintSHA256 = function(input1, input2) {
+    const buf = Buffer.concat([
+        Buffer.from([input1.length]),
+        input1,
+        Buffer.from([input2.length]),
+        input2,
+    ]);
+    return ejs.sha256(buf);
+};
+
+// Simple Tree: https://tendermint.com/docs/spec/blockchain/encoding.html#merkle-trees
+let generateMerkleRootAndProof = function(leaves, index) {
+    if (leaves.length == 0) { // If there are no leaves, then we can't generate anything
+        return [Buffer.from(""), Buffer.from("")];
+    } else if (leaves.length == 1) { // If there's only 1 leaf, return it with and empty proof
+        return [leaves[0], Buffer.from("")];
+    } else {
+        let pivot = Math.floor((leaves.length + 1) / 2);
+
+        let left, right;
+        let proof = Buffer.from("");
+
+        // If the index will be in the left subtree (index < pivot), then we
+        // need to generate the proof using the intermediary hash from the right
+        // side. Otherwise, do the reverse.
+        if (index < pivot) {
+            // recursively call the function on the leaves that will be in the
+            // left and right sub trees.
+            left = generateMerkleRootAndProof(leaves.slice(0, pivot), index);
+            right = generateMerkleRootAndProof(leaves.slice(pivot, leaves.length), -1);
+
+            // add current level's right intermediary hash to the proof
+            if (index >= 0) {
+                proof = Buffer.concat([left[1], right[0]]);
+            }
+        } else {
+            // recursively call the function on the leaves that will be in the
+            // left and right sub trees.
+            // since the index will be in the right sub tree, we need to update
+            // it's value.
+            left = generateMerkleRootAndProof(leaves.slice(0, pivot), -1);
+            right = generateMerkleRootAndProof(leaves.slice(pivot, leaves.length), index - pivot);
+
+            // add current level's left intermediary hash to the proof
+            if (index >= 0) {
+                proof = Buffer.concat([right[1], left[0]]);
+            }
+        }
+        return [tendermintSHA256(left[0], right[0]), toHex(proof)];
+    }
+};
+
 
 module.exports = {
     Account: Account,

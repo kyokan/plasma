@@ -23,10 +23,10 @@ message BigInt {
 
 message Input {
     bytes owner = 1;
-    BigInt depositNonce = 3;
-    BigInt blockNum = 4;
-    BigInt txIdx = 5;
-    BigInt outIdx = 6;
+    BigInt depositNonce = 2;
+    BigInt blockNum = 3;
+    BigInt txIdx = 4;
+    BigInt outIdx = 5;
 }
 
 message Output {
