@@ -461,7 +461,6 @@ class Input {
             txIdx: toRPC(this.txIdx),
             outIdx: toRPC(this.outIdx),
             owner: ejs.toBuffer(this.owner),
-            amount: toRPC(this.amount),
             depositNonce: toRPC(this.depositNonce)
         };
         return res;
@@ -594,8 +593,6 @@ class Transaction {
 
     toRpc() {
         let res = {
-            blockNum: this.blockNum,
-            txIdx: this.txIdx,
             transaction: {
                 blockNum: toRPC(this.blockNum),
                 txIdx: toRPC(this.txIdx),

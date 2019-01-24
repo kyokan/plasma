@@ -25,7 +25,7 @@ describe('Send', () => {
         async.timesLimit(repeat, 1, sendWrapper, function (err, results) {
             expect(results.length).to.equal(repeat);
             for (let i = 0; i < results.length; i++) {
-                expect(results[i].transaction.output0.amount.eq(amount)).to.equal(true);
+                expect(results[i].output0.amount.eq(amount)).to.equal(true);
             }
             done();
         });
