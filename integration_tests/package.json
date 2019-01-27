@@ -1,0 +1,37 @@
+{
+  "name": "plasma-integration-tests",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run build && mocha --inspect=5858 dist/**/*.test.js",
+    "build": "tsc --project .",
+    "clean": "rm -rf ./dist"
+  },
+  "author": "Matthew Slipper",
+  "license": "AGPL",
+  "dependencies": {
+    "@babel/runtime": "^7.3.1",
+    "@grpc/proto-loader": "0.4.0",
+    "@types/bn.js": "^4.11.4",
+    "@types/chai": "^4.1.7",
+    "@types/chalk": "2.2.0",
+    "@types/ethereumjs-util": "^5.2.0",
+    "@types/mocha": "^5.2.5",
+    "@types/node": "^10.12.18",
+    "@types/rimraf": "2.0.2",
+    "@types/web3": "^1.0.18",
+    "bn.js": "4.11.8",
+    "chai": "^4.2.0",
+    "chalk": "2.4.2",
+    "ethereumjs-util": "6.0.0",
+    "ganache-cli": "^6.2.5",
+    "grpc": "1.18.0",
+    "int64-buffer": "0.99.1007",
+    "mocha": "^5.2.0",
+    "rimraf": "2.6.3",
+    "truffle": "5.0.2",
+    "typescript": "^3.2.4",
+    "web3": "1.0.0-beta.37"
+  }
+}

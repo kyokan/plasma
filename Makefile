@@ -2,17 +2,16 @@ deps:
 	@echo "--> Installing dependencies for Plasma MVP Rootchain..."
 	git submodule update --remote --recursive
 	npm install --prefix plasma-mvp-rootchain plasma-mvp-rootchain
-	@$(MAKE) -C ./rpc-test-client deps
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
-# Please use 'make setup'
-# migrate: deps
-#	cd plasma-mvp-rootchain && \
-#	truffle migrate
-
 build:
 	go build -o ./target/plasma ./cmd/plasma/main.go
+
+build-contracts:
+	@echo "--> Compiling contracts..."
+	cd ./plasma-mvp-rootchain && truffle compile
+	cat ./plasma-mvp-rootchain/build/contracts/PlasmaMVP.json | jq .abi > ./integration_tests/test/abi/PlasmaMVP.abi.json
 
 build-cross:
 	docker build ./build --no-cache -t plasma-cross-compilation:latest

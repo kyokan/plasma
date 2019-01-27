@@ -1,0 +1,666 @@
+[
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "txIndexFactor",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x00d2980a"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "balances",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x27e235e3"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "maxTxnsPerBLock",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x338b881c"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "lastCommittedBlock",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x3acb097a"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "txExits",
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "name": "committedFee",
+        "type": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "name": "state",
+        "type": "uint8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x6d3d8b1a"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "blockIndexFactor",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x89609149"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "deposits",
+    "outputs": [
+      {
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "name": "ethBlockNum",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xb02c43d0"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "totalWithdrawBalance",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xc430c438"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "depositExits",
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "name": "committedFee",
+        "type": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "name": "state",
+        "type": "uint8"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xce84f906"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "depositNonce",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xde35f5cb"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "childChain",
+    "outputs": [
+      {
+        "name": "root",
+        "type": "bytes32"
+      },
+      {
+        "name": "numTxns",
+        "type": "uint256"
+      },
+      {
+        "name": "feeAmount",
+        "type": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0xf95643b1"
+  },
+  {
+    "inputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "constructor",
+    "signature": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "AddedToBalances",
+    "type": "event",
+    "signature": "0xf8552a24c7d58fd05114f6fc9db7b3a354db64d5fc758184af1696ccd8f158f3"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "root",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "blockNumber",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "numTxns",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "feeAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "BlockSubmitted",
+    "type": "event",
+    "signature": "0x044ff3798f9b3ad55d1155cea9a40508c71b4c64335f5dae87e8e11551515a06"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "depositor",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "depositNonce",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "ethBlockNum",
+        "type": "uint256"
+      }
+    ],
+    "name": "Deposit",
+    "type": "event",
+    "signature": "0x36af321ec8d3c75236829c5317affd40ddb308863a1236d2d277a4025cccee1e"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "position",
+        "type": "uint256[3]"
+      },
+      {
+        "indexed": false,
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "confirmSignatures",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "name": "committedFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "StartedTransactionExit",
+    "type": "event",
+    "signature": "0x20d695720ae96d3511520c6f51d6ab23aa19a3796da77024ad027b344bb72530"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "nonce",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "StartedDepositExit",
+    "type": "event",
+    "signature": "0x0bdfdd54dc0a51ef460d31ddf95470493780afed2eee6046199b65c2b1d66b91"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "position",
+        "type": "uint256[4]"
+      },
+      {
+        "indexed": false,
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "ChallengedExit",
+    "type": "event",
+    "signature": "0xe1289dafb1083e540206bcd7d95a9705ba2590d6a9229c35a1c4c4c5efbda901"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "position",
+        "type": "uint256[4]"
+      },
+      {
+        "indexed": false,
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "FinalizedExit",
+    "type": "event",
+    "signature": "0xb5083a27a38f8a9aa999efb3306b7be96dc3f42010a968dd86627880ba7fdbe2"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "headers",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "txnsPerBlock",
+        "type": "uint256[]"
+      },
+      {
+        "name": "feesPerBlock",
+        "type": "uint256[]"
+      },
+      {
+        "name": "blockNum",
+        "type": "uint256"
+      }
+    ],
+    "name": "submitBlock",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xd84ba62f"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address"
+      }
+    ],
+    "name": "deposit",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function",
+    "signature": "0xf340fa01"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "nonce",
+        "type": "uint256"
+      },
+      {
+        "name": "committedFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "startDepositExit",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function",
+    "signature": "0x70e4abf6"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "txPos",
+        "type": "uint256[3]"
+      },
+      {
+        "name": "txBytes",
+        "type": "bytes"
+      },
+      {
+        "name": "proof",
+        "type": "bytes"
+      },
+      {
+        "name": "confirmSignatures",
+        "type": "bytes"
+      },
+      {
+        "name": "committedFee",
+        "type": "uint256"
+      }
+    ],
+    "name": "startTransactionExit",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function",
+    "signature": "0xcf024ea6"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "blockNumber",
+        "type": "uint256"
+      }
+    ],
+    "name": "startFeeExit",
+    "outputs": [],
+    "payable": true,
+    "stateMutability": "payable",
+    "type": "function",
+    "signature": "0xae80d8c8"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "exitingTxPos",
+        "type": "uint256[4]"
+      },
+      {
+        "name": "challengingTxPos",
+        "type": "uint256[2]"
+      },
+      {
+        "name": "txBytes",
+        "type": "bytes"
+      },
+      {
+        "name": "proof",
+        "type": "bytes"
+      }
+    ],
+    "name": "challengeFeeMismatch",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x82033e4c"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "exitingTxPos",
+        "type": "uint256[4]"
+      },
+      {
+        "name": "challengingTxPos",
+        "type": "uint256[2]"
+      },
+      {
+        "name": "txBytes",
+        "type": "bytes"
+      },
+      {
+        "name": "proof",
+        "type": "bytes"
+      },
+      {
+        "name": "confirmSignature",
+        "type": "bytes"
+      }
+    ],
+    "name": "challengeExit",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xd344e8e4"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "finalizeDepositExits",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0xfcf5f9eb"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "finalizeTransactionExits",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x884fc7d6"
+  },
+  {
+    "constant": false,
+    "inputs": [],
+    "name": "withdraw",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function",
+    "signature": "0x3ccfd60b"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "childChainBalance",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x385e2fd3"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_address",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function",
+    "signature": "0x70a08231"
+  }
+]
