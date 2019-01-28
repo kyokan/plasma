@@ -1,5 +1,5 @@
 import {assert} from 'chai';
-import {Outpoint} from '../domain/Outpoint';
+import Outpoint from '../domain/Outpoint';
 import Transaction from '../domain/Transaction';
 import {selectUTXOs} from './selectUTXOs';
 import Input from '../domain/Input';

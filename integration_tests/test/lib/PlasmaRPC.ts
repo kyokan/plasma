@@ -23,7 +23,7 @@ export interface GetBalanceResponse {
   balance: BNWire
 }
 
-export interface GetBlockResponse {
+export interface BlockWire {
   block: {
     header: {
       merkleRoot: Buffer
@@ -32,7 +32,8 @@ export interface GetBlockResponse {
       number: string
     },
     hash: Buffer
-  }
+  },
+  confirmedTransactions: ConfirmedTransactionWire[]
 }
 
 export interface InputWire {
@@ -61,11 +62,11 @@ export interface TransactionWire {
   txIdx: BNWire
 }
 
-export interface TransactionResponse {
+export interface ConfirmedTransactionWire {
   signatures: Buffer[]
   transaction: TransactionWire
 }
 
 export interface GetOutputsResponse {
-  confirmedTransactions: TransactionResponse[]
+  confirmedTransactions: ConfirmedTransactionWire[]
 }

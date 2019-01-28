@@ -1,7 +1,7 @@
 import BN = require('bn.js');
-import {parseHex} from '../lib/parseHex';
+import {parseHex, toHex} from '../lib/parseHex';
 import {keccak256} from '../lib/hash';
-import {OutputWire, toBNWire} from '../lib/PlasmaRPC';
+import {fromBNWire, OutputWire, toBNWire} from '../lib/PlasmaRPC';
 import {ZERO_ADDRESS} from './Addresses';
 import {toBig, toBuffer} from '../lib/numbers';
 
@@ -47,6 +47,14 @@ export default class Output {
       ZERO_ADDRESS,
       toBig(0),
       toBig(0),
+    );
+  }
+
+  static fromWire (output: OutputWire): Output {
+    return new Output(
+      toHex(output.newOwner),
+      fromBNWire(output.amount),
+      fromBNWire(output.depositNonce),
     );
   }
 }

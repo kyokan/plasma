@@ -2,19 +2,20 @@ import * as protoLoader from '@grpc/proto-loader';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import {pify} from './pify';
-import {GetBalanceResponse, GetBlockResponse, GetOutputsResponse, TransactionResponse} from './PlasmaRPC';
+import {GetBalanceResponse, BlockWire, GetOutputsResponse, ConfirmedTransactionWire} from './PlasmaRPC';
 import {toBig} from './numbers';
 import {parseHex, toHex} from './parseHex';
-import {fromWireTransaction, Outpoint} from '../domain/Outpoint';
+import Outpoint from '../domain/Outpoint';
 import Transaction from '../domain/Transaction';
 import BN = require('bn.js');
+import Block from '../domain/Block';
 
 export type ClientCB<T> = (err: any, res: T) => void;
 
 export interface IClient {
   getBalance (args: { address: Buffer }, cb: ClientCB<GetBalanceResponse>): void
 
-  getBlock (args: { number: number }, cb: ClientCB<GetBlockResponse>): void
+  getBlock (args: { number: number }, cb: ClientCB<BlockWire>): void
 
   getOutputs (args: { address: Buffer, spendable: boolean }, cb: ClientCB<GetOutputsResponse>): void
 
@@ -46,8 +47,9 @@ export default class PlasmaClient {
     return toBig(res.balance.hex);
   }
 
-  public async getBlock (number: number): Promise<GetBlockResponse> {
-    return pify<GetBlockResponse>((cb) => this.client.getBlock({number}, cb));
+  public async getBlock (number: number): Promise<Block> {
+    const blockWire = await pify<BlockWire>((cb) => this.client.getBlock({number}, cb));
+    return Block.fromWire(blockWire);
   }
 
   public async getUTXOs (address: string): Promise<Outpoint[]> {
@@ -55,7 +57,7 @@ export default class PlasmaClient {
       address: parseHex(address),
       spendable: true,
     }, cb));
-    return res.confirmedTransactions.map((r: TransactionResponse) => fromWireTransaction(r.transaction, address));
+    return res.confirmedTransactions.map((r: ConfirmedTransactionWire) => Outpoint.fromWireTx(r, address));
   }
 
   public async send (tx: Transaction, confirmSigs: Buffer[]): Promise<any> {

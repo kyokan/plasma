@@ -1,22 +1,23 @@
 import {Uint64BE} from 'int64-buffer';
 import {keccak256} from '../lib/hash';
-import {InputWire, toBNWire} from '../lib/PlasmaRPC';
-import {parseHex} from '../lib/parseHex';
+import {fromBNWire, InputWire, toBNWire} from '../lib/PlasmaRPC';
+import {parseHex, toHex} from '../lib/parseHex';
 import {toBig, toBuffer} from '../lib/numbers';
 import * as ejs from 'ethereumjs-util';
 import {ZERO_ADDRESS} from './Addresses';
 import BN = require('bn.js');
+import {ethSign, sign} from '../lib/sign';
 
 export default class Input {
-  private readonly blockNum: number;
+  public readonly blockNum: number;
 
-  private readonly txIdx: number;
+  public readonly txIdx: number;
 
-  private readonly outIdx: number;
+  public readonly outIdx: number;
 
-  private readonly owner: string;
+  public readonly owner: string;
 
-  private readonly depositNonce: BN;
+  public readonly depositNonce: BN;
 
   constructor (blockNum: number, txIdx: number, outIdx: number, owner: string, depositNonce: BN) {
     this.blockNum = blockNum;
@@ -42,8 +43,7 @@ export default class Input {
 
   public sign(privateKey: Buffer): Buffer {
     const hash = this.sigHash();
-    const sig = ejs.ecsign(hash, privateKey);
-    return Buffer.concat([ sig.r, sig.s, Buffer.from([ sig.v ]) ]);
+    return ethSign(hash, privateKey);
   }
 
   public toRPC (): InputWire {
@@ -78,5 +78,15 @@ export default class Input {
       ZERO_ADDRESS,
       toBig(0),
     );
+  }
+
+  static fromWire(input: InputWire): Input {
+    return new Input(
+      fromBNWire(input.blockNum).toNumber(),
+      fromBNWire(input.txIdx).toNumber(),
+      fromBNWire(input.outIdx).toNumber(),
+      toHex(input.owner),
+      fromBNWire(input.depositNonce),
+    )
   }
 }

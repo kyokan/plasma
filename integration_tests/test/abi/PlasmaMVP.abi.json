@@ -429,6 +429,19 @@
     "signature": "0xb5083a27a38f8a9aa999efb3306b7be96dc3f42010a968dd86627880ba7fdbe2"
   },
   {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "b",
+        "type": "bytes32"
+      }
+    ],
+    "name": "DebugBytes",
+    "type": "event",
+    "signature": "0x34c016738b6268fe19d0d16bca45b8c85ca973b95e2f41569dc3707ddb990a2c"
+  },
+  {
     "constant": false,
     "inputs": [
       {

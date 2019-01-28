@@ -4,7 +4,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
 	"math/big"
-)
+		)
 
 type ConfirmedTransaction struct {
 	Transaction Transaction

@@ -304,6 +304,8 @@ func (ps *Storage) doPackageBlock(height uint64, locker sync.Locker) (*BlockResu
 	}
 	batch.Put(blockMetaPrefixKey(block.Header.Number), enc)
 
+	ps.Transactions = make([]merkle.DualHashable, 0, 1024)
+
 	return &BlockResult{
 		MerkleRoot:         rlpMerklepHash,
 		NumberTransactions: big.NewInt(numberOfTransactions),

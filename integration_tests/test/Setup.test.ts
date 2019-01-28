@@ -81,13 +81,13 @@ async function teardown () {
   await ganache.stop();
   await plasma.kill('SIGTERM');
   logRunner('Cleaning up temporary files...');
-  // await new Promise((resolve, reject) => rimraf(tmpDir, (err) => {
-  //   if (err) {
-  //     return reject(err);
-  //   }
-  //
-  //   return resolve();
-  // }));
+  await new Promise((resolve, reject) => rimraf(tmpDir, (err) => {
+    if (err) {
+      return reject(err);
+    }
+
+    return resolve();
+  }));
 }
 
 async function checkGanacheStatus (w3: Web3) {

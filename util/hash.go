@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
+	"crypto/sha256"
 )
 
 type Hash []byte
@@ -30,18 +31,24 @@ func DoHash(b []byte) Hash {
 }
 
 func Sha256(b []byte) Hash {
-	hash := sha3.Sum256(b)
+	hash := sha256.Sum256(b)
 	return hash[:]
 }
 
 func ValidateSignature(hash, signature []byte, address common.Address) error {
+	hasher := sha3.NewLegacyKeccak256()
+	hasher.Write([]byte("\x19Ethereum Signed Message:\n32"))
+	hasher.Write(hash)
+	ethHash := hasher.Sum(nil)
+
 	if len(signature) == 65 && signature[64] > 26 {
 		signature[64] -= 27
 	}
-	pubKey, err := crypto.SigToPub(hash, signature)
+	pubKey, err := crypto.SigToPub(ethHash, signature)
 	if err != nil {
 		return err
 	}
+
 	signatureAddress := crypto.PubkeyToAddress(*pubKey)
 	if !AddressesEqual(&address, &signatureAddress) {
 		return errors.New("Invalid signature")

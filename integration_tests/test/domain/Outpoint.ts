@@ -1,25 +1,36 @@
 import BN = require('bn.js');
-import {fromBNWire, TransactionWire} from '../lib/PlasmaRPC';
-import {toHex} from '../lib/parseHex';
+import {ConfirmedTransactionWire} from '../lib/PlasmaRPC';
+import ConfirmedTransaction from './ConfirmedTransaction';
 
-export interface Outpoint {
-  amount: BN
-  txIdx: number
-  blockNum: number
-  outIdx: number
-}
+export default class Outpoint {
+  public txIdx: number;
 
-export function fromWireTransaction (tx: TransactionWire, owner: string): Outpoint {
-  const txIdx = fromBNWire(tx.txIdx).toNumber();
-  const blockNum = fromBNWire(tx.blockNum).toNumber();
-  const outIdx = owner === toHex(tx.output0.newOwner) ? 0 : 1;
+  public blockNum: number;
 
-  console.log(owner, toHex(tx.output0.newOwner));
+  public outIdx: number;
 
-  return {
-    txIdx,
-    blockNum,
-    outIdx,
-    amount: outIdx === 0 ? fromBNWire(tx.output0.amount) : fromBNWire(tx.output1.amount),
-  };
+  public amount: BN;
+
+  public transaction: ConfirmedTransaction;
+
+  constructor (txIdx: number, blockNum: number, outIdx: number, amount: BN, transaction: ConfirmedTransaction) {
+    this.txIdx = txIdx;
+    this.blockNum = blockNum;
+    this.outIdx = outIdx;
+    this.amount = amount;
+    this.transaction = transaction;
+  }
+
+  static fromWireTx (txWire: ConfirmedTransactionWire, owner: string): Outpoint {
+    const tx = ConfirmedTransaction.fromConfirmedTransactionWire(txWire);
+    const outIdx = owner === tx.output0.newOwner ? 0 : 1;
+
+    return new Outpoint(
+      tx.txIdx,
+      tx.blockNum,
+      outIdx,
+      outIdx === 0 ? tx.output0.amount : tx.output1.amount,
+      tx,
+    );
+  }
 }
