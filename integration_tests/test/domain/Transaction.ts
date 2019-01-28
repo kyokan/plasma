@@ -56,9 +56,9 @@ export default class Transaction {
 
   toArray () {
     return [
-      ...this.input0.toRLP(),
+      ...this.input0.toArray(),
       this.sig0,
-      ...this.input1.toRLP(),
+      ...this.input1.toArray(),
       this.sig1,
       ...this.output0.toArray(),
       ...this.output1.toArray(),
@@ -66,12 +66,13 @@ export default class Transaction {
     ];
   }
 
-  toRLP () {
-    return (ejs as any).rlp.encode(this.toArray());
+  toRLP (): Buffer {
+    return (ejs as any).rlp.encode(this.toArray()) as Buffer;
   }
 
   sigHash () {
     const rlp = this.toRLP();
+    console.log('rlp is', rlp.toString('hex'));
     return keccak256(rlp);
   }
 
@@ -79,6 +80,7 @@ export default class Transaction {
     this.sig0 = this.input0.sign(privateKey);
     this.sig1 = this.input1.sign(privateKey);
     const confSigHash = this.sigHash();
+    console.log('sigHashConf', confSigHash.toString('hex'));
     const sig = ejs.ecsign(confSigHash, privateKey);
     const confSig = Buffer.concat([sig.r, sig.s, Buffer.from([sig.v])]);
     return [confSig, confSig];

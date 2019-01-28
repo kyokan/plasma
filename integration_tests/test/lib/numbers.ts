@@ -24,6 +24,6 @@ export function toBuffer(num: string|number|BN|BNWire, bufLen: number = 32): Buf
   }
 
   const buf = ejs.toBuffer(num);
-  const diff = length - buf.length;
+  const diff = bufLen - buf.length;
   return Buffer.concat([ Buffer.from(new Uint8Array(diff)), buf]);
 }

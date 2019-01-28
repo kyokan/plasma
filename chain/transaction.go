@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
+	"log"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type Transaction struct {
@@ -129,6 +131,7 @@ func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
 
 func (tx *Transaction) SignatureHash() util.Hash {
 	encoded, _ := rlp.EncodeToBytes(tx)
+	log.Print("rlp is", hexutil.Encode(encoded))
 	return util.DoHash(encoded)
 }
 

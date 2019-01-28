@@ -34,7 +34,7 @@ async function setup () {
     .withNetworkID('development')
     .withDbPath(ganacheDir)
     .withUnlockedAccounts([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    .withBlockTime(3)
+    .withBlockTime(1)
     .build();
 
   logRunner('Starting ganache...');
@@ -54,7 +54,7 @@ async function setup () {
   const w3 = SharedWeb3.getShared();
   let started = false;
 
-  for (let i = 0; i < 3; i++){
+  for (let i = 0; i < 3; i++) {
     try {
       logRunner('Checking initialization...');
       await checkGanacheStatus(w3);
@@ -81,40 +81,40 @@ async function teardown () {
   await ganache.stop();
   await plasma.kill('SIGTERM');
   logRunner('Cleaning up temporary files...');
-  await new Promise((resolve, reject) => rimraf(tmpDir, (err) => {
-    if (err) {
-      return reject(err);
-    }
-
-    return resolve();
-  }));
+  // await new Promise((resolve, reject) => rimraf(tmpDir, (err) => {
+  //   if (err) {
+  //     return reject(err);
+  //   }
+  //
+  //   return resolve();
+  // }));
 }
 
-async function checkGanacheStatus(w3: Web3) {
+async function checkGanacheStatus (w3: Web3) {
   return new Promise((resolve, reject) => {
     w3.eth.getBlockNumber().then(resolve).catch(reject);
     setTimeout(() => reject('timed out'), 100);
-  })
+  });
 }
 
-async function migrateContract() {
+async function migrateContract () {
   return new Promise((resolve, reject) => {
     let finished = false;
     const truffle = spawn(path.resolve(__dirname, '..', 'node_modules', '.bin', 'truffle'), [
       'migrate',
-      '--reset'
+      '--reset',
     ], {
-      cwd: path.resolve(__dirname, '..', '..', 'plasma-mvp-rootchain')
+      cwd: path.resolve(__dirname, '..', '..', 'plasma-mvp-rootchain'),
     });
-    truffle.stdout.on('data', (d:Buffer) => {
+    truffle.stdout.on('data', (d: Buffer) => {
       const dStr = d.toString('utf-8');
-      if (dStr.indexOf(Config.PLASMA_CONTRACT_ADDRESS) > -1 ) {
+      if (dStr.indexOf(Config.PLASMA_CONTRACT_ADDRESS) > -1) {
         finished = true;
       }
 
       logPrefixed('truffle-stdout', 'cyan', dStr);
     });
-    truffle.stderr.on('data', (d:Buffer) => logPrefixed('truffle-stderr', 'cyan', d.toString('utf-8')));
+    truffle.stderr.on('data', (d: Buffer) => logPrefixed('truffle-stderr', 'cyan', d.toString('utf-8')));
     truffle.on('close', (code, signal) => {
       if (finished) {
         resolve();
@@ -127,7 +127,7 @@ async function migrateContract() {
   });
 }
 
-async function startPlasma() {
+async function startPlasma () {
   return new Promise((resolve, reject) => {
     setTimeout(() => reject(new Error('timed out starting plasma')), 10000);
     plasma = spawn(path.resolve(__dirname, '..', '..', 'target', 'plasma'), [

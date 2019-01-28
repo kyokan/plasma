@@ -2,9 +2,11 @@ import * as protoLoader from '@grpc/proto-loader';
 import * as grpc from 'grpc';
 import * as path from 'path';
 import {pify} from './pify';
-import {GetBalanceResponse, GetBlockResponse, GetOutputsResponse} from './PlasmaRPC';
+import {GetBalanceResponse, GetBlockResponse, GetOutputsResponse, TransactionResponse} from './PlasmaRPC';
 import {toBig} from './numbers';
-import {parseHex} from './parseHex';
+import {parseHex, toHex} from './parseHex';
+import {fromWireTransaction, Outpoint} from '../domain/Outpoint';
+import Transaction from '../domain/Transaction';
 import BN = require('bn.js');
 
 export type ClientCB<T> = (err: any, res: T) => void;
@@ -15,6 +17,8 @@ export interface IClient {
   getBlock (args: { number: number }, cb: ClientCB<GetBlockResponse>): void
 
   getOutputs (args: { address: Buffer, spendable: boolean }, cb: ClientCB<GetOutputsResponse>): void
+
+  send (args: any, cb: ClientCB<any>): void
 }
 
 let cachedClient: PlasmaClient;
@@ -46,8 +50,18 @@ export default class PlasmaClient {
     return pify<GetBlockResponse>((cb) => this.client.getBlock({number}, cb));
   }
 
-  public async getUTXOs (address: string): Promise<GetOutputsResponse> {
-    return pify<GetOutputsResponse>((cb) => this.client.getOutputs({address: parseHex(address), spendable: true}, cb));
+  public async getUTXOs (address: string): Promise<Outpoint[]> {
+    const res = await pify<GetOutputsResponse>((cb) => this.client.getOutputs({
+      address: parseHex(address),
+      spendable: true,
+    }, cb));
+    return res.confirmedTransactions.map((r: TransactionResponse) => fromWireTransaction(r.transaction, address));
+  }
+
+  public async send (tx: Transaction, confirmSigs: Buffer[]): Promise<any> {
+    console.log(JSON.stringify(tx.toRPC(confirmSigs)));
+    console.log(confirmSigs.map(toHex));
+    return pify((cb) => this.client.send({confirmed: tx.toRPC(confirmSigs)}, cb));
   }
 
   static getShared (): PlasmaClient {

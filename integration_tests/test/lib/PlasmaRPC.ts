@@ -1,4 +1,5 @@
 import BN = require('bn.js');
+import {toBig} from './numbers';
 
 export interface BNWire {
   hex: string
@@ -12,6 +13,10 @@ export function toBNWire (num: BN | number): BNWire {
   return {
     hex: num.toString('hex'),
   };
+}
+
+export function fromBNWire(num: BNWire): BN {
+  return toBig(num.hex);
 }
 
 export interface GetBalanceResponse {
@@ -44,18 +49,21 @@ export interface OutputWire {
   depositNonce: BNWire
 }
 
+export interface TransactionWire {
+  input0: InputWire
+  sig0: Buffer
+  input1: InputWire
+  sig1: Buffer
+  output0: OutputWire
+  output1: OutputWire
+  fee: BNWire
+  blockNum: BNWire
+  txIdx: BNWire
+}
+
 export interface TransactionResponse {
   signatures: Buffer[]
-  transaction: {
-    input0: InputWire
-    sig0: Buffer
-    input1: InputWire
-    sig1: Buffer
-    output0: OutputWire
-    fee: BNWire
-    blockNum: BNWire
-    txIdx: BNWire
-  }
+  transaction: TransactionWire
 }
 
 export interface GetOutputsResponse {

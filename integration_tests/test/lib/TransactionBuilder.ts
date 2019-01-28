@@ -1,12 +1,11 @@
-import { assert } from 'chai';
+import {assert} from 'chai';
 import {Outpoint} from '../domain/Outpoint';
 import Transaction from '../domain/Transaction';
-import BN = require('bn.js');
 import {selectUTXOs} from './selectUTXOs';
 import Input from '../domain/Input';
 import {toBig} from './numbers';
 import Output from '../domain/Output';
-import Output from '../domain/Output';
+import BN = require('bn.js');
 
 export default class TransactionBuilder {
   private readonly utxos: Outpoint[];
@@ -65,21 +64,21 @@ export default class TransactionBuilder {
       ), new Output(
         this.from,
         totalOutpoints.sub(totalAmount),
-        toBig(0)
+        toBig(0),
       ));
     }
 
     return new Transaction(
       new Input(
-        outpoints[0].txIdx,
         outpoints[0].blockNum,
+        outpoints[0].txIdx,
         outpoints[0].outIdx,
         this.from,
         toBig(0),
       ),
       outpoints[1] ? new Input(
-        outpoints[0].txIdx,
         outpoints[0].blockNum,
+        outpoints[0].txIdx,
         outpoints[0].outIdx,
         this.from,
         toBig(0),
@@ -90,7 +89,7 @@ export default class TransactionBuilder {
       0,
       null,
       null,
-      this.fee!
+      this.fee!,
     );
   }
 }

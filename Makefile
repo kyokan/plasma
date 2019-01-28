@@ -8,6 +8,9 @@ deps:
 build:
 	go build -o ./target/plasma ./cmd/plasma/main.go
 
+build-debug:
+	go build -gcflags "all=-N -l" -o ./target/plasma ./cmd/plasma/main.go
+
 build-contracts:
 	@echo "--> Compiling contracts..."
 	cd ./plasma-mvp-rootchain && truffle compile
