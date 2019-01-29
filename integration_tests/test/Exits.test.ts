@@ -7,7 +7,7 @@ import SendOperation from './domain/SendOperation';
 import ExitOperation from './domain/ExitOperation';
 import {wait} from './lib/wait';
 
-describe('Exits', () => {
+describe.only('Exits', () => {
   let contract: PlasmaContract;
   let client: PlasmaClient;
 

@@ -34,6 +34,6 @@ describe('Basic functionality', () => {
     }
 
     assert.equal(res.header.number, 1);
-    assert.equal(res.hash.toString('hex'), '75af368e110be48098d9d7b4d6009d5c20323895dd426534500834ffd5cef62c');
+    assert.equal(res.hash.toString('hex'), '3ba210900ba59a2539595d8c091cf3eaaf7c968d24124144763c5d683abde0b1');
   });
 });

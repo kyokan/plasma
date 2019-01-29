@@ -51,11 +51,10 @@ export default class ExitOperation {
     const callSigHash = sha256(Buffer.concat([sha256(confirmedTx.toRLP()), block.header.merkleRoot]));
     const callSig = ethSign(callSigHash, privateKey);
     const callSigs: [Buffer, Buffer] = confirmedTx.input1.owner === this.from ? [callSig, callSig] : [callSig, Buffer.from('') ];
-    console.log('roots are', block.header.rlpMerkleRoot, block.header.merkleRoot);
-    console.log('proof is', proof.toString('hex'));
-    console.log(confirmedTx);
+    console.log('call sig hash', callSigHash.toString('hex'));
+    console.log(Buffer.concat(callSigs).toString('hex'));
 
     const res = await this.contract.startExit(this.outpoint!, proof, callSigs, this.committedFee!, this.from);
-    console.log(res.events!.DebugBytes);
+    console.log(res.events!);
   }
 }
