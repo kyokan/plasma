@@ -11,7 +11,6 @@ import (
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/util"
-		"github.com/kyokan/plasma/types"
 )
 
 type TransactionSink struct {
@@ -128,12 +127,4 @@ func (sink *TransactionSink) VerifyTransaction(tx *chain.ConfirmedTransaction) (
 	}
 
 	return true, nil
-}
-
-func sendErrorResponse(ch chan<- types.TransactionRequest, req *types.TransactionRequest, err error) {
-	req.Response = &types.TransactionResponse{
-		Error: err,
-	}
-
-	ch <- *req
 }
