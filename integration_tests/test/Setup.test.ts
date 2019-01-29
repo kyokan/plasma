@@ -80,6 +80,11 @@ async function teardown () {
   testsFinished = true;
   await ganache.stop();
   await plasma.kill('SIGTERM');
+
+  if (process.env.KEEP_FILES) {
+    return;
+  }
+
   logRunner('Cleaning up temporary files...');
   await new Promise((resolve, reject) => rimraf(tmpDir, (err) => {
     if (err) {

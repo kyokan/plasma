@@ -24,10 +24,9 @@ install:
 abigen: deps
 	cd plasma-mvp-rootchain && \
 	truffle compile && \
-	mkdir -p abi/contracts gen/contracts && \
-	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > abi/contracts/PlasmaMVP.abi && \
-	abigen --abi abi/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out gen/contracts/plasmamvp.go && \
-	cp abi/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
+	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > ../eth/contracts/PlasmaMVP.abi && \
+	abigen --abi ../eth/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out ../eth/contracts/plasma_mvp.go && \
+	cp ../eth/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
 	rm -rf abi && \
 	rm -rf gen
 

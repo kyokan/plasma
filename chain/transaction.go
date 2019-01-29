@@ -10,7 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-		)
+	"log"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 type Transaction struct {
 	Input0  *Input
@@ -24,13 +26,31 @@ type Transaction struct {
 	TxIdx   *big.Int
 }
 
+type rlpTransaction struct {
+	BlkNum0       *UInt256
+	TxIdx0        *UInt256
+	OutIdx0       *UInt256
+	DepositNonce0 *UInt256
+	Sig0          Signature
+	BlkNum1       *UInt256
+	TxIdx1        *UInt256
+	OutIdx1       *UInt256
+	DepositNonce1 *UInt256
+	Sig1          Signature
+	Owner0        common.Address
+	Amount0       *UInt256
+	Owner1        common.Address
+	Amount1       *UInt256
+	Fee           *UInt256
+}
+
 func ZeroTransaction() *Transaction {
 	return &Transaction{
-		Input0: ZeroInput(),
-		Input1: ZeroInput(),
+		Input0:  ZeroInput(),
+		Input1:  ZeroInput(),
 		Output0: ZeroOutput(),
 		Output1: ZeroOutput(),
-		Fee: Zero(),
+		Fee:     Zero(),
 	}
 }
 
@@ -40,9 +60,9 @@ func (tx *Transaction) IsDeposit() bool {
 
 func (tx *Transaction) IsExit() bool {
 	return tx != nil &&
-		tx.Input1.IsZeroInput() &&
-		tx.Output1.IsZeroOutput() &&
-		tx.Output0.IsExit()
+			tx.Input1.IsZeroInput() &&
+			tx.Output1.IsZeroOutput() &&
+			tx.Output0.IsExit()
 }
 
 func (tx *Transaction) GetFee() *big.Int {
@@ -54,9 +74,9 @@ func (tx *Transaction) IsZeroTransaction() bool {
 		return false
 	}
 	return tx.Input0.IsZeroInput() &&
-		tx.Input1.IsZeroInput() &&
-		tx.Output0.IsZeroOutput() &&
-		tx.Output1.IsZeroOutput()
+			tx.Input1.IsZeroInput() &&
+			tx.Output0.IsZeroOutput() &&
+			tx.Output1.IsZeroOutput()
 }
 
 func (tx *Transaction) InputAt(idx uint8) *Input {
@@ -127,8 +147,29 @@ func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
 	return doHash(values, hasher)
 }
 
+func (tx *Transaction) signatureArray() rlpTransaction {
+	return rlpTransaction{
+		BlkNum0:       NewUint256(tx.Input0.BlkNum),
+		TxIdx0:        NewUint256(tx.Input0.TxIdx),
+		OutIdx0:       NewUint256(tx.Input0.OutIdx),
+		DepositNonce0: NewUint256(tx.Input0.DepositNonce),
+		Sig0:          tx.Sig0,
+		BlkNum1:       NewUint256(tx.Input1.BlkNum),
+		TxIdx1:        NewUint256(tx.Input1.TxIdx),
+		OutIdx1:       NewUint256(tx.Input1.OutIdx),
+		DepositNonce1: NewUint256(tx.Input1.DepositNonce),
+		Sig1:          tx.Sig1,
+		Owner0:        tx.Output0.Owner,
+		Amount0:       NewUint256(tx.Output0.Denom),
+		Owner1:        tx.Output1.Owner,
+		Amount1:       NewUint256(tx.Output1.Denom),
+		Fee:           NewUint256(tx.Fee),
+	}
+}
+
 func (tx *Transaction) SignatureHash() util.Hash {
-	encoded, _ := rlp.EncodeToBytes(tx)
+	encoded, _ := rlp.EncodeToBytes(tx.signatureArray())
+	log.Println("encoded", hexutil.Encode(encoded))
 	return util.DoHash(encoded)
 }
 
@@ -170,4 +211,3 @@ func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
 func (tx *Transaction) SetIndex(index uint32) {
 	tx.TxIdx = big.NewInt(int64(index))
 }
-

@@ -5,6 +5,7 @@ import PlasmaClient from './lib/PlasmaClient';
 import {assertBigEqual} from './lib/assertBigEqual';
 import {withRetryCondition} from './lib/withRetries';
 import BN = require('bn.js');
+import {wait} from './lib/wait';
 
 describe('Deposits', () => {
   let contract: PlasmaContract;
@@ -21,6 +22,7 @@ describe('Deposits', () => {
     await contract.deposit(depBal, Config.USER_ADDRESSES[1]);
     const balance = await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.gt(toBig(0)), 30);
     assertBigEqual(balance, depBal);
+    await wait(10000);
   });
 
   it('should increase the user\'s balance upon further deposits', async function () {

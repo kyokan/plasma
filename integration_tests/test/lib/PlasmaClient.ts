@@ -61,8 +61,6 @@ export default class PlasmaClient {
   }
 
   public async send (tx: Transaction, confirmSigs: Buffer[]): Promise<any> {
-    console.log(JSON.stringify(tx.toRPC(confirmSigs)));
-    console.log(confirmSigs.map(toHex));
     return pify((cb) => this.client.send({confirmed: tx.toRPC(confirmSigs)}, cb));
   }
 

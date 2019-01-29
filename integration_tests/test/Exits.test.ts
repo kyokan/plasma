@@ -7,7 +7,7 @@ import SendOperation from './domain/SendOperation';
 import ExitOperation from './domain/ExitOperation';
 import {wait} from './lib/wait';
 
-describe.only('Exits', () => {
+describe('Exits', () => {
   let contract: PlasmaContract;
   let client: PlasmaClient;
 
@@ -29,12 +29,14 @@ describe.only('Exits', () => {
 
   it('should exit', async function () {
     this.timeout(30000);
-    await wait(10000);
+    await wait(5000);
     const outpoints = await client.getUTXOs(Config.USER_ADDRESSES[5]);
     const exitOp = new ExitOperation(contract, client, Config.USER_ADDRESSES[5])
       .withOutpoint(outpoints[0])
-      .withCommittedFee(toBig(20000));
+      .withCommittedFee(toBig(500000));
 
-    await exitOp.exit(Config.PRIVATE_KEYS[5]);
+    // NOTE: Need to use PRIVATE_KEYS[4] below to generate the
+    // correct confirm sigs.
+    await exitOp.exit(Config.PRIVATE_KEYS[4]);
   });
 });

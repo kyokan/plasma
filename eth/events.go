@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
+	"github.com/kyokan/plasma/eth/contracts"
 )
 
 func (c *clientState) filterOpts(start uint64) (*bind.FilterOpts, error) {
@@ -15,6 +15,8 @@ func (c *clientState) filterOpts(start uint64) (*bind.FilterOpts, error) {
 	}
 
 	end := header.Number.Uint64()
+	log.Println("start is", start)
+	log.Println("end is", end)
 
 	return &bind.FilterOpts{
 		Start:   start,
@@ -73,12 +75,12 @@ func (c *clientState) BlockSubmittedFilter(start uint64) ([]contracts.PlasmaBloc
 	return events, end, nil
 }
 
-func (c *clientState) DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error) {
+func (c *clientState) DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error) {
 	opts, err := c.filterOpts(start)
 	if err != nil {
 		return nil, 0, err
 	}
-	end := *opts.End
+	opts.End = &end
 
 
 	itr, err := c.contract.FilterDeposit(opts)

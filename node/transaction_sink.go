@@ -11,8 +11,7 @@ import (
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
 	"github.com/kyokan/plasma/util"
-	"github.com/kyokan/plasma/txdag"
-	"github.com/kyokan/plasma/types"
+		"github.com/kyokan/plasma/types"
 )
 
 type TransactionSink struct {
@@ -37,52 +36,6 @@ func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.ConfirmedTransac
 			}
 
 			sink.c <- tx
-		}
-	}()
-}
-
-func (sink *TransactionSink) AcceptTransactionRequests(chch <-chan chan types.TransactionRequest) {
-	go func() {
-		for {
-			ch := <-chch
-			req := <-ch
-			balance, err := sink.storage.Balance(&req.From)
-
-			if err != nil {
-				sendErrorResponse(ch, &req, err)
-				return
-			}
-
-			if balance.Cmp(req.Amount) <= 0 {
-				sendErrorResponse(ch, &req, errors.New("insufficient funds"))
-				return
-			}
-
-			txs, err := sink.storage.SpendableTxs(&req.From)
-
-			if err != nil {
-				sendErrorResponse(ch, &req, errors.New("insufficient funds"))
-				return
-			}
-			var tx *chain.ConfirmedTransaction
-			if req.Transaction.IsZeroTransaction() {
-				tx, err = txdag.FindBestUTXOs(req.From, req.To, req.Amount, txs)
-
-				if err != nil {
-					sendErrorResponse(ch, &req, err)
-					return
-				}
-			} else {
-				tx = &req.ConfirmedTransaction
-			}
-
-			sink.c <- *tx
-
-			req.Response = &types.TransactionResponse{
-				ConfirmedTransaction: tx,
-			}
-
-			ch <- req
 		}
 	}()
 }

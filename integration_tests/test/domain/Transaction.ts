@@ -6,6 +6,7 @@ import * as ejs from 'ethereumjs-util';
 import {keccak256} from '../lib/hash';
 import BN = require('bn.js');
 import {ethSign, sign} from '../lib/sign';
+import {toHex} from '../lib/parseHex';
 
 export default class Transaction {
   public readonly input0: Input;
@@ -57,9 +58,9 @@ export default class Transaction {
 
   toArray () {
     return [
-      ...this.input0.toArray(),
+      ...this.input0.toConfirmSigArray(),
       this.sig0,
-      ...this.input1.toArray(),
+      ...this.input1.toConfirmSigArray(),
       this.sig1,
       ...this.output0.toArray(),
       ...this.output1.toArray(),
@@ -68,7 +69,9 @@ export default class Transaction {
   }
 
   toRLP (): Buffer {
-    return (ejs as any).rlp.encode(this.toArray()) as Buffer;
+    const ret = (ejs as any).rlp.encode(this.toArray()) as Buffer;
+    console.log(toHex(ret));
+    return ret;
   }
 
   sigHash () {

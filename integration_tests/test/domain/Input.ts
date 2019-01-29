@@ -66,6 +66,15 @@ export default class Input {
     ];
   }
 
+  public toConfirmSigArray() {
+    return [
+      toBuffer(this.blockNum),
+      toBuffer(this.txIdx),
+      toBuffer(this.outIdx),
+      toBuffer(this.depositNonce),
+    ];
+  }
+
   public toRLP () {
     return (ejs as any).rlp.encode(this.toArray());
   }

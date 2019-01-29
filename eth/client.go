@@ -13,11 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
-	"github.com/kyokan/plasma/plasma-mvp-rootchain/gen/contracts"
+	"github.com/kyokan/plasma/eth/contracts"
 	"github.com/kyokan/plasma/chain"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
-		)
+	)
 
 const SignaturePreamble = "\x19Ethereum Signed Message:\n"
 
@@ -53,14 +53,13 @@ type Client interface {
 	StartFeeExit(*big.Int) error
 
 	ChallengeExit(nonce *big.Int, opts *ChallengeExitOpts) error
-	ChallengeFeeMismatch(nonce *big.Int, opts *ChallengeExitOpts) error
 
 	FinalizeDepositExits() error
 	FinalizeTransactionExits() error
 
 	AddedToBalancesFilter(uint64) ([]contracts.PlasmaAddedToBalances, uint64, error)
 	BlockSubmittedFilter(uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error)
-	DepositFilter(start uint64) ([]contracts.PlasmaDeposit, uint64, error)
+	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
 	ChallengedExitFilter(uint64) ([]contracts.PlasmaChallengedExit, uint64, error)
 
@@ -68,6 +67,8 @@ type Client interface {
 
 	StartedTransactionExitFilter(uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
 	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
+
+	EthereumBlockHeight() (uint64, error)
 }
 
 type DepositEvent struct {
@@ -156,6 +157,15 @@ func (c *clientState) SubscribeDeposits(address common.Address, resChan chan<- D
 	}()
 
 	return nil
+}
+
+func (c *clientState) EthereumBlockHeight() (uint64, error) {
+	header, err := c.client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return header.Number.Uint64(), nil
 }
 
 func parseDepositEvent(depositAbi *abi.ABI, resChan chan<- DepositEvent, raw *types.Log) {

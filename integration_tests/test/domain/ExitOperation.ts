@@ -40,6 +40,7 @@ export default class ExitOperation {
     assert(this.committedFee, 'a fee must be provided');
     const block = await this.client.getBlock(this.outpoint!.blockNum);
     const merkle = new MerkleTree();
+    console.log(block.transactions.length, block.header.number);
     for (const tx of block.transactions) {
       console.log('item added');
       console.log('rlp is', tx.toRLP().toString('hex'));
