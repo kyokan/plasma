@@ -15,10 +15,10 @@ describe('Exits', () => {
     this.timeout(60000);
     contract = PlasmaContract.getShared();
     client = PlasmaClient.getShared();
-    const depBal = toBig(1000);
+    const depBal = toBig(1000000000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[4]);
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[4]), (r) => r.eq(depBal), 30);
-    const sendBal = toBig(900);
+    const sendBal = toBig(999000000);
     const sendOp = new SendOperation(client, Config.USER_ADDRESSES[4])
       .forValue(sendBal)
       .toAddress(Config.USER_ADDRESSES[5])
