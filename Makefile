@@ -38,15 +38,15 @@ start: deps build
 
 clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules
-	rm -rf ./plasma-mvp-rootchain/abi
-	rm -rf ./plasma-mvp-rootchain/gen
 	rm -rf ./plasma-mvp-rootchain/build
+	rm -rf ./integration_tests/node_modules
 	rm -rf ./target
 	rm -rf ~/.plasma
 	rm -rf .vendor-new
 
-test:
+test-all:
 	@go test ./...
+	npm --prefix ./integration_tests test
 
 package:
 	fpm -f -p target -s dir -t deb -n plasma -a amd64 -m "Kyokan, LLC <mslipper@kyokan.io>" \
