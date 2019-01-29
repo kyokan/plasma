@@ -40,11 +40,7 @@ export default class ExitOperation {
     assert(this.committedFee, 'a fee must be provided');
     const block = await this.client.getBlock(this.outpoint!.blockNum);
     const merkle = new MerkleTree();
-    console.log(block.transactions.length, block.header.number);
     for (const tx of block.transactions) {
-      console.log('item added');
-      console.log('rlp is', tx.toRLP().toString('hex'));
-      console.log('hash is', sha256(tx.toRLP()));
       merkle.addItem(sha256(tx.toRLP()));
     }
     const {proof} = merkle.generateProofAndRoot(this.outpoint!.txIdx);
@@ -52,10 +48,6 @@ export default class ExitOperation {
     const callSigHash = sha256(Buffer.concat([sha256(confirmedTx.toRLP()), block.header.merkleRoot]));
     const callSig = ethSign(callSigHash, privateKey);
     const callSigs: [Buffer, Buffer] = confirmedTx.input1.owner === this.from ? [callSig, callSig] : [callSig, Buffer.from('') ];
-    console.log('call sig hash', callSigHash.toString('hex'));
-    console.log(Buffer.concat(callSigs).toString('hex'));
-
-    const res = await this.contract.startExit(this.outpoint!, proof, callSigs, this.committedFee!, this.from);
-    console.log(res.events!);
+    await this.contract.startExit(this.outpoint!, proof, callSigs, this.committedFee!, this.from);
   }
 }
