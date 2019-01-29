@@ -40,6 +40,8 @@ clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules
 	rm -rf ./plasma-mvp-rootchain/build
 	rm -rf ./integration_tests/node_modules
+	rm -rf ./eth/contracts/plasma_mvp.go
+	rm -rf ./eth/contracts/PlasmaMVP.abi
 	rm -rf ./target
 	rm -rf ~/.plasma
 	rm -rf .vendor-new
