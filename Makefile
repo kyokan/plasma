@@ -11,11 +11,6 @@ build:
 build-debug:
 	go build -gcflags "all=-N -l" -o ./target/plasma ./cmd/plasma/main.go
 
-build-contracts:
-	@echo "--> Compiling contracts..."
-	cd ./plasma-mvp-rootchain && truffle compile
-	cat ./plasma-mvp-rootchain/build/contracts/PlasmaMVP.json | jq .abi > ./integration_tests/test/abi/PlasmaMVP.abi.json
-
 build-cross:
 	docker build ./build --no-cache -t plasma-cross-compilation:latest
 	mkdir -p ./target
@@ -31,20 +26,16 @@ abigen: deps
 	truffle compile && \
 	mkdir -p abi/contracts gen/contracts && \
 	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > abi/contracts/PlasmaMVP.abi && \
-	abigen --abi abi/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out gen/contracts/plasmamvp.go
+	abigen --abi abi/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out gen/contracts/plasmamvp.go && \
+	cp abi/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
+	rm -rf abi && \
+	rm -rf gen
 
 protogen:
 	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
 
-build-all: abigen build
-
 start: deps build
 	@./bin/start
-
-setup: build
-	rm -rf ./test/storage/ganache/*
-	rm -rf ./test/storage/root
-	@./bin/setup
 
 clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules
@@ -53,8 +44,6 @@ clean:
 	rm -rf ./plasma-mvp-rootchain/build
 	rm -rf ./target
 	rm -rf ~/.plasma
-	rm -rf ./test/storage/ganache/*
-	rm -rf ./test/storage/root
 	rm -rf .vendor-new
 
 test:

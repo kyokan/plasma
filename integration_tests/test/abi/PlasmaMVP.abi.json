@@ -1,20 +1,6 @@
 [
   {
     "constant": true,
-    "inputs": [],
-    "name": "txIndexFactor",
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "payable": false,
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "constant": true,
     "inputs": [
       {
         "name": "",
@@ -35,7 +21,7 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "maxTxnsPerBLock",
+    "name": "lastCommittedBlock",
     "outputs": [
       {
         "name": "",
@@ -48,8 +34,58 @@
   },
   {
     "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "plasmaChain",
+    "outputs": [
+      {
+        "name": "header",
+        "type": "bytes32"
+      },
+      {
+        "name": "numTxns",
+        "type": "uint256"
+      },
+      {
+        "name": "feeAmount",
+        "type": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
     "inputs": [],
-    "name": "lastCommittedBlock",
+    "name": "operator",
+    "outputs": [
+      {
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "depositExitQueue",
     "outputs": [
       {
         "name": "",
@@ -97,8 +133,13 @@
   },
   {
     "constant": true,
-    "inputs": [],
-    "name": "blockIndexFactor",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "txExitQueue",
     "outputs": [
       {
         "name": "",
@@ -192,7 +233,7 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "depositNonce",
+    "name": "minExitBond",
     "outputs": [
       {
         "name": "",
@@ -205,28 +246,11 @@
   },
   {
     "constant": true,
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "childChain",
+    "inputs": [],
+    "name": "depositNonce",
     "outputs": [
       {
-        "name": "root",
-        "type": "bytes32"
-      },
-      {
-        "name": "numTxns",
-        "type": "uint256"
-      },
-      {
-        "name": "feeAmount",
-        "type": "uint256"
-      },
-      {
-        "name": "createdAt",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -239,6 +263,23 @@
     "payable": false,
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "oldOperator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "name": "newOperator",
+        "type": "address"
+      }
+    ],
+    "name": "ChangedOperator",
+    "type": "event"
   },
   {
     "anonymous": false,
@@ -262,7 +303,7 @@
     "inputs": [
       {
         "indexed": false,
-        "name": "root",
+        "name": "header",
         "type": "bytes32"
       },
       {
@@ -360,6 +401,11 @@
         "indexed": false,
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "committedFee",
+        "type": "uint256"
       }
     ],
     "name": "StartedDepositExit",
@@ -410,28 +456,18 @@
     "type": "event"
   },
   {
-    "anonymous": false,
+    "constant": false,
     "inputs": [
       {
-        "indexed": false,
-        "name": "b",
-        "type": "bytes32"
+        "name": "newOperator",
+        "type": "address"
       }
     ],
-    "name": "DebugBytes",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "name": "b",
-        "type": "bytes"
-      }
-    ],
-    "name": "DD",
-    "type": "event"
+    "name": "changeOperator",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
     "constant": false,
@@ -445,7 +481,7 @@
         "type": "uint256[]"
       },
       {
-        "name": "feesPerBlock",
+        "name": "feePerBlock",
         "type": "uint256[]"
       },
       {
@@ -527,38 +563,16 @@
       {
         "name": "blockNumber",
         "type": "uint256"
+      },
+      {
+        "name": "committedFee",
+        "type": "uint256"
       }
     ],
     "name": "startFeeExit",
     "outputs": [],
     "payable": true,
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "constant": false,
-    "inputs": [
-      {
-        "name": "exitingTxPos",
-        "type": "uint256[4]"
-      },
-      {
-        "name": "challengingTxPos",
-        "type": "uint256[2]"
-      },
-      {
-        "name": "txBytes",
-        "type": "bytes"
-      },
-      {
-        "name": "proof",
-        "type": "bytes"
-      }
-    ],
-    "name": "challengeFeeMismatch",
-    "outputs": [],
-    "payable": false,
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -626,7 +640,7 @@
   {
     "constant": true,
     "inputs": [],
-    "name": "childChainBalance",
+    "name": "plasmaChainBalance",
     "outputs": [
       {
         "name": "",

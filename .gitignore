@@ -10,3 +10,4 @@ package-lock.json
 ./*.yaml
 database*
 target/
+integration_tests/test/abi/PlasmaMVP.abi.josn
