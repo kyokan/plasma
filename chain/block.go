@@ -7,18 +7,16 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
-// JSON tags needed for test fixtures
 type BlockHeader struct {
-	MerkleRoot    util.Hash `json:"MerkleRoot"`
-	RLPMerkleRoot util.Hash `json:"RLPMerkleRoot"`
-	PrevHash      util.Hash `json:"PrevHash"`
-	Number        uint64    `json:"Number"`
+	MerkleRoot    util.Hash
+	RLPMerkleRoot util.Hash
+	PrevHash      util.Hash
+	Number        uint64
 }
 
-// JSON tags needed for test fixtures
 type Block struct {
-	Header    *BlockHeader `json:"Header"`
-	BlockHash util.Hash    `json:"BlockHash"`
+	Header    *BlockHeader
+	BlockHash util.Hash
 }
 
 type BlockMetadata struct {

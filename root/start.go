@@ -36,7 +36,7 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	go node.StartExitListener(storage, plasma, context.Background())
 
 	server := NewServer(ctx, storage)
-	go server.Start(config.RPCPort, config.RESTPort)
+	go server.Start(config.RPCPort)
 
 	// TODO: add an exit listener to make sure to add an exit transaction to root node.
 	// Also add an exit block to the plasma contract.

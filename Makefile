@@ -46,8 +46,7 @@ clean:
 	rm -rf ~/.plasma
 	rm -rf .vendor-new
 
-test-all:
-	@go test ./...
+test-integration:
 	npm --prefix ./integration_tests test
 
 package:

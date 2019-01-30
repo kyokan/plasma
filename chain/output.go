@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/kyokan/plasma/util"
 	"math/big"
-)
+	)
 
 type Output struct {
 	Owner        common.Address
@@ -69,6 +69,6 @@ func (out *Output) Hash() util.Hash {
 	buf := new(bytes.Buffer)
 	buf.Write(out.Owner.Bytes())
 	buf.Write(out.Denom.Bytes())
-	digest := util.DoHash(buf.Bytes())
+	digest := util.Keccak256(buf.Bytes())
 	return digest
 }

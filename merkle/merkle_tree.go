@@ -3,27 +3,23 @@ package merkle
 import (
 	"encoding/binary"
 	"github.com/kyokan/plasma/util"
-	"math/big"
 )
 
 type DualHashable interface {
-	util.Hashable
 	util.RLPHashable
-	SetIndex(uint32)
-	GetFee() *big.Int
 }
 
-func getMerkleRoot(hasher util.Hasher, leaves []DualHashable) ([]byte, []byte) {
+func getMerkleRoot(hasher util.Hasher, leaves []DualHashable) ([]byte) {
 	switch len(leaves) {
 	case 0:
-		return nil, nil
+		return nil
 	case 1:
-		return leaves[0].RLPHash(hasher), leaves[0].Hash(hasher)
+		return leaves[0].RLPHash(hasher)
 	default:
 		mid := (1 + len(leaves)) / 2
-		lhsRLP, lhs := getMerkleRoot(hasher, leaves[:mid])
-		rhsRLP, rhs := getMerkleRoot(hasher, leaves[mid:])
-		return hasher(encodeLength(lhsRLP, rhsRLP)), hasher(encodeLength(lhs, rhs))
+		lhsRLP := getMerkleRoot(hasher, leaves[:mid])
+		rhsRLP := getMerkleRoot(hasher, leaves[mid:])
+		return hasher(encodeLength(lhsRLP, rhsRLP))
 	}
 }
 
@@ -36,6 +32,6 @@ func encodeLength(lhs, rhs []byte) []byte {
 	return append(left, right...)
 }
 
-func GetMerkleRoot(leaves []DualHashable) ([]byte, []byte) {
+func GetMerkleRoot(leaves []DualHashable) ([]byte) {
 	return getMerkleRoot(util.Sha256, leaves)
 }

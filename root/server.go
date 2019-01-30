@@ -11,12 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-	"github.com/gin-gonic/gin"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"net/http"
-	"strconv"
-	"time"
-)
+					)
 
 type Server struct {
 	storage db.PlasmaStorage
@@ -30,7 +25,7 @@ func NewServer(ctx context.Context, storage db.PlasmaStorage) (*Server) {
 	}
 }
 
-func (r *Server) Start(rpcPort int, restPort int) error {
+func (r *Server) Start(rpcPort int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", rpcPort))
 	if err != nil {
 		log.Println("error", err)
@@ -52,91 +47,6 @@ func (r *Server) Start(rpcPort int, restPort int) error {
 	}()
 
 	log.Printf("Started RPC server on port %d", rpcPort)
-	if err = r.startREST(restPort); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *Server) startREST(port int) error {
-	rtr := gin.Default()
-	rtr.GET("/v1/balance/:address", func(c *gin.Context) {
-		addr, err := hexutil.Decode(c.Param("address"))
-		if err != nil {
-			c.Status(http.StatusBadRequest)
-			return
-		}
-		res, err := r.GetBalance(c, &pb.GetBalanceRequest{
-			Address: addr,
-		})
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		c.JSON(http.StatusOK, res)
-	})
-	rtr.GET("/v1/outputs/:address/:spendable", func(c *gin.Context) {
-		addr, err := hexutil.Decode(c.Param("address"))
-		if err != nil {
-			c.Status(http.StatusBadRequest)
-			return
-		}
-		spendable := c.Param("spendable") == "true"
-		res, err := r.GetOutputs(c, &pb.GetOutputsRequest{
-			Address:   addr,
-			Spendable: spendable,
-		})
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		c.JSON(http.StatusOK, res)
-	})
-	rtr.GET("/v1/block/:number", func(c *gin.Context) {
-		numStr := c.Param("number")
-		num, err := strconv.Atoi(numStr)
-		if err != nil {
-			c.Status(http.StatusBadRequest)
-			return
-		}
-		res, err := r.GetBlock(c, &pb.GetBlockRequest{
-			Number: uint64(num),
-		})
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		c.JSON(http.StatusOK, res)
-	})
-	rtr.GET("/v1/blockheight", func(c *gin.Context) {
-		res, err := r.BlockHeight(c, &pb.EmptyRequest{})
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		c.JSON(http.StatusOK, res)
-	})
-
-	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: rtr,
-	}
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
-		}
-	}()
-	go func() {
-		<-r.ctx.Done()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Fatal("Server Shutdown:", err)
-		}
-	}()
-
-	log.Printf("started REST server on %d\n", port)
 
 	return nil
 }

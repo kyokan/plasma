@@ -264,13 +264,12 @@ func (ps *Storage) doPackageBlock(height uint64) (*BlockResult, error) {
 	numberOfTransactions := ps.currentTxIdx
 	currentFees := big.NewInt(ps.currentBlockFees.Int64())
 
-	rlpMerklepHash, merkleHash := merkle.GetMerkleRoot(ps.transactions)
+	merkleRoot := merkle.GetMerkleRoot(ps.transactions)
 
 	header := chain.BlockHeader{
-		MerkleRoot:    merkleHash,
-		RLPMerkleRoot: rlpMerklepHash,
-		PrevHash:      ps.prevBlockHash,
-		Number:        blkNum,
+		MerkleRoot: merkleRoot,
+		PrevHash:   ps.prevBlockHash,
+		Number:     blkNum,
 	}
 
 	block := chain.Block{
@@ -279,11 +278,11 @@ func (ps *Storage) doPackageBlock(height uint64) (*BlockResult, error) {
 	}
 	ps.prevBlockHash = block.BlockHash
 
-	enc, err := rlp.EncodeToBytes(rlpMerklepHash)
+	enc, err := rlp.EncodeToBytes(merkleRoot)
 	if err != nil {
 		return nil, err
 	}
-	batch.Put(merklePrefixKey(hexutil.Encode(merkleHash)), enc)
+	batch.Put(merklePrefixKey(hexutil.Encode(merkleRoot)), enc)
 
 	enc, err = rlp.EncodeToBytes(block)
 	if err != nil {
@@ -311,7 +310,7 @@ func (ps *Storage) doPackageBlock(height uint64) (*BlockResult, error) {
 	ps.currentTxIdx = 0
 
 	return &BlockResult{
-		MerkleRoot:         rlpMerklepHash,
+		MerkleRoot:         merkleRoot,
 		NumberTransactions: big.NewInt(numberOfTransactions),
 		BlockFees:          currentFees,
 		BlockNumber:        big.NewInt(int64(block.Header.Number)),
@@ -319,7 +318,7 @@ func (ps *Storage) doPackageBlock(height uint64) (*BlockResult, error) {
 }
 
 func (ps *Storage) isTransactionValid(confirmed chain.ConfirmedTransaction) ([]*chain.ConfirmedTransaction, error) {
-	empty := []*chain.ConfirmedTransaction{&chain.ConfirmedTransaction{Transaction: *chain.ZeroTransaction(),}}
+	empty := []*chain.ConfirmedTransaction{{Transaction: *chain.ZeroTransaction(),}}
 	if confirmed.Transaction.IsDeposit() {
 		return empty, nil
 	}

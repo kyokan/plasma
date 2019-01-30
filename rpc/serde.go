@@ -144,19 +144,3 @@ func DeserializeOutput(out *pb.Output) (*chain.Output) {
 		DepositNonce: DeserializeBig(out.DepositNonce),
 	}
 }
-
-func DeserializeBlock(block *pb.Block) (*chain.Block) {
-	return &chain.Block{
-		Header: &chain.BlockHeader{
-			MerkleRoot:    block.Header.MerkleRoot,
-			RLPMerkleRoot: block.Header.RlpMerkleRoot,
-			PrevHash:      block.Header.PrevHash,
-			Number:        block.Header.Number,
-		},
-		BlockHash: block.Hash,
-	}
-}
-
-func De0x(in string) string {
-	return strings.Replace(in, "0x", "", 1)
-}

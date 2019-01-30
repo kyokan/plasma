@@ -20,7 +20,7 @@ type RLPHashable interface {
 	RLPHash(Hasher) Hash
 }
 
-func DoHash(b []byte) Hash {
+func Keccak256(b []byte) Hash {
 	hash := sha3.NewLegacyKeccak256()
 
 	var buf []byte

@@ -30,7 +30,7 @@ func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.ConfirmedTransac
 			valid, err := sink.VerifyTransaction(&tx)
 
 			if !valid || err != nil {
-				log.Printf("Transaction with hash %s is not valid: %s", tx.Hash(util.Sha256), err)
+				log.Printf("Transaction with hash %s is not valid: %s", tx.RLPHash(util.Sha256), err)
 				continue
 			}
 

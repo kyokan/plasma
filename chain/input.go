@@ -61,7 +61,7 @@ func (in *Input) Hash() util.Hash {
 	binary.Write(buf, binary.BigEndian, in.OutIdx)
 	binary.Write(buf, binary.BigEndian, in.DepositNonce)
 	binary.Write(buf, binary.BigEndian, in.Owner)
-	digest := util.DoHash(buf.Bytes())
+	digest := util.Keccak256(buf.Bytes())
 	return digest
 }
 
@@ -88,6 +88,6 @@ func (in *Input) SignatureHash() util.Hash {
 		itf.DepositNonce = NewUint256(nil)
 	}
 	encoded, _ := rlp.EncodeToBytes(&itf)
-	return util.DoHash(encoded)
+	return util.Keccak256(encoded)
 }
 

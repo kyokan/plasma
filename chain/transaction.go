@@ -1,18 +1,13 @@
 package chain
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
-	"fmt"
+				"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-	"log"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-)
+		)
 
 type Transaction struct {
 	Input0  *Input
@@ -131,23 +126,7 @@ func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
 }
 
-func (tx *Transaction) Hash(hasher util.Hasher) util.Hash {
-	values := []interface{}{
-		tx.Input0.Hash(),
-		tx.Sig0[:],
-		tx.Input1.Hash(),
-		tx.Sig1[:],
-		tx.Output0.Hash(),
-		tx.Output1.Hash(),
-		tx.Fee,
-		tx.BlkNum,
-		tx.TxIdx,
-	}
-
-	return doHash(values, hasher)
-}
-
-func (tx *Transaction) signatureArray() rlpTransaction {
+func (tx *Transaction) rlpRepresentation() rlpTransaction {
 	return rlpTransaction{
 		BlkNum0:       NewUint256(tx.Input0.BlkNum),
 		TxIdx0:        NewUint256(tx.Input0.TxIdx),
@@ -168,46 +147,14 @@ func (tx *Transaction) signatureArray() rlpTransaction {
 }
 
 func (tx *Transaction) SignatureHash() util.Hash {
-	encoded, _ := rlp.EncodeToBytes(tx.signatureArray())
-	log.Println("encoded", hexutil.Encode(encoded))
-	return util.DoHash(encoded)
-}
-
-func doHash(values []interface{}, hasher util.Hasher) util.Hash {
-	buf := new(bytes.Buffer)
-
-	for _, component := range values {
-		var err error
-		switch t := component.(type) {
-		case util.Hash:
-			_, err = buf.Write(t)
-		case []byte:
-			_, err = buf.Write(t)
-		case *big.Int:
-			_, err = buf.Write(t.Bytes())
-		case uint64, uint32:
-			err = binary.Write(buf, binary.BigEndian, t)
-		default:
-			err = errors.New(fmt.Sprint("invalid component type %v", t))
-		}
-
-		if err != nil {
-			panic(err)
-		}
-	}
-	return hasher(buf.Bytes())
+	return tx.RLPHash(util.Keccak256)
 }
 
 func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
-	bytes, err := rlp.EncodeToBytes(tx)
-
+	bytes, err := rlp.EncodeToBytes(tx.rlpRepresentation())
 	if err != nil {
 		panic(err)
 	}
 
 	return hasher(bytes)
-}
-
-func (tx *Transaction) SetIndex(index uint32) {
-	tx.TxIdx = big.NewInt(int64(index))
 }
