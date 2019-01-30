@@ -1,10 +1,8 @@
 package chain
 
 import (
-	"bytes"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/util"
-	"math/big"
+		"github.com/ethereum/go-ethereum/common"
+		"math/big"
 	)
 
 type Output struct {
@@ -63,12 +61,4 @@ func (out *Output) IsZeroOutput() bool {
 
 	return (out.Denom == nil ||out.Denom.Cmp(Zero()) == 0) &&
 		(out.DepositNonce == nil || out.DepositNonce.Cmp(Zero()) == 0)
-}
-
-func (out *Output) Hash() util.Hash {
-	buf := new(bytes.Buffer)
-	buf.Write(out.Owner.Bytes())
-	buf.Write(out.Denom.Bytes())
-	digest := util.Keccak256(buf.Bytes())
-	return digest
 }
