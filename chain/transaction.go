@@ -94,36 +94,30 @@ func (tx *Transaction) OutputAt(idx *big.Int) *Output {
 	return tx.Output1
 }
 
-func (tx *Transaction) OutputFor(addr *common.Address) *Output {
+func (tx *Transaction) lookupOutput(addr *common.Address) (*Output, uint8) {
 	output := tx.OutputAt(big.NewInt(0))
 
 	if util.AddressesEqual(&output.Owner, addr) {
-		return output
+		return output, 0
 	}
 
 	output = tx.OutputAt(big.NewInt(1))
 
 	if util.AddressesEqual(&output.Owner, addr) {
-		return output
+		return output, 1
 	}
 
 	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
 }
 
-func (tx *Transaction) OutputIndexFor(addr *common.Address) *big.Int {
-	output := tx.OutputAt(big.NewInt(0))
+func (tx *Transaction) OutputFor(addr *common.Address) *Output {
+	out, _ := tx.lookupOutput(addr)
+	return out
+}
 
-	if util.AddressesEqual(&output.Owner, addr) {
-		return big.NewInt(0)
-	}
-
-	output = tx.OutputAt(big.NewInt(1))
-
-	if util.AddressesEqual(&output.Owner, addr) {
-		return big.NewInt(1)
-	}
-
-	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
+func (tx *Transaction) OutputIndexFor(addr *common.Address) uint8 {
+	_, idx := tx.lookupOutput(addr)
+	return idx
 }
 
 func (tx *Transaction) rlpRepresentation() rlpTransaction {

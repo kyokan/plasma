@@ -21,7 +21,7 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	ldb, storage, err := db.CreateStorage(path.Join(config.DBPath, "root"), plasma)
+	ldb, storage, err := db.CreateStorage(path.Join(config.DBPath, "root"))
 	if err != nil {
 		return err
 	}

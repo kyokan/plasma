@@ -15,8 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/chain"
-	"github.com/kyokan/plasma/eth"
-	"github.com/kyokan/plasma/util"
+		"github.com/kyokan/plasma/util"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	levelutil "github.com/syndtr/goleveldb/leveldb/util"
@@ -84,7 +83,7 @@ type Storage struct {
 	mtx              sync.Mutex
 }
 
-func NewStorage(db *leveldb.DB, client eth.Client) PlasmaStorage {
+func NewStorage(db *leveldb.DB) PlasmaStorage {
 	var err error
 	result := Storage{
 		db:               db,
