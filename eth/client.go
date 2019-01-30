@@ -2,27 +2,40 @@ package eth
 
 import (
 	"context"
-	"log"
-	"math/big"
-	"strings"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+		"math/big"
+				"github.com/ethereum/go-ethereum/common"
+		"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
 	"github.com/kyokan/plasma/eth/contracts"
 	"github.com/kyokan/plasma/chain"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
-	)
+	"log"
+	"time"
+)
 
 const SignaturePreamble = "\x19Ethereum Signed Message:\n"
 
-const depositFilter = "0xe1fffcc4923d04b559f4d29a8bfc6cda04eb5b0d3c460751c2402c5c5cc9109c"
-const depositDescription = `[{"anonymous":false,"inputs":[{"indexed":false,"name":"sender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Deposit","type":"event"}]`
+type PlasmaClient struct {
+	plasma      *contracts.Plasma
+	privateKey  *ecdsa.PrivateKey
+	userAddress string
+}
+
+type Exit struct {
+	Owner     common.Address
+	Amount    *big.Int
+	BlockNum  uint64
+	TxIndex   uint32
+	OIndex    uint8
+	StartedAt *big.Int
+}
+
+type Block struct {
+	Root      []byte
+	StartedAt *big.Int
+}
 
 type StartExitOpts struct {
 	Transaction      chain.Transaction
@@ -39,26 +52,10 @@ type ChallengeExitOpts struct {
 }
 
 type Client interface {
-	Balance(addr common.Address) (*big.Int, error)
 	UserAddress() common.Address
-	Contract() *contracts.Plasma
-	SignData(data []byte) ([]byte, error)
 	SubmitBlock(util.Hash, *big.Int, *big.Int, *big.Int) error
 	SubmitBlocks([]util.Hash, []*big.Int, []*big.Int, *big.Int) error
-	Deposit(value *big.Int, tx *chain.Transaction) error
-	GetChildBlock(uint64) (merkleRoot [32]byte, NumTxns *big.Int, FeeAmount *big.Int, CreatedAt *big.Int, err error)
 
-	StartDepositExit(nonce, committedFee *big.Int) error
-	StartTransactionExit(opts *StartExitOpts) error
-	StartFeeExit(*big.Int) error
-
-	ChallengeExit(nonce *big.Int, opts *ChallengeExitOpts) error
-
-	FinalizeDepositExits() error
-	FinalizeTransactionExits() error
-
-	AddedToBalancesFilter(uint64) ([]contracts.PlasmaAddedToBalances, uint64, error)
-	BlockSubmittedFilter(uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error)
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
 	ChallengedExitFilter(uint64) ([]contracts.PlasmaChallengedExit, uint64, error)
@@ -101,60 +98,33 @@ func NewClient(nodeUrl string, contractAddr string, privateKey *ecdsa.PrivateKey
 	}, nil
 }
 
-func (c *clientState) Balance(addr common.Address) (*big.Int, error) {
-	log.Printf("Attempting to get balance for %s", util.AddressToHex(&addr))
-	return c.client.BalanceAt(context.Background(), addr, nil)
-}
-
 func (c *clientState) UserAddress() common.Address {
 	return crypto.PubkeyToAddress(*(c.privateKey.Public()).(*ecdsa.PublicKey))
 }
 
-func (c *clientState) Contract() *contracts.Plasma {
-	return c.contract
+func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock, feesInBlock, blkNum *big.Int) error {
+	return c.SubmitBlocks([]util.Hash{ merkleHash }, []*big.Int{txInBlock}, []*big.Int{ feesInBlock }, blkNum)
 }
 
-func (c *clientState) SignData(data []byte) ([]byte, error) {
-	hash := GethHash(data)
-	signed, err := crypto.Sign(hash, c.privateKey)
-	if err != nil {
-		return nil, err
-	}
-	if len(signed) == 65 && signed[64] < 2 {
-		signed[64] += 27;
-	}
-	return signed, nil
-}
-
-func (c *clientState) SubscribeDeposits(address common.Address, resChan chan<- DepositEvent) error {
-	query := ethereum.FilterQuery{
-		FromBlock: nil,
-		ToBlock:   nil,
-		Topics:    [][]common.Hash{{common.HexToHash(depositFilter)}},
-		Addresses: []common.Address{address},
+func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks, feesInBlocks []*big.Int, firstBlkNum *big.Int) error {
+	opts := CreateKeyedTransactor(c.privateKey)
+	hashes := make([][32]byte, len(merkleHashes))
+	for i := 0; i != len(merkleHashes); i++ {
+		copy(hashes[i][:], merkleHashes[i][:32])
 	}
 
-	ch := make(chan types.Log)
-	_, err := c.client.SubscribeFilterLogs(context.TODO(), query, ch)
+	tx, err := c.contract.SubmitBlock(opts, hashes, txInBlocks, feesInBlocks, firstBlkNum)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Watching for deposits on address %s.", util.AddressToHex(&address))
-
-	depositAbi, err := abi.JSON(strings.NewReader(depositDescription))
+	log.Printf("Submit block pending: 0x%x, start block num: %d\n", tx.Hash(), firstBlkNum.Uint64())
+	_, err = util.WithRetries(func() (interface{}, error) {
+		return c.client.TransactionReceipt(context.Background(), tx.Hash())
+	}, 10, 5*time.Second)
 	if err != nil {
-		return err
+		log.Panicln("failed to submit block!", err)
 	}
-
-	go func() {
-		for {
-			select {
-			case event := <-ch:
-				parseDepositEvent(&depositAbi, resChan, &event)
-			}
-		}
-	}()
 
 	return nil
 }
@@ -167,17 +137,3 @@ func (c *clientState) EthereumBlockHeight() (uint64, error) {
 
 	return header.Number.Uint64(), nil
 }
-
-func parseDepositEvent(depositAbi *abi.ABI, resChan chan<- DepositEvent, raw *types.Log) {
-	event := DepositEvent{}
-	err := depositAbi.Unpack(&event, "Deposit", raw.Data)
-
-	if err != nil {
-		log.Print("Failed to unpack deposit: ", err)
-		return
-	}
-
-	log.Printf("Received %s wei deposit from %s.", event.Value.String(), util.AddressToHex(&event.Sender))
-	resChan <- event
-}
-

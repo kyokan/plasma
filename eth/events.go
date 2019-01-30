@@ -15,64 +15,12 @@ func (c *clientState) filterOpts(start uint64) (*bind.FilterOpts, error) {
 	}
 
 	end := header.Number.Uint64()
-	log.Println("start is", start)
-	log.Println("end is", end)
 
 	return &bind.FilterOpts{
 		Start:   start,
 		End:     &end, // TODO: end doesn't seem to work
 		Context: context.Background(),
 	}, nil
-}
-
-func (c *clientState) AddedToBalancesFilter(start uint64) ([]contracts.PlasmaAddedToBalances, uint64, error) {
-	opts, err := c.filterOpts(start)
-	if err != nil {
-		return nil, 0, err
-	}
-	end := *opts.End
-
-
-	itr, err := c.contract.FilterAddedToBalances(opts)
-	if err != nil {
-		log.Fatalf("Failed to filter added to balance events: %v", err)
-	}
-
-	next := true
-	var events []contracts.PlasmaAddedToBalances
-	for next {
-		if itr.Event != nil {
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, end, nil
-}
-
-func (c *clientState) BlockSubmittedFilter(start uint64) ([]contracts.PlasmaBlockSubmitted, uint64, error) {
-	opts, err := c.filterOpts(start)
-	if err != nil {
-		return nil, 0, err
-	}
-	end := *opts.End
-
-
-	itr, err := c.contract.FilterBlockSubmitted(opts)
-	if err != nil {
-		log.Fatalf("Failed to filter block submitted events: %v", err)
-	}
-
-	next := true
-	var events []contracts.PlasmaBlockSubmitted
-	for next {
-		if itr.Event != nil {
-			events = append(events, *itr.Event)
-		}
-		next = itr.Next()
-	}
-
-	return events, end, nil
 }
 
 func (c *clientState) DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error) {
