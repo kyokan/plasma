@@ -28,6 +28,12 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	defer ldb.Close()
 
 	sink := node.NewTransactionSink(storage)
+	mpool := node.NewMempool(storage)
+	err = mpool.Start()
+	if err != nil {
+		return err
+	}
+
 	p := node.NewPlasmaNode(storage, sink, plasma)
 	go p.Start()
 	// TODO: ensure that 1 deposit tx is always 1 block
