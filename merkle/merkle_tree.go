@@ -3,7 +3,15 @@ package merkle
 import (
 	"encoding/binary"
 	"github.com/kyokan/plasma/util"
+	"math/big"
 )
+
+type DualHashable interface {
+	util.Hashable
+	util.RLPHashable
+	SetIndex(uint32)
+	GetFee() *big.Int
+}
 
 func getMerkleRoot(hasher util.Hasher, leaves []DualHashable) ([]byte, []byte) {
 	switch len(leaves) {

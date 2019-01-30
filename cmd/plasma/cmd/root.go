@@ -9,18 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	FlagConfig       = "config"
-	FlagDB           = "db"
-	FlagNodeURL      = "node-url"
-	FlagContractAddr = "contract-addr"
-	FlagPrivateKey   = "private-key"
-	FlagRPCPort      = "rpc-port"
-	FlagAddress      = "address"
-	FlagBlockNum     = "blocknum"
-	FlagAmount       = "amount"
-	FlagRESTPort     = "rest-port"
-)
+
 
 var boundFlags = []string{
 	FlagDB,
