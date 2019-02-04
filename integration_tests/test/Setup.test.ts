@@ -151,13 +151,16 @@ async function startPlasma () {
 
       logPrefixed('plasma-stderr', 'yellow', d.toString('utf-8'));
     });
-    plasma.on('close', (code, signal) => {
+    plasma.on('close', async (code, signal) => {
       if (testsFinished) {
         logRunner('Plasma successfully stopped.');
         return;
       }
 
       logRunner(`Plasma stopped unexpectedly! Code: ${code}, Signal: ${signal}`);
+      // ganache sometimes sticks around even after process death,
+      // so we stop it manually here
+      await ganache.stop();
       process.exit(1);
     });
   });

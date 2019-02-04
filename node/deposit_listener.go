@@ -7,12 +7,11 @@ import (
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-		)
+	"github.com/kyokan/plasma/chain"
+	"math/big"
+)
 
-func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasma eth.Client) {
-	ch := make(chan eth.DepositEvent)
-	sink.AcceptDepositEvents(ch)
-
+func StartDepositListener(storage db.PlasmaStorage, plasma eth.Client, mPool *Mempool) {
 	var events []contracts.PlasmaDeposit
 	var event contracts.PlasmaDeposit
 	var lastPolledBlock uint64
@@ -53,17 +52,23 @@ func StartDepositListener(storage db.PlasmaStorage, sink *TransactionSink, plasm
 			count := uint64(0)
 
 			for _, event = range events {
-				// TODO: Add deposit nonce to DepositEvent
-				ch <- eth.DepositEvent{
-					Sender:       event.Depositor,
-					Value:        event.Amount,
-					DepositNonce: event.DepositNonce,
+				tx := chain.Transaction{
+					Input0: chain.ZeroInput(),
+					Input1: chain.ZeroInput(),
+					Output0: &chain.Output{
+						Owner:        event.Depositor,
+						Denom:        event.Amount,
+						DepositNonce: event.DepositNonce,
+					},
+					Output1: chain.ZeroOutput(),
+					Fee:     big.NewInt(0),
+				}
+				confirmed := chain.ConfirmedTransaction{Transaction: tx,}
+				if err := mPool.Append(confirmed); err != nil {
+				    log.Println("error while adding to mempool", err)
 				}
 
 				count++
-
-				// TODO: AcceptDepositEvents is not synchronized so sleeps are required.
-				time.Sleep(time.Second * 3)
 			}
 		} else {
 			log.Printf("No deposit events at block %d.\n", lastPolledBlock)

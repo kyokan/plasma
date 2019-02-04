@@ -2,9 +2,9 @@ package eth
 
 import (
 	"context"
-		"math/big"
-				"github.com/ethereum/go-ethereum/common"
-		"github.com/ethereum/go-ethereum/ethclient"
+	"math/big"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/kyokan/plasma/util"
 	"github.com/kyokan/plasma/eth/contracts"
@@ -39,8 +39,8 @@ type Block struct {
 
 type StartExitOpts struct {
 	Transaction      chain.Transaction
-	Input 	 		 chain.Input
-	Signature  		 []byte
+	Input            chain.Input
+	Signature        []byte
 	Proof            []byte
 	ConfirmSignature []byte
 	CommittedFee     *big.Int
@@ -53,8 +53,8 @@ type ChallengeExitOpts struct {
 
 type Client interface {
 	UserAddress() common.Address
-	SubmitBlock(util.Hash, *big.Int, *big.Int, *big.Int) error
-	SubmitBlocks([]util.Hash, []*big.Int, []*big.Int, *big.Int) error
+	SubmitBlock(util.Hash, uint32, *big.Int, *big.Int) error
+	SubmitBlocks(merkleRoot []util.Hash, txCount []uint32, fees []*big.Int, blkNum *big.Int) error
 
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
@@ -102,18 +102,23 @@ func (c *clientState) UserAddress() common.Address {
 	return crypto.PubkeyToAddress(*(c.privateKey.Public()).(*ecdsa.PublicKey))
 }
 
-func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock, feesInBlock, blkNum *big.Int) error {
-	return c.SubmitBlocks([]util.Hash{ merkleHash }, []*big.Int{txInBlock}, []*big.Int{ feesInBlock }, blkNum)
+func (c *clientState) SubmitBlock(merkleHash util.Hash, txInBlock uint32, feesInBlock *big.Int, blkNum *big.Int) error {
+	return c.SubmitBlocks([]util.Hash{merkleHash}, []uint32{txInBlock}, []*big.Int{feesInBlock}, blkNum)
 }
 
-func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks, feesInBlocks []*big.Int, firstBlkNum *big.Int) error {
+func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks []uint32, feesInBlocks []*big.Int, firstBlkNum *big.Int) error {
 	opts := CreateKeyedTransactor(c.privateKey)
 	hashes := make([][32]byte, len(merkleHashes))
-	for i := 0; i != len(merkleHashes); i++ {
+	for i := 0; i < len(merkleHashes); i++ {
 		copy(hashes[i][:], merkleHashes[i][:32])
 	}
 
-	tx, err := c.contract.SubmitBlock(opts, hashes, txInBlocks, feesInBlocks, firstBlkNum)
+	bigTxInBlocks := make([]*big.Int, len(txInBlocks), len(txInBlocks))
+	for i, count := range txInBlocks {
+		bigTxInBlocks[i] = big.NewInt(int64(count))
+	}
+
+	tx, err := c.contract.SubmitBlock(opts, hashes, bigTxInBlocks, feesInBlocks, firstBlkNum)
 	if err != nil {
 		return err
 	}

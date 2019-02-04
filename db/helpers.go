@@ -67,8 +67,8 @@ func blkNumHashkey(blkNum *big.Int, hexHash string) []byte {
     return txPrefixKey("blkNum", blkNum.String(), "hash", hexHash)
 }
 
-func blkNumTxIdxKey(blkNum, txIdx *big.Int) []byte {
-    return txPrefixKey("blkNum", blkNum.String(), "txIdx", txIdx.String())
+func blkNumTxIdxKey(blkNum uint64, txIdx uint32) []byte {
+    return txPrefixKey("blkNum", strconv.FormatUint(uint64(blkNum), 10), "txIdx", strconv.FormatUint(uint64(txIdx), 10))
 }
 
 // Used to lookup transaction associated with a deposit

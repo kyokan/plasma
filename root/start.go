@@ -34,14 +34,14 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 		return err
 	}
 
-	p := node.NewPlasmaNode(storage, sink, plasma)
+	p := node.NewPlasmaNode(storage, sink, mpool, plasma)
 	go p.Start()
 	// TODO: ensure that 1 deposit tx is always 1 block
-	go node.StartDepositListener(storage, sink, plasma)
+	go node.StartDepositListener(storage, plasma, mpool)
 
 	go node.StartExitListener(storage, plasma, context.Background())
 
-	server := NewServer(ctx, storage)
+	server := NewServer(ctx, storage, mpool)
 	go server.Start(config.RPCPort)
 
 	// TODO: add an exit listener to make sure to add an exit transaction to root node.

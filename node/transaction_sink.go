@@ -2,15 +2,13 @@ package node
 
 import (
 	"errors"
-	"log"
-	"math/big"
+		"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
-	"github.com/kyokan/plasma/eth"
-	"github.com/kyokan/plasma/util"
+		"github.com/kyokan/plasma/util"
 )
 
 type TransactionSink struct {
@@ -20,46 +18,6 @@ type TransactionSink struct {
 
 func NewTransactionSink(storage db.PlasmaStorage) *TransactionSink {
 	return &TransactionSink{c: make(chan chain.ConfirmedTransaction), storage: storage}
-}
-
-func (sink *TransactionSink) AcceptTransactions(ch <-chan chain.ConfirmedTransaction) {
-	go func() {
-		for {
-			tx := <-ch
-
-			valid, err := sink.VerifyTransaction(&tx)
-
-			if !valid || err != nil {
-				log.Printf("Transaction with hash %s is not valid: %s", tx.RLPHash(util.Sha256), err)
-				continue
-			}
-
-			sink.c <- tx
-		}
-	}()
-}
-
-func (sink *TransactionSink) AcceptDepositEvents(ch <-chan eth.DepositEvent) {
-	go func() {
-		var deposit eth.DepositEvent
-		var tx chain.Transaction
-		for {
-			deposit = <-ch
-
-			tx = chain.Transaction{
-				Input0: chain.ZeroInput(),
-				Input1: chain.ZeroInput(),
-				Output0: &chain.Output{
-					Owner:        deposit.Sender,
-					Denom:        deposit.Value,
-					DepositNonce: deposit.DepositNonce,
-				},
-				Output1: chain.ZeroOutput(),
-				Fee:     big.NewInt(0),
-			}
-			sink.c <- chain.ConfirmedTransaction{Transaction: tx,}
-		}
-	}()
 }
 
 func (sink *TransactionSink) VerifyTransaction(tx *chain.ConfirmedTransaction) (bool, error) {

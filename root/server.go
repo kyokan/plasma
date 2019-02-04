@@ -11,17 +11,20 @@ import (
 	"google.golang.org/grpc"
 	"log"
 	"net"
-					)
+	"github.com/kyokan/plasma/node"
+)
 
 type Server struct {
 	storage db.PlasmaStorage
 	ctx     context.Context
+	mPool   *node.Mempool
 }
 
-func NewServer(ctx context.Context, storage db.PlasmaStorage) (*Server) {
+func NewServer(ctx context.Context, storage db.PlasmaStorage, mPool *node.Mempool) (*Server) {
 	return &Server{
 		storage: storage,
 		ctx:     ctx,
+		mPool:   mPool,
 	}
 }
 
@@ -117,13 +120,12 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	confirmed := rpc.DeserializeConfirmedTx(req.Confirmed)
-
-	signedTx, storeErr := r.storage.StoreTransaction(*confirmed)
-	if storeErr != nil {
-		return nil, storeErr
+	err := r.mPool.Append(*confirmed)
+	if err != nil {
+		return nil, err
 	}
 	return &pb.SendResponse{
-		Confirmed: rpc.SerializeConfirmedTx(signedTx),
+		Confirmed: rpc.SerializeConfirmedTx(confirmed),
 	}, nil
 }
 

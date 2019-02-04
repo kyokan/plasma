@@ -5,11 +5,7 @@ import (
 	"github.com/kyokan/plasma/util"
 )
 
-type DualHashable interface {
-	util.RLPHashable
-}
-
-func getMerkleRoot(hasher util.Hasher, leaves []DualHashable) ([]byte) {
+func getMerkleRoot(hasher util.Hasher, leaves []util.RLPHashable) ([]byte) {
 	switch len(leaves) {
 	case 0:
 		return nil
@@ -32,6 +28,6 @@ func encodeLength(lhs, rhs []byte) []byte {
 	return append(left, right...)
 }
 
-func GetMerkleRoot(leaves []DualHashable) ([]byte) {
+func GetMerkleRoot(leaves []util.RLPHashable) ([]byte) {
 	return getMerkleRoot(util.Sha256, leaves)
 }
