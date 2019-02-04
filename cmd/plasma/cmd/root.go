@@ -9,8 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-
-
 var boundFlags = []string{
 	FlagDB,
 	FlagNodeURL,

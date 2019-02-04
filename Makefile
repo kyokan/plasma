@@ -5,8 +5,11 @@ deps:
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
-build:
+build-plasma:
 	go build -o ./target/plasma ./cmd/plasma/main.go
+
+build-harness:
+	go build -o ./target/plasma-harness ./cmd/harness/main.go
 
 build-debug:
 	go build -gcflags "all=-N -l" -o ./target/plasma ./cmd/plasma/main.go
@@ -32,9 +35,6 @@ abigen: deps
 
 protogen:
 	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
-
-start: deps build
-	@./bin/start
 
 clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules

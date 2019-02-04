@@ -33,10 +33,14 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 		return err
 	}
 
+	chainsaw := node.NewChainsaw(plasma, mpool, storage)
+	if err := chainsaw.Start(); err != nil {
+	    return err
+	}
+
 	p := node.NewPlasmaNode(storage, mpool, plasma)
 	go p.Start()
 	// TODO: ensure that 1 deposit tx is always 1 block
-	go node.StartDepositListener(storage, plasma, mpool)
 
 	go node.StartExitListener(storage, plasma, context.Background())
 

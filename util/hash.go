@@ -6,9 +6,14 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 	"crypto/sha256"
-	)
+	"github.com/ethereum/go-ethereum/common/hexutil"
+)
 
 type Hash []byte
+
+func (h Hash) Hex() string {
+	return hexutil.Encode(h)
+}
 
 type Hasher func([]byte) Hash
 
