@@ -18,7 +18,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	levelutil "github.com/syndtr/goleveldb/leveldb/util"
 	"time"
-)
+	)
 
 const FeeTxIdx = 65535 // 2^16 - 1
 
@@ -118,13 +118,13 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 	var empty []byte
 
 	// Recording spends
-	if confirmed.Transaction.Input0.IsZeroInput() == false {
+	if !confirmed.Transaction.Input0.IsZeroInput() {
 		prevTx0, _, err := ps.findPreviousTx(&confirmed, 0)
 		if err != nil {
 			return nil, err
 		}
 
-		input := confirmed.Transaction.InputAt(0)
+		input := confirmed.Transaction.Input0
 		prevOutput := prevTx0.Transaction.OutputAt(input.OutIdx)
 		outputOwner := prevOutput.Owner
 		if confirmed.Transaction.Output0.IsExit() {
@@ -133,8 +133,8 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 			batch.Put(spend(&outputOwner, confirmed.Transaction.Input0), empty)
 		}
 	}
-	if confirmed.Transaction.Input1.IsZeroInput() == false {
-		prevTx1, _, err := ps.findPreviousTx(&confirmed, 0)
+	if !confirmed.Transaction.Input1.IsZeroInput() {
+		prevTx1, _, err := ps.findPreviousTx(&confirmed, 1)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 	}
 
 	// Recording earns
-	if confirmed.Transaction.Output0.IsZeroOutput() == false {
+	if !confirmed.Transaction.Output0.IsZeroOutput() {
 		if confirmed.Transaction.Output0.IsDeposit() { // Only first output can be a deposit
 			batch.Put(depositKey(&confirmed), txEnc)
 		}
@@ -152,7 +152,7 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 		output := confirmed.Transaction.OutputAt(outIdx)
 		batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
 	}
-	if confirmed.Transaction.Output1.IsZeroOutput() == false {
+	if !confirmed.Transaction.Output1.IsZeroOutput() {
 		outIdx := big.NewInt(1)
 		output := confirmed.Transaction.OutputAt(outIdx)
 		batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
@@ -241,7 +241,7 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 		blkNum = 1
 	} else {
 		blkNum = prevBlock.Header.Number + 1
-		prevHash = prevBlock.Header.Hash()
+		prevHash = prevBlock.BlockHash
 	}
 
 	log.Printf("packaging block %d\n", blkNum)
@@ -296,6 +296,7 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 
 		currentFees = currentFees.Add(currentFees, tx.Transaction.Fee)
 	}
+	batch.Put(blockFeesKey(blkNum), currentFees.Bytes())
 
 	err = ps.db.Write(batch, nil)
 	if err != nil {
@@ -310,100 +311,12 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 	}, nil
 }
 
-func (ps *Storage) isTransactionValid(confirmed chain.ConfirmedTransaction) ([]*chain.ConfirmedTransaction, error) {
-	empty := []*chain.ConfirmedTransaction{{Transaction: *chain.ZeroTransaction(),}}
-	if confirmed.Transaction.IsDeposit() {
-		return empty, nil
-	}
-
-	if confirmed.Transaction.IsZeroTransaction() {
-		return nil, errors.New("Failed to add an empty transaction")
-	}
-	tx := confirmed.Transaction
-	result := make([]*chain.ConfirmedTransaction, 0, 2)
-	spendKeys := make([][]byte, 0, 4)
-
-	prevTx, _, err := ps.findPreviousTx(&confirmed, 0)
-	if err != nil {
-		log.Println("noprev")
-		return nil, err
-	}
-	if prevTx == nil {
-		return nil, errors.New("Couldn't find transaction for input 0")
-	}
-
-	outputAddress := prevTx.Transaction.OutputAt(tx.Input0.OutIdx).Owner
-	signatureHash := tx.SignatureHash()
-	log.Println(hexutil.Encode(confirmed.RLPHash(util.Sha256)))
-	err = util.ValidateSignature(signatureHash, confirmed.Signatures[0][:], outputAddress)
-	if err != nil {
-		log.Println("confsig")
-		return nil, err
-	}
-	err = util.ValidateSignature(tx.Input0.SignatureHash(), tx.Sig0[:], outputAddress)
-	if err != nil {
-		log.Println("txsig")
-		return nil, err
-	}
-
-	result = append(result, prevTx)
-	spendKeys = append(spendKeys, spend(&outputAddress, tx.Input0))
-	spendKeys = append(spendKeys, spendExit(&outputAddress, tx.Input0))
-
-	if tx.Input1.IsZeroInput() == false {
-		prevTx, _, err := ps.findPreviousTx(&confirmed, 1)
-		if err != nil {
-			return nil, err
-		}
-		if prevTx == nil {
-			return nil, errors.New("Couldn't find transaction for input 1")
-		}
-		outputAddress = prevTx.Transaction.OutputAt(tx.Input1.OutIdx).Owner
-		err = util.ValidateSignature(signatureHash, confirmed.Signatures[1][:], outputAddress)
-		if err != nil {
-			return nil, err
-		}
-		err = util.ValidateSignature(tx.Input1.SignatureHash(), tx.Sig1[:], outputAddress)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, prevTx)
-		spendKeys = append(spendKeys, spend(&outputAddress, tx.Input1))
-		spendKeys = append(spendKeys, spendExit(&outputAddress, tx.Input1))
-	}
-
-	for _, spendKey := range spendKeys {
-		found, _ := ps.db.Has(spendKey, nil)
-		if found {
-			msg := fmt.Sprintf("Error: Found double spend for key %s", string(spendKey))
-			log.Printf(msg)
-			return nil, errors.New(msg)
-		}
-	}
-
-	totalInput := result[0].Transaction.OutputAt(tx.Input0.OutIdx).Denom
-	if len(result) > 1 {
-		totalInput = big.NewInt(0).Add(totalInput, result[1].Transaction.OutputAt(tx.Input1.OutIdx).Denom)
-	}
-
-	totalOutput := big.NewInt(0).Add(tx.Output0.Denom, tx.Fee)
-	if !tx.Output1.IsZeroOutput() {
-		totalOutput = totalOutput.Add(totalOutput, tx.Output1.Denom)
-	}
-
-	if totalInput.Cmp(totalOutput) != 0 {
-		return nil, errors.New("inputs and outputs do not have the same sum")
-	}
-
-	return result, nil
-}
-
 func (ps *Storage) ProcessDeposit(confirmed chain.ConfirmedTransaction) (deposit *BlockResult, err error) {
 	if !confirmed.Transaction.IsDeposit() {
 		return nil, errors.New("only deposit blocks are accepted")
 	}
 
-	return ps.doPackageBlock([]chain.ConfirmedTransaction{ confirmed })
+	return ps.doPackageBlock([]chain.ConfirmedTransaction{confirmed})
 }
 
 func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error) {

@@ -10,18 +10,20 @@ import (
 	)
 
 type PlasmaNode struct {
-	storage db.PlasmaStorage
-	txSink  *TransactionSink
-	mPool   *Mempool
-	client  eth.Client
+	storage   db.PlasmaStorage
+	txSink    *TransactionSink
+	mPool     *Mempool
+	client    eth.Client
+	submitter *BlockSubmitter
 }
 
 func NewPlasmaNode(storage db.PlasmaStorage, sink *TransactionSink, mPool *Mempool, client eth.Client) *PlasmaNode {
 	return &PlasmaNode{
-		storage: storage,
-		txSink:  sink,
-		mPool:   mPool,
-		client:  client,
+		storage:   storage,
+		txSink:    sink,
+		mPool:     mPool,
+		client:    client,
+		submitter: NewBlockSubmitter(client),
 	}
 }
 
@@ -59,10 +61,7 @@ func (node PlasmaNode) packageBlock(txs []chain.ConfirmedTransaction) {
 	}
 
 	if blockResult != nil {
-		err = node.client.SubmitBlock(blockResult.MerkleRoot, blockResult.NumberTransactions, blockResult.BlockFees, blockResult.BlockNumber)
-		if err != nil {
-			log.Printf("Error submiting block: %s", err.Error())
-		}
+		node.submitter.Enqueue(*blockResult)
 	}
 }
 
@@ -73,9 +72,6 @@ func (node PlasmaNode) packageDepositBlocks(deposit chain.ConfirmedTransaction) 
 		log.Printf("Error packaging deposti block: %s", err.Error())
 		return
 	}
-	err = node.client.SubmitBlock(depositBlock.MerkleRoot, depositBlock.NumberTransactions, depositBlock.BlockFees, depositBlock.BlockNumber)
-	if err != nil {
-		log.Printf("Error submiting deposit block: %s", err.Error())
-	}
 
+	node.submitter.Enqueue(*depositBlock)
 }

@@ -28,7 +28,7 @@ describe('Sends', () => {
       .toAddress(Config.USER_ADDRESSES[3])
       .withFee(fee);
     await sendOp.send(Config.PRIVATE_KEYS[2]);
-    await wait(10000);
+    await wait(1000);
     assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[3]), sent);
     assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[2]), toBig(1000).sub(sent).sub(fee));
   });

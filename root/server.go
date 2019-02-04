@@ -12,7 +12,7 @@ import (
 	"log"
 	"net"
 	"github.com/kyokan/plasma/node"
-)
+	)
 
 type Server struct {
 	storage db.PlasmaStorage

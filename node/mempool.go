@@ -3,14 +3,12 @@ package node
 import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
-	"math/big"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/util"
+				"github.com/kyokan/plasma/util"
 	"errors"
 	"log"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"math/big"
 )
 
 const MaxMempoolSize = 65534
@@ -128,61 +126,70 @@ func (m *Mempool) Append(tx chain.ConfirmedTransaction) error {
 	return <-res
 }
 
-func (m *Mempool) VerifySpendTransaction(tx *chain.ConfirmedTransaction) (bool, error) {
-	inputTx1, err := m.storage.FindTransactionByBlockNumTxIdx(tx.Transaction.Input0.BlkNum, tx.Transaction.Input0.TxIdx)
+func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) (bool, error) {
+	prevTx0, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input0.BlkNum, confirmed.Transaction.Input0.TxIdx)
 	if err != nil {
 		return false, err
 	}
-	if inputTx1 == nil {
-		return false, errors.New("input 1 not found")
+	if prevTx0 == nil {
+		return false, errors.New("input 0 not found")
 	}
 
-	inputTx2, err := m.storage.FindTransactionByBlockNumTxIdx(tx.Transaction.Input1.BlkNum, tx.Transaction.Input1.TxIdx)
+	prevTx0Output := prevTx0.Transaction.OutputAt(confirmed.Transaction.Input0.OutIdx)
+	sigHash0 := confirmed.Transaction.Input0.SignatureHash()
+	err = util.ValidateSignature(sigHash0, confirmed.Transaction.Sig0[:], prevTx0Output.Owner)
 	if err != nil {
+		panic(err)
+		return false, err
+	}
+	log.Println(hexutil.Encode(confirmed.Transaction.RLP()))
+
+	err = util.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
+	if err != nil {
+		panic(err)
 		return false, err
 	}
 
-	var prevOutput1 *chain.Output
-	if tx.Transaction.Input0.OutIdx.Cmp(chain.Zero()) == 0 {
-		prevOutput1 = inputTx1.Transaction.Output0
-	} else {
-		prevOutput1 = inputTx1.Transaction.Output1
+	totalInput := big.NewInt(0)
+	totalInput = totalInput.Add(totalInput, prevTx0Output.Denom)
+
+	if !confirmed.Transaction.Input1.IsZeroInput() {
+		prevTx1, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input1.BlkNum, confirmed.Transaction.Input1.TxIdx)
+		if err != nil {
+			return false, err
+		}
+		if prevTx1 == nil {
+			return false, errors.New("input 1 not found")
+		}
+
+		prevTx1Output := prevTx1.Transaction.OutputAt(confirmed.Transaction.Input1.OutIdx)
+		sigHash1 := confirmed.Transaction.Input1.SignatureHash()
+		err = util.ValidateSignature(sigHash1, confirmed.Transaction.Sig1[:], prevTx1Output.Owner)
+		if err != nil {
+			return false, err
+		}
+		err = util.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[1][:], prevTx1Output.Owner)
+		if err != nil {
+			return false, err
+		}
+
+		totalInput = totalInput.Add(totalInput, prevTx1Output.Denom)
 	}
 
-	var prevOutput2 *chain.Output
-	if tx.Transaction.Input1.OutIdx.Cmp(chain.Zero()) == 0 {
-		prevOutput2 = inputTx2.Transaction.Output0
-	} else {
-		prevOutput2 = inputTx2.Transaction.Output1
+	totalOutput := big.NewInt(0)
+	totalOutput = totalOutput.Add(totalOutput, confirmed.Transaction.Output0.Denom)
+	totalOutput = totalOutput.Add(totalOutput, confirmed.Transaction.Fee)
+	if !confirmed.Transaction.Output1.IsZeroOutput() {
+		totalOutput = totalOutput.Add(totalOutput, confirmed.Transaction.Output1.Denom)
 	}
 
-	totalInput := big.NewInt(0).Add(prevOutput1.Denom, prevOutput2.Denom)
-	totalOutput := big.NewInt(0).Add(tx.Transaction.Output0.Denom, tx.Transaction.Output1.Denom)
-	totalOutput = totalOutput.Add(totalOutput, tx.Transaction.Fee)
+	fmt.Println(totalInput.String(), totalOutput.String())
+
 	if totalInput.Cmp(totalOutput) != 0 {
 		return false, errors.New("inputs and outputs do not have the same sum")
 	}
 
-	sig1Bytes, err := crypto.Ecrecover(tx.Transaction.Input0.SignatureHash(), tx.Transaction.Sig0[:])
-	if err != nil {
-		return false, err
-	}
-
-	sig2Bytes, err := crypto.Ecrecover(tx.Transaction.Input1.SignatureHash(), tx.Transaction.Sig1[:])
-	if err != nil {
-		return false, err
-	}
-
-	sig1Addr := common.BytesToAddress(sig1Bytes)
-	sig2Addr := common.BytesToAddress(sig2Bytes)
-	if !util.AddressesEqual(&prevOutput1.Owner, &sig1Addr) {
-		return false, errors.New("input 1 signature is not valid")
-	}
-	if !util.AddressesEqual(&prevOutput2.Owner, &sig2Addr) {
-		return false, errors.New("input 2 signature is not valid")
-	}
-
-	isDoubleSpent, err := m.storage.IsDoubleSpent(tx)
+	isDoubleSpent, err := m.storage.IsDoubleSpent(confirmed)
 	if err != nil {
 		return false, err
 	}

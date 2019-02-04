@@ -144,11 +144,15 @@ func (tx *Transaction) SignatureHash() util.Hash {
 	return tx.RLPHash(util.Keccak256)
 }
 
-func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
+func (tx *Transaction) RLP() []byte {
 	bytes, err := rlp.EncodeToBytes(tx.rlpRepresentation())
 	if err != nil {
 		panic(err)
 	}
 
-	return hasher(bytes)
+	return bytes
+}
+
+func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
+	return hasher(tx.RLP())
 }

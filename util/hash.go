@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/sha3"
 	"crypto/sha256"
+	"fmt"
 )
 
 type Hash []byte
@@ -41,15 +42,19 @@ func ValidateSignature(hash, signature []byte, address common.Address) error {
 	hasher.Write(hash)
 	ethHash := hasher.Sum(nil)
 
-	if len(signature) == 65 && signature[64] > 26 {
-		signature[64] -= 27
+	sigCopy := make([]byte, len(signature))
+	copy(sigCopy, signature)
+	if len(sigCopy) == 65 && sigCopy[64] > 26 {
+		sigCopy[64] -= 27
 	}
-	pubKey, err := crypto.SigToPub(ethHash, signature)
+
+	pubKey, err := crypto.SigToPub(ethHash, sigCopy)
 	if err != nil {
 		return err
 	}
 
 	signatureAddress := crypto.PubkeyToAddress(*pubKey)
+	fmt.Println(signatureAddress.String(), address.String())
 	if !AddressesEqual(&address, &signatureAddress) {
 		return errors.New("Invalid signature")
 	}

@@ -69,9 +69,7 @@ export default class Transaction {
   }
 
   toRLP (): Buffer {
-    const ret = (ejs as any).rlp.encode(this.toArray()) as Buffer;
-    console.log(toHex(ret));
-    return ret;
+    return (ejs as any).rlp.encode(this.toArray()) as Buffer;
   }
 
   sigHash () {

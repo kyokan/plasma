@@ -29,7 +29,7 @@ describe('Exits', () => {
 
   it('should exit', async function () {
     this.timeout(30000);
-    await wait(5000);
+    await wait(15000);
     const outpoints = await client.getUTXOs(Config.USER_ADDRESSES[5]);
     const exitOp = new ExitOperation(contract, client, Config.USER_ADDRESSES[5])
       .withOutpoint(outpoints[0])
