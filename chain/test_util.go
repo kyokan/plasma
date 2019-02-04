@@ -8,14 +8,11 @@ import (
 
 func RandomInput() *Input {
 	return &Input{
-		Output: Output{
-			DepositNonce: big.NewInt(rand.Int63()),
-			Owner: RandomAddress(),
-			Denom: Zero(),
-		},
-		BlkNum: rand.Uint64(),
-		TxIdx:  rand.Uint32(),
-		OutIdx: 1,
+		DepositNonce: big.NewInt(rand.Int63()),
+		Owner:        RandomAddress(),
+		BlkNum:       rand.Uint64(),
+		TxIdx:        rand.Uint32(),
+		OutIdx:       1,
 	}
 }
 

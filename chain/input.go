@@ -8,10 +8,12 @@ import (
 )
 
 type Input struct {
-	Output
 	BlkNum uint64
 	TxIdx  uint32
 	OutIdx uint8
+
+	DepositNonce *big.Int
+	Owner        common.Address
 }
 
 type rlpInput struct {
@@ -24,14 +26,11 @@ type rlpInput struct {
 
 func NewInput(blkNum uint64, txIdx uint32, outIdx uint8, depositNonce *big.Int, owner common.Address) *Input {
 	return &Input{
-		Output: Output{
-			DepositNonce: depositNonce,
-			Owner:        owner,
-			Denom:        Zero(),
-		},
-		BlkNum: blkNum,
-		TxIdx:  txIdx,
-		OutIdx: outIdx,
+		DepositNonce: depositNonce,
+		Owner:        owner,
+		BlkNum:       blkNum,
+		TxIdx:        txIdx,
+		OutIdx:       outIdx,
 	}
 }
 

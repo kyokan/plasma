@@ -82,7 +82,6 @@ func queryExitEvents(storage db.PlasmaStorage, plasma eth.Client) {
 				input := chain.ZeroInput()
 				input.DepositNonce = depExitEvent.Nonce
 				input.Owner = depExitEvent.Owner
-				input.Denom = depExitEvent.Amount
 				count++
 				inputs = append(inputs, *input)
 				log.Printf("Found %d deposit exit events at from blocks %d to %d.\n", count, depExitIdx, depExitBlockIdx)

@@ -113,13 +113,11 @@ func DeserializeInput(in *pb.Input) (*chain.Input) {
 		return chain.ZeroInput()
 	}
 	return &chain.Input{
-		Output: chain.Output{
-			DepositNonce: DeserializeBig(in.DepositNonce),
-			Owner:        common.BytesToAddress(in.Owner),
-		},
-		BlkNum: util.Big2Uint64(DeserializeBig(in.BlockNum)),
-		TxIdx:  util.Big2Uint32(DeserializeBig(in.TxIdx)),
-		OutIdx: util.Big2Uint8(DeserializeBig(in.OutIdx)),
+		DepositNonce: DeserializeBig(in.DepositNonce),
+		Owner:        common.BytesToAddress(in.Owner),
+		BlkNum:       util.Big2Uint64(DeserializeBig(in.BlockNum)),
+		TxIdx:        util.Big2Uint32(DeserializeBig(in.TxIdx)),
+		OutIdx:       util.Big2Uint8(DeserializeBig(in.OutIdx)),
 	}
 }
 
