@@ -14,3 +14,4 @@ integration_tests/test/abi/PlasmaMVP.abi.json
 eth/contracts/*.go
 eth/contracts/*.abi
 .ganache
+.database
