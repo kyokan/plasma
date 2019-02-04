@@ -142,8 +142,6 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 		panic(err)
 		return false, err
 	}
-	log.Println(hexutil.Encode(confirmed.Transaction.RLP()))
-
 	err = util.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
 	if err != nil {
 		panic(err)
@@ -182,8 +180,6 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 	if !confirmed.Transaction.Output1.IsZeroOutput() {
 		totalOutput = totalOutput.Add(totalOutput, confirmed.Transaction.Output1.Denom)
 	}
-
-	fmt.Println(totalInput.String(), totalOutput.String())
 
 	if totalInput.Cmp(totalOutput) != 0 {
 		return false, errors.New("inputs and outputs do not have the same sum")
