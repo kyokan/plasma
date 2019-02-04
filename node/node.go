@@ -11,16 +11,14 @@ import (
 
 type PlasmaNode struct {
 	storage   db.PlasmaStorage
-	txSink    *TransactionSink
 	mPool     *Mempool
 	client    eth.Client
 	submitter *BlockSubmitter
 }
 
-func NewPlasmaNode(storage db.PlasmaStorage, sink *TransactionSink, mPool *Mempool, client eth.Client) *PlasmaNode {
+func NewPlasmaNode(storage db.PlasmaStorage, mPool *Mempool, client eth.Client) *PlasmaNode {
 	return &PlasmaNode{
 		storage:   storage,
-		txSink:    sink,
 		mPool:     mPool,
 		client:    client,
 		submitter: NewBlockSubmitter(client),
