@@ -13,9 +13,9 @@ func RandomInput() *Input {
 			Owner: RandomAddress(),
 			Denom: Zero(),
 		},
-		BlkNum: big.NewInt(rand.Int63()),
-		TxIdx:  big.NewInt(rand.Int63()),
-		OutIdx: big.NewInt(rand.Int63n(2)),
+		BlkNum: rand.Uint64(),
+		TxIdx:  rand.Uint32(),
+		OutIdx: 1,
 	}
 }
 

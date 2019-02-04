@@ -18,7 +18,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	levelutil "github.com/syndtr/goleveldb/leveldb/util"
 	"time"
-	)
+)
 
 const FeeTxIdx = 65535 // 2^16 - 1
 
@@ -32,7 +32,7 @@ type BlockResult struct {
 type PlasmaStorage interface {
 	ProcessDeposit(tx chain.ConfirmedTransaction) (deposit *BlockResult, err error)
 	FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error)
-	FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.ConfirmedTransaction, error)
+	FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.ConfirmedTransaction, error)
 
 	Balance(addr *common.Address) (*big.Int, error)
 	SpendableTxs(addr *common.Address) ([]chain.ConfirmedTransaction, error)
@@ -51,9 +51,6 @@ type PlasmaStorage interface {
 
 	LastDepositExitEventIdx() (uint64, error)
 	SaveDepositExitEventIdx(idx uint64) error
-
-	GetInvalidBlock(blkHash util.Hash) (*chain.Block, error)
-	SaveInvalidBlock(blk *chain.Block) error
 
 	MarkExitsAsSpent([]chain.Input) error
 
@@ -94,7 +91,7 @@ func (ps *Storage) findPreviousTx(tx *chain.ConfirmedTransaction, inputIdx uint8
 		input = tx.Transaction.Input1
 	}
 
-	return ps.findTransactionByBlockNumTxIdx(input.BlkNum.Uint64(), uint32(input.TxIdx.Uint64()))
+	return ps.findTransactionByBlockNumTxIdx(input.BlkNum, input.TxIdx)
 }
 
 func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.ConfirmedTransaction, batch *leveldb.Batch) (*chain.ConfirmedTransaction, error) {
@@ -148,14 +145,12 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 		if confirmed.Transaction.Output0.IsDeposit() { // Only first output can be a deposit
 			batch.Put(depositKey(&confirmed), txEnc)
 		}
-		outIdx := big.NewInt(0)
-		output := confirmed.Transaction.OutputAt(outIdx)
-		batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
+		output := confirmed.Transaction.OutputAt(0)
+		batch.Put(earn(&output.Owner, confirmed, 0), empty)
 	}
 	if !confirmed.Transaction.Output1.IsZeroOutput() {
-		outIdx := big.NewInt(1)
-		output := confirmed.Transaction.OutputAt(outIdx)
-		batch.Put(earn(&output.Owner, confirmed, outIdx), empty)
+		output := confirmed.Transaction.OutputAt(1)
+		batch.Put(earn(&output.Owner, confirmed, 1), empty)
 	}
 
 	return &confirmed, batch.Replay(ps)
@@ -225,9 +220,6 @@ func (ps *Storage) IsDoubleSpent(confirmed *chain.ConfirmedTransaction) (bool, e
 }
 
 func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResult, error) {
-	ps.mtx.Lock()
-	defer ps.mtx.Unlock()
-
 	log.Printf("packaging %d txs", len(txs))
 
 	prevBlock, err := ps.LatestBlock()
@@ -320,6 +312,8 @@ func (ps *Storage) ProcessDeposit(confirmed chain.ConfirmedTransaction) (deposit
 }
 
 func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 	// Construct partial prefix that matches all transactions for the block
 	prefix := txPrefixKey("blkNum", strconv.FormatUint(blkNum, 10), "txIdx")
 	prefix = append(prefix, ':', ':')
@@ -431,13 +425,19 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (
 	return &tx, block.BlockHash, nil
 }
 
-func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum, txIdx *big.Int) (*chain.ConfirmedTransaction, error) {
-	tx, _, err := ps.findTransactionByBlockNumTxIdx(blkNum.Uint64(), uint32(txIdx.Uint64()))
+func (ps *Storage) FindTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (*chain.ConfirmedTransaction, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	tx, _, err := ps.findTransactionByBlockNumTxIdx(blkNum, txIdx)
 	return tx, err
 }
 
 // Address
 func (ps *Storage) Balance(addr *common.Address) (*big.Int, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	txs, err := ps.SpendableTxs(addr)
 
 	if err != nil {
@@ -454,6 +454,9 @@ func (ps *Storage) Balance(addr *common.Address) (*big.Int, error) {
 }
 
 func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.ConfirmedTransaction, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	earnPrefix := earnPrefixKey(addr)
 	spendPrefix := spendPrefixKey(addr)
 
@@ -501,6 +504,9 @@ func (ps *Storage) SpendableTxs(addr *common.Address) ([]chain.ConfirmedTransact
 }
 
 func (ps *Storage) UTXOs(addr *common.Address) ([]chain.ConfirmedTransaction, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	earnPrefix := earnPrefixKey(addr)
 	earnMap := make(map[string]uint8)
 
@@ -533,6 +539,9 @@ func (ps *Storage) UTXOs(addr *common.Address) ([]chain.ConfirmedTransaction, er
 
 // Block
 func (ps *Storage) BlockAtHeight(num uint64) (*chain.Block, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	key, err := ps.db.Get(blockNumKey(num), nil)
 	if err != nil {
 		return nil, err
@@ -553,6 +562,9 @@ func (ps *Storage) BlockAtHeight(num uint64) (*chain.Block, error) {
 }
 
 func (ps *Storage) BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	data, err := ps.db.Get(blockMetaPrefixKey(num), nil)
 	if err != nil {
 		return nil, err
@@ -600,11 +612,16 @@ func (ps *Storage) LatestBlock() (*chain.Block, error) {
 }
 
 func (ps *Storage) PackageBlock(txs []chain.ConfirmedTransaction) (*BlockResult, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 	return ps.doPackageBlock(txs)
 }
 
 // Deposit
 func (ps *Storage) LastDepositEventIdx() (uint64, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	res, err := ps.getMostRecentEventIdx(latestDepositIdxKey)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -618,23 +635,33 @@ func (ps *Storage) LastDepositEventIdx() (uint64, error) {
 }
 
 func (ps *Storage) SaveDepositEventIdx(idx uint64) error {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
 	return ps.saveEventIdx(latestDepositIdxKey, idx)
 }
 
 // Exits
 func (ps *Storage) LastTransactionExitEventIdx() (uint64, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 	return ps.getMostRecentEventIdx(latestTxExitIdxKey)
 }
 
 func (ps *Storage) SaveTransactionExitEventIdx(idx uint64) error {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
 	return ps.saveEventIdx(latestTxExitIdxKey, idx)
 }
 
 func (ps *Storage) LastDepositExitEventIdx() (uint64, error) {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 	return ps.getMostRecentEventIdx(latestDepExitIdxKey)
 }
 
 func (ps *Storage) SaveDepositExitEventIdx(idx uint64) error {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
 	return ps.saveEventIdx(latestDepExitIdxKey, idx)
 }
 
@@ -651,32 +678,4 @@ func (ps *Storage) getMostRecentEventIdx(eventKey string) (uint64, error) {
 		return 0, err
 	}
 	return bytesToUint64(b), nil
-}
-
-// Invalid block
-func (ps *Storage) GetInvalidBlock(blkHash util.Hash) (*chain.Block, error) {
-	key := invalidPrefixKey(hexutil.Encode(blkHash))
-
-	data, err := ps.db.Get(key, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var blk chain.Block
-	err = rlp.DecodeBytes(data, &blk)
-	if err != nil {
-		return nil, err
-	}
-
-	return &blk, nil
-}
-
-func (ps *Storage) SaveInvalidBlock(blk *chain.Block) error {
-	enc, err := rlp.EncodeToBytes(blk)
-	if err != nil {
-		return err
-	}
-
-	key := invalidPrefixKey(hexutil.Encode(blk.BlockHash))
-	return ps.db.Put(key, enc, nil)
 }

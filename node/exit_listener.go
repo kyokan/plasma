@@ -7,6 +7,7 @@ import (
 	"github.com/kyokan/plasma/eth"
 	"log"
 	"time"
+	"github.com/kyokan/plasma/util"
 )
 
 func StartExitListener(storage db.PlasmaStorage, plasma eth.Client, ctx context.Context) {
@@ -55,9 +56,9 @@ func queryExitEvents(storage db.PlasmaStorage, plasma eth.Client) {
 			count := uint64(0)
 			for _, txExitEvent := range txExitEvents {
 				input := chain.ZeroInput()
-				input.BlkNum = txExitEvent.Position[0]
-				input.TxIdx  = txExitEvent.Position[1]
-				input.OutIdx = txExitEvent.Position[2]
+				input.BlkNum = util.Big2Uint64(txExitEvent.Position[0])
+				input.TxIdx  = util.Big2Uint32(txExitEvent.Position[1])
+				input.OutIdx = util.Big2Uint8(txExitEvent.Position[2])
 				input.Owner  = txExitEvent.Owner
 				count++
 				inputs = append(inputs, *input)

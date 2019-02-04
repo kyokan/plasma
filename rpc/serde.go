@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
 	"fmt"
+	"github.com/kyokan/plasma/util"
 )
 
 func SerializeBig(in *big.Int) (*pb.BigInt) {
@@ -41,33 +42,32 @@ func DeserializeConfirmedTxs(confirmedTransactions []*pb.ConfirmedTransaction) (
 	return out
 }
 
-
 func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 	return &pb.Transaction{
-		Input0: SerializeInput(tx.Input0),
-		Sig0: tx.Sig0[:],
-		Input1: SerializeInput(tx.Input1),
-		Sig1: tx.Sig1[:],
-		Output0: SerializeOutput(tx.Output0),
-		Output1: SerializeOutput(tx.Output1),
-		Fee: SerializeBig(tx.Fee),
+		Input0:   SerializeInput(tx.Input0),
+		Sig0:     tx.Sig0[:],
+		Input1:   SerializeInput(tx.Input1),
+		Sig1:     tx.Sig1[:],
+		Output0:  SerializeOutput(tx.Output0),
+		Output1:  SerializeOutput(tx.Output1),
+		Fee:      SerializeBig(tx.Fee),
 		BlockNum: SerializeBig(tx.BlkNum),
-		TxIdx: SerializeBig(tx.TxIdx),
+		TxIdx:    SerializeBig(tx.TxIdx),
 	}
 }
 
 func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 	result := chain.ZeroTransaction()
 	if tx != nil {
-		result.Input0  = DeserializeInput(tx.Input0)
+		result.Input0 = DeserializeInput(tx.Input0)
 		copy(result.Sig0[:], tx.Sig0)
-		result.Input1  = DeserializeInput(tx.Input1)
+		result.Input1 = DeserializeInput(tx.Input1)
 		copy(result.Sig1[:], tx.Sig1)
 		result.Output0 = DeserializeOutput(tx.Output0)
 		result.Output1 = DeserializeOutput(tx.Output1)
-		result.Fee     = DeserializeBig(tx.Fee)
-		result.BlkNum  = DeserializeBig(tx.BlockNum)
-		result.TxIdx   = DeserializeBig(tx.TxIdx)
+		result.Fee = DeserializeBig(tx.Fee)
+		result.BlkNum = DeserializeBig(tx.BlockNum)
+		result.TxIdx = DeserializeBig(tx.TxIdx)
 		copy(result.Sig0[:], tx.Sig0)
 	}
 	return result
@@ -100,10 +100,10 @@ func SerializeInput(in *chain.Input) (*pb.Input) {
 		return nil
 	}
 	return &pb.Input{
-		BlockNum: SerializeBig(in.BlkNum),
-		TxIdx:    SerializeBig(in.TxIdx),
-		OutIdx:   SerializeBig(in.OutIdx),
-		Owner:    in.Owner.Bytes(),
+		BlockNum:     SerializeBig(util.Uint642Big(in.BlkNum)),
+		TxIdx:        SerializeBig(util.Uint322Big(in.TxIdx)),
+		OutIdx:       SerializeBig(util.Uint82Big(in.OutIdx)),
+		Owner:        in.Owner.Bytes(),
 		DepositNonce: SerializeBig(in.DepositNonce),
 	}
 }
@@ -115,11 +115,11 @@ func DeserializeInput(in *pb.Input) (*chain.Input) {
 	return &chain.Input{
 		Output: chain.Output{
 			DepositNonce: DeserializeBig(in.DepositNonce),
-			Owner: common.BytesToAddress(in.Owner),
+			Owner:        common.BytesToAddress(in.Owner),
 		},
-		BlkNum: DeserializeBig(in.BlockNum),
-		TxIdx:  DeserializeBig(in.TxIdx),
-		OutIdx: DeserializeBig(in.OutIdx),
+		BlkNum: util.Big2Uint64(DeserializeBig(in.BlockNum)),
+		TxIdx:  util.Big2Uint32(DeserializeBig(in.TxIdx)),
+		OutIdx: util.Big2Uint8(DeserializeBig(in.OutIdx)),
 	}
 }
 

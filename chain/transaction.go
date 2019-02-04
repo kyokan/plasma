@@ -86,8 +86,8 @@ func (tx *Transaction) InputAt(idx uint8) *Input {
 	return tx.Input1
 }
 
-func (tx *Transaction) OutputAt(idx *big.Int) *Output {
-	if idx.Cmp(big.NewInt(0)) == 0 {
+func (tx *Transaction) OutputAt(idx uint8) *Output {
+	if idx == 0 {
 		return tx.Output0
 	}
 
@@ -95,13 +95,13 @@ func (tx *Transaction) OutputAt(idx *big.Int) *Output {
 }
 
 func (tx *Transaction) lookupOutput(addr *common.Address) (*Output, uint8) {
-	output := tx.OutputAt(big.NewInt(0))
+	output := tx.OutputAt(0)
 
 	if util.AddressesEqual(&output.Owner, addr) {
 		return output, 0
 	}
 
-	output = tx.OutputAt(big.NewInt(1))
+	output = tx.OutputAt(1)
 
 	if util.AddressesEqual(&output.Owner, addr) {
 		return output, 1
@@ -122,14 +122,14 @@ func (tx *Transaction) OutputIndexFor(addr *common.Address) uint8 {
 
 func (tx *Transaction) rlpRepresentation() rlpTransaction {
 	return rlpTransaction{
-		BlkNum0:       NewUint256(tx.Input0.BlkNum),
-		TxIdx0:        NewUint256(tx.Input0.TxIdx),
-		OutIdx0:       NewUint256(tx.Input0.OutIdx),
+		BlkNum0:       NewUint256(util.Uint642Big(tx.Input0.BlkNum)),
+		TxIdx0:        NewUint256(util.Uint322Big(tx.Input0.TxIdx)),
+		OutIdx0:       NewUint256(util.Uint82Big(tx.Input0.OutIdx)),
 		DepositNonce0: NewUint256(tx.Input0.DepositNonce),
 		Sig0:          tx.Sig0,
-		BlkNum1:       NewUint256(tx.Input1.BlkNum),
-		TxIdx1:        NewUint256(tx.Input1.TxIdx),
-		OutIdx1:       NewUint256(tx.Input1.OutIdx),
+		BlkNum1:       NewUint256(util.Uint642Big(tx.Input1.BlkNum)),
+		TxIdx1:        NewUint256(util.Uint322Big(tx.Input1.TxIdx)),
+		OutIdx1:       NewUint256(util.Uint82Big(tx.Input1.OutIdx)),
 		DepositNonce1: NewUint256(tx.Input1.DepositNonce),
 		Sig1:          tx.Sig1,
 		Owner0:        tx.Output0.Owner,

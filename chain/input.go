@@ -9,9 +9,9 @@ import (
 
 type Input struct {
 	Output
-	BlkNum *big.Int
-	TxIdx  *big.Int
-	OutIdx *big.Int
+	BlkNum uint64
+	TxIdx  uint32
+	OutIdx uint8
 }
 
 type rlpInput struct {
@@ -22,7 +22,7 @@ type rlpInput struct {
 	Owner        common.Address
 }
 
-func NewInput(blkNum, txIdx, outIdx, depositNonce *big.Int, owner common.Address) *Input {
+func NewInput(blkNum uint64, txIdx uint32, outIdx uint8, depositNonce *big.Int, owner common.Address) *Input {
 	return &Input{
 		Output: Output{
 			DepositNonce: depositNonce,
@@ -37,23 +37,23 @@ func NewInput(blkNum, txIdx, outIdx, depositNonce *big.Int, owner common.Address
 
 func ZeroInput() *Input {
 	var address common.Address
-	return NewInput(Zero(), Zero(), Zero(), Zero(), address)
+	return NewInput(0, 0, 0, Zero(), address)
 }
 
 func (in *Input) IsZeroInput() bool {
 	return in == nil ||
-			(in.BlkNum.Cmp(Zero()) == 0 &&
-					in.TxIdx.Cmp(Zero()) == 0 &&
-					in.OutIdx.Cmp(Zero()) == 0 &&
+			(in.BlkNum == 0 &&
+					in.TxIdx == 0 &&
+					in.OutIdx == 0 &&
 					in.DepositNonce.Cmp(Zero()) == 0)
 }
 
 func (in *Input) RLPHash(hasher util.Hasher) util.Hash {
 	var itf rlpInput
 	if in != nil {
-		itf.BlkNum = NewUint256(in.BlkNum)
-		itf.TxIdx = NewUint256(in.TxIdx)
-		itf.OutIdx = NewUint256(in.OutIdx)
+		itf.BlkNum = NewUint256(new(big.Int).SetUint64(in.BlkNum))
+		itf.TxIdx = NewUint256(big.NewInt(int64(in.TxIdx)))
+		itf.OutIdx = NewUint256(big.NewInt(int64(in.OutIdx)))
 		itf.DepositNonce = NewUint256(in.DepositNonce)
 		itf.Owner = in.Owner
 	} else {

@@ -199,10 +199,10 @@ func (m *Mempool) VerifyDepositTransaction(tx *chain.ConfirmedTransaction) (bool
 
 func (m *Mempool) updatePoolSpends(confirmed *chain.ConfirmedTransaction) {
 	tx := confirmed.Transaction
-	key0 := fmt.Sprintf("%d:%d:%d", tx.Input0.BlkNum.Uint64(), tx.Input0.TxIdx.Uint64(), tx.Input0.OutIdx.Uint64())
+	key0 := fmt.Sprintf("%d:%d:%d", tx.Input0.BlkNum, tx.Input0.TxIdx, tx.Input0.OutIdx)
 	m.poolSpends[key0] = true
 	if !tx.Input1.IsZeroInput() {
-		key1 := fmt.Sprintf("%d:%d:%d", tx.Input1.BlkNum.Uint64(), tx.Input1.TxIdx.Uint64(), tx.Input1.OutIdx.Uint64())
+		key1 := fmt.Sprintf("%d:%d:%d", tx.Input1.BlkNum, tx.Input1.TxIdx, tx.Input1.OutIdx)
 		m.poolSpends[key1] = true
 	}
 }
