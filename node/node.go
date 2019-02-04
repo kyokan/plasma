@@ -26,7 +26,7 @@ func NewPlasmaNode(storage db.PlasmaStorage, mPool *Mempool, client eth.Client) 
 }
 
 func (node *PlasmaNode) Start() {
-	go node.awaitTxs(time.Second)
+	go node.awaitTxs(100 * time.Millisecond)
 }
 
 func (node PlasmaNode) awaitTxs(interval time.Duration) {
