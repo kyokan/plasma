@@ -16,6 +16,7 @@ import (
 	"github.com/kyokan/plasma/eth"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/kyokan/plasma/log"
+	"bytes"
 )
 
 type sendCmdOutput struct {
@@ -132,7 +133,11 @@ var sendCmd = &cobra.Command{
 
 		confirmed.Transaction.BlkNum = util.Uint642Big(sendRes.Inclusion.BlockNumber)
 		confirmed.Transaction.TxIdx = util.Uint322Big(sendRes.Inclusion.TransactionIndex)
-		authSig, err := eth.Sign(privKey, confirmed.Transaction.SignatureHash())
+		var buf bytes.Buffer
+		buf.Write(confirmed.RLPHash(util.Sha256))
+		buf.Write(sendRes.Inclusion.MerkleRoot)
+		sigHash := util.Sha256(buf.Bytes())
+		authSig, err := eth.Sign(privKey, sigHash)
 		if err != nil {
 			return err
 		}
