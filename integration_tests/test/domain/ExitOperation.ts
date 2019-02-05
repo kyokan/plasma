@@ -4,7 +4,6 @@ import PlasmaContract from '../lib/PlasmaContract';
 import PlasmaClient from '../lib/PlasmaClient';
 import MerkleTree from '../lib/MerkleTree';
 import {sha256} from '../lib/hash';
-import {ethSign} from '../lib/sign';
 import BN = require('bn.js');
 
 export default class ExitOperation {
@@ -44,9 +43,8 @@ export default class ExitOperation {
     }
     const {proof} = merkle.generateProofAndRoot(this.outpoint!.txIdx);
     const confirmedTx = this.outpoint!.transaction;
-    const callSigHash = sha256(Buffer.concat([sha256(confirmedTx.toRLP()), block.header.merkleRoot]));
-    const callSig = ethSign(callSigHash, privateKey);
-    const callSigs: [Buffer, Buffer] = confirmedTx.input1.owner === this.from ? [callSig, callSig] : [callSig, Buffer.from('')];
+    const callSigRes = await this.client.getConfirmations(privateKey, this.outpoint!.blockNum, this.outpoint!.txIdx, this.outpoint!.outIdx);
+    const callSigs: [Buffer, Buffer] = confirmedTx.input1.owner === this.from ? [callSigRes.authSig0, callSigRes.authSig1] : [callSigRes.authSig0, Buffer.from('')];
     await this.contract.startExit(this.outpoint!, proof, callSigs, this.committedFee!, this.from);
   }
 }

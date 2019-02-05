@@ -19,12 +19,12 @@ import (
 )
 
 type sendCmdOutput struct {
-	Value            string `json:"value"`
-	To               string `json:"to"`
-	BlockNumber      uint64 `json:"blockNumber"`
-	TransactionIndex uint32 `json:"transactionIndex"`
-	MerkleRoot       string `json:"merkleRoot"`
-	ConfirmSignatures []string `json:"confirmSignatures"`
+	Value            string   `json:"value"`
+	To               string   `json:"to"`
+	BlockNumber      uint64   `json:"blockNumber"`
+	TransactionIndex uint32   `json:"transactionIndex"`
+	MerkleRoot       string   `json:"merkleRoot"`
+	AuthSignatures   []string `json:"authSignatures"`
 }
 
 var sendCmdLog = log.ForSubsystem("SendCmd")
@@ -132,7 +132,7 @@ var sendCmd = &cobra.Command{
 
 		confirmed.Transaction.BlkNum = util.Uint642Big(sendRes.Inclusion.BlockNumber)
 		confirmed.Transaction.TxIdx = util.Uint322Big(sendRes.Inclusion.TransactionIndex)
-		realConfirmSig, err := eth.Sign(privKey, confirmed.Transaction.SignatureHash())
+		authSig, err := eth.Sign(privKey, confirmed.Transaction.SignatureHash())
 		if err != nil {
 			return err
 		}
@@ -140,11 +140,11 @@ var sendCmd = &cobra.Command{
 		sendCmdLog.Info("confirming transaction")
 
 		ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
-		confirmRes, err := client.Confirm(ctx, &pb.ConfirmRequest{
-			BlockNumber:sendRes.Inclusion.BlockNumber,
-			TransactionIndex:sendRes.Inclusion.TransactionIndex,
-			ConfirmSig0: realConfirmSig[:],
-			ConfirmSig1: realConfirmSig[:],
+		_, err = client.Confirm(ctx, &pb.ConfirmRequest{
+			BlockNumber:      sendRes.Inclusion.BlockNumber,
+			TransactionIndex: sendRes.Inclusion.TransactionIndex,
+			AuthSig0:      authSig[:],
+			AuthSig1:      authSig[:],
 		})
 		if err != nil {
 			return err
@@ -156,9 +156,9 @@ var sendCmd = &cobra.Command{
 			BlockNumber:      sendRes.Inclusion.BlockNumber,
 			TransactionIndex: sendRes.Inclusion.TransactionIndex,
 			MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
-			ConfirmSignatures: []string {
-				hexutil.Encode(confirmRes.Signatures[0]),
-				hexutil.Encode(confirmRes.Signatures[1]),
+			AuthSignatures: []string{
+				hexutil.Encode(authSig[:]),
+				hexutil.Encode(authSig[:]),
 			},
 		}
 

@@ -2,6 +2,7 @@ import PlasmaClient from '../lib/PlasmaClient';
 import TransactionBuilder from '../lib/TransactionBuilder';
 import {assert} from 'chai';
 import BN = require('bn.js');
+import ConfirmedTransaction from './ConfirmedTransaction';
 
 export default class SendOperation {
   private readonly client: PlasmaClient;
@@ -47,6 +48,9 @@ export default class SendOperation {
       .build();
 
     const confirmSigs = tx.sign(privateKey);
-    await this.client.send(tx, confirmSigs);
+    const confirmData = await this.client.send(tx, confirmSigs);
+    const confirmedTx = ConfirmedTransaction.fromTransaction(tx, confirmSigs);
+    const authSigs = confirmedTx.authSign(privateKey, confirmData.merkleRoot);
+    await this.client.confirm(confirmData.blockNumber, confirmData.transactionIndex, authSigs);
   }
 }

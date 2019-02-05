@@ -4,9 +4,8 @@ import {fromBNWire, toBNWire, TransactionWire} from '../lib/PlasmaRPC';
 import {toBuffer} from '../lib/numbers';
 import * as ejs from 'ethereumjs-util';
 import {keccak256} from '../lib/hash';
+import {ethSign} from '../lib/sign';
 import BN = require('bn.js');
-import {ethSign, sign} from '../lib/sign';
-import {toHex} from '../lib/parseHex';
 
 export default class Transaction {
   public readonly input0: Input;
@@ -83,7 +82,7 @@ export default class Transaction {
     return this.confirmSign(privateKey);
   }
 
-  confirmSign(privateKey: Buffer): [Buffer, Buffer] {
+  confirmSign (privateKey: Buffer): [Buffer, Buffer] {
     const confSigHash = this.sigHash();
     const confSig = ethSign(confSigHash, privateKey);
     return [confSig, confSig];

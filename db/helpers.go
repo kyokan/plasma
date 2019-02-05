@@ -20,6 +20,7 @@ const blockKeyPrefix = "blk"
 const blockMetaKeyPrefix = "blkmeta"
 const blockFees = "blk_fees"
 const blockFeesExit = "blk_fees_exit"
+const authSigPrefix = "auth_sig"
 const depositPrefix = "deposit_nonce"
 const latestKey = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
@@ -69,6 +70,10 @@ func blkNumHashkey(blkNum *big.Int, hexHash string) []byte {
 
 func blkNumTxIdxKey(blkNum uint64, txIdx uint32) []byte {
 	return txPrefixKey("blkNum", strconv.FormatUint(uint64(blkNum), 10), "txIdx", strconv.FormatUint(uint64(txIdx), 10))
+}
+
+func blkNumTxIdxAuthSigKey(blkNum uint64, txIdx uint32) []byte {
+	return prefixKey(authSigPrefix, string(blkNumTxIdxKey(blkNum, txIdx)))
 }
 
 // Used to lookup transaction associated with a deposit

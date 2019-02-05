@@ -4,9 +4,11 @@ import Output from './Output';
 import BN = require('bn.js');
 import * as ejs from 'ethereumjs-util';
 import {ConfirmedTransactionWire} from '../lib/PlasmaRPC';
+import {sha256, tmSHA256} from '../lib/hash';
+import {ethSign} from '../lib/sign';
 
 export default class ConfirmedTransaction extends Transaction {
-  private confirmSignatures: [Buffer, Buffer];
+  public readonly confirmSignatures: [Buffer, Buffer];
 
   constructor (input0: Input, input1: Input, output0: Output, output1: Output, blockNum: number, txIdx: number, sig0: Buffer | null, sig1: Buffer | null, fee: BN, confirmSignatures: [Buffer, Buffer]) {
     super(input0, input1, output0, output1, blockNum, txIdx, sig0, sig1, fee);
@@ -24,6 +26,12 @@ export default class ConfirmedTransaction extends Transaction {
     ];
 
     return (ejs as any).rlp.encode(arr) as Buffer;
+  }
+
+  authSign(privateKey: Buffer, merkleRoot: Buffer): [Buffer, Buffer] {
+    const authSigHash = sha256(Buffer.concat([ sha256(this.toRLP()), merkleRoot ]));
+    const authSig = ethSign(authSigHash, privateKey);
+    return [authSig, authSig];
   }
 
   static fromTransaction (tx: Transaction, confirmSignatures: [Buffer, Buffer]) {

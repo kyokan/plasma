@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-		"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/chain"
@@ -42,6 +42,7 @@ type PlasmaStorage interface {
 	LatestBlock() (*chain.Block, error)
 	PackageBlock(txs []chain.ConfirmedTransaction) (result *BlockResult, err error)
 	ConfirmTransaction(blockNumber uint64, transactionIndex uint32, sigs [2]chain.Signature) (*chain.ConfirmedTransaction, error)
+	AuthSigsFor(blockNumber uint64, transactionIndex uint32) ([2]chain.Signature, error)
 
 	LastDepositEventIdx() (uint64, error)
 	SaveDepositEventIdx(idx uint64) error
@@ -58,7 +59,7 @@ type PlasmaStorage interface {
 }
 
 type Storage struct {
-	db  *leveldb.DB
+	db *leveldb.DB
 }
 
 func NewStorage(db *leveldb.DB) PlasmaStorage {
@@ -312,7 +313,6 @@ func (ps *Storage) ProcessDeposit(confirmed chain.ConfirmedTransaction) (deposit
 
 func (ps *Storage) FindTransactionsByBlockNum(blkNum uint64) ([]chain.ConfirmedTransaction, error) {
 
-
 	// Construct partial prefix that matches all transactions for the block
 	prefix := txPrefixKey("blkNum", strconv.FormatUint(blkNum, 10), "txIdx")
 	prefix = append(prefix, ':', ':')
@@ -527,9 +527,13 @@ func (ps *Storage) ConfirmTransaction(blockNumber uint64, transactionIndex uint3
 		return nil, err
 	}
 
-	tx.Signatures = sigs
+	encoded, err := rlp.EncodeToBytes(sigs)
+	if err != nil {
+		return nil, err
+	}
+
 	batch := new(leveldb.Batch)
-	out, err := ps.saveTransaction(blockNumber, transactionIndex, *tx, batch)
+	batch.Put(blkNumTxIdxAuthSigKey(blockNumber, transactionIndex), encoded)
 	if err != nil {
 		return nil, err
 	}
@@ -537,7 +541,26 @@ func (ps *Storage) ConfirmTransaction(blockNumber uint64, transactionIndex uint3
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	return tx, nil
+}
+
+func (ps *Storage) AuthSigsFor(blockNumber uint64, transactionIndex uint32) ([2]chain.Signature, error) {
+	var sigs [2]chain.Signature
+	key := blkNumTxIdxAuthSigKey(blockNumber, transactionIndex)
+	has, err := ps.db.Has(key, nil)
+	if err != nil {
+		return sigs, err
+	}
+	if !has {
+		return sigs, errors.New("no auth sigs found")
+	}
+	rawSigs, err := ps.db.Get(key, nil)
+	if err != nil {
+		return sigs, err
+	}
+
+	err = rlp.DecodeBytes(rawSigs, &sigs)
+	return sigs, err
 }
 
 // Block

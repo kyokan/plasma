@@ -11,11 +11,5 @@ export function sha256(buf: Buffer): Buffer {
 }
 
 export function tmSHA256(bufs: Buffer[]): Buffer {
-  const items = [];
-  for (const buf of bufs) {
-    items.push(Buffer.from([buf.length]));
-    items.push(buf);
-  }
-
   return sha256(Buffer.concat(bufs));
 }

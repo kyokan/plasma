@@ -12,7 +12,8 @@ import (
 	"log"
 	"net"
 	"github.com/kyokan/plasma/node"
-)
+	"github.com/pkg/errors"
+	)
 
 type Server struct {
 	storage   db.PlasmaStorage
@@ -121,6 +122,10 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 }
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
+	if req == nil {
+		return nil, errors.New("no request provided")
+	}
+
 	confirmed := rpc.DeserializeConfirmedTx(req.Confirmed)
 	inclusion := r.mPool.Append(*confirmed)
 	if inclusion.Error != nil {
@@ -138,9 +143,9 @@ func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 
 func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.ConfirmedTransaction, error) {
 	var sig0 chain.Signature
-	copy(sig0[:], req.ConfirmSig0)
+	copy(sig0[:], req.AuthSig0)
 	var sig1 chain.Signature
-	copy(sig1[:], req.ConfirmSig1)
+	copy(sig1[:], req.AuthSig1)
 
 	tx, err := r.confirmer.Confirm(req.BlockNumber, req.TransactionIndex, [2]chain.Signature{
 		sig0,
@@ -151,6 +156,18 @@ func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.Confi
 	}
 
 	return rpc.SerializeConfirmedTx(tx), nil
+}
+
+func (r *Server) GetConfirmations(ctx context.Context, req *pb.GetConfirmationsRequest) (*pb.GetConfirmationsResponse, error) {
+	sigs, err := r.confirmer.GetConfirmations(req.Sig, req.Nonce, req.BlockNumber, req.TransactionIndex, uint8(req.OutputIndex))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetConfirmationsResponse{
+		AuthSig0: sigs[0][:],
+		AuthSig1: sigs[1][:],
+	}, nil
 }
 
 func (r *Server) BlockHeight(context.Context, *pb.EmptyRequest) (*pb.BlockHeightResponse, error) {

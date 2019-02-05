@@ -35,8 +35,6 @@ describe('Exits', () => {
       .withOutpoint(outpoints[0])
       .withCommittedFee(toBig(500000));
 
-    // NOTE: Need to use PRIVATE_KEYS[4] below to generate the
-    // correct confirm sigs.
-    await exitOp.exit(Config.PRIVATE_KEYS[4]);
+    await exitOp.exit(Config.PRIVATE_KEYS[5]);
   });
 });

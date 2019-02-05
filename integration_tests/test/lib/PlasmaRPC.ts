@@ -70,3 +70,17 @@ export interface ConfirmedTransactionWire {
 export interface GetOutputsResponse {
   confirmedTransactions: ConfirmedTransactionWire[]
 }
+
+export interface SendResponse {
+  confirmed: any
+  inclusion: {
+    merkleRoot: Buffer
+    blockNumber: number
+    transactionIndex: number
+  }
+}
+
+export interface GetConfirmationsResponse{
+  authSig0: Buffer
+  authSig1: Buffer
+}

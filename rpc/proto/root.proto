@@ -12,6 +12,8 @@ service Root {
     }
     rpc Confirm (ConfirmRequest) returns (ConfirmedTransaction) {
     }
+    rpc GetConfirmations(GetConfirmationsRequest) returns (GetConfirmationsResponse) {
+    }
     rpc BlockHeight (EmptyRequest) returns (BlockHeightResponse) {
     }
 }
@@ -115,8 +117,21 @@ message TransactionInclusion {
 message ConfirmRequest {
     uint64 blockNumber = 1;
     uint32 transactionIndex = 2;
-    bytes confirmSig0 = 3;
-    bytes confirmSig1 = 4;
+    bytes authSig0 = 3;
+    bytes authSig1 = 4;
+}
+
+message GetConfirmationsRequest {
+    bytes sig = 1;
+    uint64 nonce = 2;
+    uint64 blockNumber = 3;
+    uint32 transactionIndex = 4;
+    uint32 outputIndex = 5;
+}
+
+message GetConfirmationsResponse {
+    bytes authSig0 = 1;
+    bytes authSig1 = 2;
 }
 
 message BlockHeightResponse {

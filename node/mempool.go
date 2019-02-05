@@ -58,8 +58,6 @@ func NewMempool(storage db.PlasmaStorage) *Mempool {
 }
 
 func (m *Mempool) Start() error {
-	var emptySigs [2]chain.Signature
-
 	go func() {
 		for {
 			select {
@@ -107,8 +105,6 @@ func (m *Mempool) Start() error {
 						Response: req.res,
 					})
 				} else {
-					// zero signatures since they are replaced upon confirm
-					tx.Signatures = emptySigs
 					m.txPool = append(m.txPool, MempoolTx{
 						Tx:       tx,
 						Response: req.res,
