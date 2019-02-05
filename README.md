@@ -1,9 +1,12 @@
 # Plasma
 
-This project is a golang implementation and extension of the [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. Our goals are the following:
+This project is a golang implementation and extension of the [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. We aim to build a Plasma implementation that can withstand the rigors of production deployment while retaining as much trustlessness as possible.
 
-1. Extend the Plasma MVP.
-2. Build a pluggable architecture that enables developers to build decentralized applications on top of a Plasma chain.
+**Note:** while Plasma is rapidly approaching mainnet readiness, it should still be considered alpha-quality software.
+
+## Smart Contract
+
+This implementation uses the FourthState [plasma-mvp-rootchain](https://github.com/FourthState/plasma-mvp-rootchain) smart contract. Kyokan is funding [Authio](https://authio.org/)'s efforts to perform a full security audit of the contract.
 
 ## Architecture
 
@@ -29,200 +32,71 @@ The following are three main parts of the system:
 1. A smart contract on the Ethereum root chain.
 2. Supports deposits, block submission, exits, and challenges.
 
-## Block Submission
+## Binaries
 
-Blocks are submitted under the following conditions:
+This project consists of three binaries:
 
-1. When a deposit transaction is received.
-2. When 65,535 transactions are in the mempool.
-3. Every 500 ms.
+1. `plasmad`, the Plasma node daemon itself.
+2. `plasmacli`, a CLI client for a querying `plasmad`.
+3. `plasma-harness`, a tool that simplifies local development by managing Ganache and Truffle processes.
 
-Every hour, the root node puts the last hour's worth of transactions into a Merkle tree and sends the Merkle root to the Plasma contract.
+You likely won't need to run `plasma-harness` in production.
 
 ## Prerequisites
 
 1. [Golang](https://golang.org/doc/install): This is primarily a golang development environment.
 2. [dep](https://github.com/golang/dep): We use ```dep``` for our dependency management.
 3. [Node.js](https://nodejs.org/en/) and [npm](https://www.npmjs.com/get-npm)
-4. [Truffle](http://truffleframework.com/docs/getting_started/installation): For convenience, truffle is currently used 
-to migrate Plasma contracts to the Ethereum root chain. 
-**Please make sure that the version of [solc](https://github.com/trufflesuite/truffle/blob/e8c18f36801a7fd2673e96247c13818d18a93b5b/package.json#L9) used by Truffle matches the one used by the contracts. Currently, Truffle [v4.0.5](https://github.com/trufflesuite/truffle/tree/e8c18f36801a7fd2673e96247c13818d18a93b5b) 
-is most recent to support Solidity [v0.4.18](https://github.com/ethereum/solidity/tree/9cf6e910bd2b90d0c9415d9c257f85fe0c518de8)**
-```npm install -g truffle@v4.0.5 ```
+4. [Truffle](http://truffleframework.com/docs/getting_started/installation).
 5. [Ganache](https://github.com/trufflesuite/ganache): Currently we use Ganache to test against a root chain.
-6. [Geth](https://github.com/ethereum/go-ethereum/wiki/Installing-Geth): To run a local private chain for testing with web sockets and lower mining difficulty.
 
-## Installation and Setup
+## Local Development Installation and Setup
 
-1. Checkout, install deps, and build:
+### 1. Checkout, install deps, and build:
 
-```
+```bash
 mkdir -p $GOPATH/src/github.com/kyokan
 git clone https://github.com/kyokan/plasma.git
 cd plasma
-dep ensure
-make
+make deps
+make build-plasmad
+make build-plasmacli
+make build-harness
 ```
 
-2. Run ganache on default port 7545
+### 2. Start the harness:
 
-3. Deploy contracts:
-
-Make sure to save the resulting Plasma contract address to be used later.
-
-```
-cd $GOPATH/src/github.com/kyokan/plasma/contracts
-./generate.js --network ganache
+```bash
+./target/plasma-harness start
 ```
 
-4. You can optionally setup a local private chain or testnet:
+`plasma-harness` will start `ganache-cli` in deterministic mode with a fixed mnemonic and automatically deploy all smart contracts. Since `ganache-cli` is in deterministic mode, the smart contract's address will always be `0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da`.
 
-This is a simple example of setting up a private chain.  For more details refer to the [Private Network](https://github.com/ethereum/go-ethereum/wiki/Private-network) written by Ethereum.
+### 3. Start `plasmad`:
 
-```
-mkdir -p ~/geth/chain
-cd ~/geth
-echo '{    "config": {        "chainId": 15,        "homesteadBlock": 0,        "eip155Block": 0,        "eip158Block": 0    },    "difficulty": "1024",    "gasLimit": "10000000",    "alloc": {        "0x44a5cae1ebd47c415630da1e2131b71d1f2f5803": { "balance": "1000000000000000000000" }    }}' > genesis.json
-geth --datadir chain init genesis.json
-geth account new --datadir chain
-geth --datadir chain --rpc --ws --mine --unlock [YOUR_ADDRESS]
+`plasmad` uses a YAML config file. An example configuration file suitable for local development can be found in the `build` folder. We will assume that you will use that one while starting `plasmad`. To start `plasmad`, run:
+
+```bash
+./target/plasmad --config ./build/config-local.yaml start-root
 ```
 
-## CLI Usage Examples
+### 4. Set up `plasmacli`:
 
-These examples work with running ganache as the root chain.  Be sure to set the contract address either through the command line or by setting them directly in cli.go.  They have been omitted from the examples to make it easier to read.
+`plasmacli` requires a private key to sign deposits and transactions. It reads the private key from a file on-disk, and defaults to searching for it at `~/.plasma/key`. Since `plasma-harness` runs Ganache, you can use any one of the default Ganache accounts as the private key:
 
-Also note that these examples require you to run generate.js again in between tests.
-
-#### Getting Balances
-
-Run the following to get the balance of each account at any point:
-
-```
-plasma balance
-plasma --user-address 0xf17f52151EbEF6C7334FAD080c5704D77216b732 balance
+```bash
+# private key for Ganache account index 1
+mkdir -p ~/.plasma
+echo "ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f" > ~/.plasma/key
 ```
 
-### Simulate Exits
+### 5. Deposit and send funds:
 
-In one tab run:
+You're ready to start sending money! Just make a deposit and send funds when you're ready:
 
-```
-plasma start
-```
-
-In a second tab run:
-
-```
-plasma validate
+```bash
+./target/plasmacli deposit 0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da 1000000
+./target/plasmacli send 0x821aea9a577a9b44299b9c15c88cf3087f3b5544 100 
 ```
 
-In a third tab run:
-
-```
-plasma deposit --amount 1000000
-plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 1234
-plasma --user-address 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --private-key ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f exit --blocknum 3 --txindex 0 --oindex 0
-plasma exit --blocknum 3 --txindex 0 --oindex 1
-plasma finalize
-```
-
-### Simulate Exit Challenges
-
-In one tab run:
-
-```
-plasma start
-```
-
-In a second tab run:
-
-```
-plasma validate
-```
-
-In a third tab run:
-
-```
-plasma deposit --amount 1000000
-plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 1234
-plasma exit --blocknum 2 --txindex 0 --oindex 0
-plasma finalize
-```
-
-### Simulate Root Validation
-
-In one tab run:
-
-```
-plasma start
-```
-
-In a second tab run:
-
-```
-plasma validate
-```
-
-In a third tab run:
-
-```
-plasma deposit --amount 1000000
-plasma send --to 0xf17f52151EbEF6C7334FAD080c5704D77216b732 --amount 3
-```
-
-Cancel the first two tabs.
-
-Run a force submission just for this example:
-
-```
-plasma force-submit --merkle-root f2972273de7810c2f290efd7f61e0d4a --prev-hash 344decbb42838bb176dc2e5a1ca51700a02f1d2d5e65d328222dfed5446f7c5d --number 4
-```
-
-Start root node and validator again then run finalize to see exits:
-
-```
-plasma finalize
-```
-
-## Root Node API
-### Send Transaction
-Send a transaction to other participants.
-#### Parameters
-|Name|Type|Required|Description|
-|---|---|---|---|
-|from|Address|Yes|Sender of transaction|
-|to|Address|Yes|Recipient of transaction|
-|amount|Float|Yes|Amount to send|
-#### Sample
-```
-curl http://localhost:8643/rpc -H "Content-Type: application/json" -X POST --data '{ "method": "Transaction.Send", "params": [{"From":"0x627306090abaB3A6e1400e9345bC60c78a8BEf57","To":"0xf17f52151EbEF6C7334FAD080c5704D77216b732","Amount":"3"}], "id":1}'
-```
-
-## Example Applications
-
-Currently there are a growing number of decentralized applications using devices that offer a utility (such as routing network packets) and simultaneously leverage this data to calculate micro payments in a “pay-as-you-go” model.  Solutions such as state-channels help limit costs, but come with complexities when there are thousands of nodes, requiring thousands of channels to be opened and/or chained.  Plasma offers a great alternative solution in these scenarios because in reality the payment contract is between two parties: the decentralized app which owns these devices, and the customer using these devices.  In this way, the decentralized app can maintain their own Plasma child chain, pooling together transactions reported from their devices.  They can then fine tune their costs based on the size of the block headers and frequency these blocks are reported to the Plasma contract.
-
-At the same time, customers of the decentralized app may run standardized validator nodes (provided by this implementation) on a VPC.  This ensures security for customers, since validator nodes will automatically exit in case of byzantine behavior from the decentralized app.  Validators will run autonomously handling the complexities of verifications, exits, and challenges.  This makes them easy to use for normal consumers.  In practice it makes sense for customers to group together into validator pools, since running a VPC could be expensive.
-
-## Future Applications
-
-We are actively working on extending the Plasma MVP to beyond payments.  In the use-case above, it would be beneficial if the decentralized app could "plug in" to Plasma by executing proprietary business logic while still getting the security guarantees of the Ethereum root chain.  A simple example is a contract that calculates how much network bandwidth customers use.  This gives several advantages:
-
-1. Customers have greater visibility of how they will be charged before agreeing to use the service.
-2. Customers will have confidence in the security because validators will submit challenge proofs incase of incorrect payment calculations.  Currently users would need to trust the amount charged was calculated correctly, and it would be realistically difficult to validate, especially in high transaction volume situations.
-3. Decentralized Apps can more quickly develop without worrying about scalability and security.
-
-Implementing this vision will come down to two major parts:
-
-#### Pluggable Framework for Decentralized Apps
-
-We will create a layer on top of Root Nodes that will allow decentralized apps to run their own business logic.  Our vision is to provide a development framework and/or protocol that is easy to use, while still being secure.  To achieve this, the functionality provided will be incrementally released as specific subsets of state transitions whose priority is determined by real world decentralized app use cases.  Decentralized apps will likely integrate with this layer via pluggable golang code and/or rpc protocols.
-
-#### Contract Security Guarantees
-
-Root Nodes will submit state transition types that are hashed into separate merkle roots stored in Plasma blocks on the contract.  The Plasma contract may track simplified and/or recent state transition functions and storage for each instance, to help increase security.  In the case of byzantine behavior, validators can submit proofs that refute these transitions by re-running state transitions within a challenge window and verifying that the resulting merkle roots match. 
-
-### Conclusion
-
-Decentralized apps and customers may then agree upon pre-defined state transitions on the child chain, with Plasma based security guarantees of the root chain. In this model two parties will review state transition functions beforehand that detail what data will be used to determine costs (i.e. network bandwidth). The devices will then broadcast state transition transactions to the Root Node, which will execute the transition on the child chain. The Root Node will then create proofs of the state transitions and store them in the block header. Validators will then autonomously validate that the latest submitted blocks look legitimate by re-running the state transitions.  This model illustrates how we plan to move towards a pluggable Plasma framework that extends beyond payments.
+Deposits require an on-chain transaction. Once you've deposited, though, new Plasma blocks are created every 100ms and feel effectively instant.
