@@ -10,6 +10,8 @@ service Root {
     }
     rpc Send (SendRequest) returns (SendResponse) {
     }
+    rpc Confirm (ConfirmRequest) returns (ConfirmedTransaction) {
+    }
     rpc BlockHeight (EmptyRequest) returns (BlockHeightResponse) {
     }
 }
@@ -101,6 +103,20 @@ message SendRequest {
 
 message SendResponse {
     ConfirmedTransaction confirmed = 1;
+    TransactionInclusion inclusion = 2;
+}
+
+message TransactionInclusion {
+    bytes merkleRoot = 1;
+    uint64 blockNumber = 2;
+    uint32 transactionIndex = 3;
+}
+
+message ConfirmRequest {
+    uint64 blockNumber = 1;
+    uint32 transactionIndex = 2;
+    bytes confirmSig0 = 3;
+    bytes confirmSig1 = 4;
 }
 
 message BlockHeightResponse {

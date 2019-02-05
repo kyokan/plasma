@@ -14,8 +14,8 @@ build-harness:
 build-plasmacli:
 	go build -o ./target/plasmacli ./cmd/plasmacli/main.go
 
-build-debug:
-	go build -gcflags "all=-N -l" -o ./target/plasma ./cmd/plasma/main.go
+build-plasmad-debug:
+	go build -gcflags "all=-N -l" -o ./target/plasmad ./cmd/plasmad/main.go
 
 build-cross:
 	docker build ./build --no-cache -t plasma-cross-compilation:latest

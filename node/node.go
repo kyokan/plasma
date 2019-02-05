@@ -2,12 +2,13 @@ package node
 
 import (
 	"github.com/kyokan/plasma/chain"
-		"log"
-		"time"
+	"log"
+	"time"
 
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
-	)
+	"github.com/kyokan/plasma/util"
+)
 
 type PlasmaNode struct {
 	storage   db.PlasmaStorage
@@ -29,7 +30,7 @@ func (node *PlasmaNode) Start() {
 	go node.awaitTxs(100 * time.Millisecond)
 }
 
-func (node PlasmaNode) awaitTxs(interval time.Duration) {
+func (node *PlasmaNode) awaitTxs(interval time.Duration) {
 	log.Print("Awaiting transactions.")
 
 	tick := time.NewTicker(interval)
@@ -51,25 +52,61 @@ func (node PlasmaNode) awaitTxs(interval time.Duration) {
 	}
 }
 
-func (node PlasmaNode) packageBlock(txs []chain.ConfirmedTransaction) {
+func (node *PlasmaNode) packageBlock(mtxs []MempoolTx) {
+	txs := make([]chain.ConfirmedTransaction, len(mtxs), len(mtxs))
+	chans := make([]chan TxInclusionResponse, len(mtxs), len(mtxs))
+	for i, mtx := range mtxs {
+		txs[i] = mtx.Tx
+		chans[i] = mtx.Response
+	}
+
 	blockResult, err := node.storage.PackageBlock(txs)
 	if err != nil {
 		log.Printf("Error packaging block: %s", err.Error())
+		node.notifyAwaiters(chans, nil, err)
 		return
 	}
 
 	if blockResult != nil {
 		node.submitter.Enqueue(*blockResult)
 	}
+
+	node.notifyAwaiters(chans, blockResult, nil)
 }
 
-func (node PlasmaNode) packageDepositBlocks(deposit chain.ConfirmedTransaction) {
+func (node *PlasmaNode) notifyAwaiters(awaiters []chan TxInclusionResponse, blockRes *db.BlockResult, err error) {
+	for i, awaiter := range awaiters {
+		if err != nil {
+			awaiter <- TxInclusionResponse{
+				Error: err,
+			}
+		} else {
+			awaiter <- TxInclusionResponse{
+				MerkleRoot:       blockRes.MerkleRoot,
+				BlockNumber:      util.Big2Uint64(blockRes.BlockNumber),
+				TransactionIndex: uint32(i),
+				Error:            err,
+			}
+		}
+	}
+}
+
+func (node *PlasmaNode) packageDepositBlocks(depositMtx MempoolTx) {
 	log.Printf("packaging 1 deposit txs into block")
-	depositBlock, err := node.storage.ProcessDeposit(deposit)
+	depositBlock, err := node.storage.ProcessDeposit(depositMtx.Tx)
 	if err != nil {
+		depositMtx.Response <- TxInclusionResponse{
+			Error: err,
+		}
 		log.Printf("Error packaging deposti block: %s", err.Error())
 		return
 	}
 
 	node.submitter.Enqueue(*depositBlock)
+	depositMtx.Response <- TxInclusionResponse{
+		MerkleRoot:       depositBlock.MerkleRoot,
+		BlockNumber:      util.Big2Uint64(depositBlock.BlockNumber),
+		TransactionIndex: 0,
+		Error:            nil,
+	}
 }

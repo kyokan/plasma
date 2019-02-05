@@ -12,19 +12,21 @@ import (
 	"log"
 	"net"
 	"github.com/kyokan/plasma/node"
-	)
+)
 
 type Server struct {
-	storage db.PlasmaStorage
-	ctx     context.Context
-	mPool   *node.Mempool
+	storage   db.PlasmaStorage
+	ctx       context.Context
+	mPool     *node.Mempool
+	confirmer *node.TransactionConfirmer
 }
 
-func NewServer(ctx context.Context, storage db.PlasmaStorage, mPool *node.Mempool) (*Server) {
+func NewServer(ctx context.Context, storage db.PlasmaStorage, mPool *node.Mempool, confirmer *node.TransactionConfirmer) (*Server) {
 	return &Server{
-		storage: storage,
-		ctx:     ctx,
-		mPool:   mPool,
+		storage:   storage,
+		ctx:       ctx,
+		mPool:     mPool,
+		confirmer: confirmer,
 	}
 }
 
@@ -120,13 +122,35 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
 	confirmed := rpc.DeserializeConfirmedTx(req.Confirmed)
-	err := r.mPool.Append(*confirmed)
-	if err != nil {
-		return nil, err
+	inclusion := r.mPool.Append(*confirmed)
+	if inclusion.Error != nil {
+		return nil, inclusion.Error
 	}
 	return &pb.SendResponse{
 		Confirmed: rpc.SerializeConfirmedTx(confirmed),
+		Inclusion: &pb.TransactionInclusion{
+			MerkleRoot:       inclusion.MerkleRoot[:],
+			BlockNumber:      inclusion.BlockNumber,
+			TransactionIndex: inclusion.TransactionIndex,
+		},
 	}, nil
+}
+
+func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.ConfirmedTransaction, error) {
+	var sig0 chain.Signature
+	copy(sig0[:], req.ConfirmSig0)
+	var sig1 chain.Signature
+	copy(sig1[:], req.ConfirmSig1)
+
+	tx, err := r.confirmer.Confirm(req.BlockNumber, req.TransactionIndex, [2]chain.Signature{
+		sig0,
+		sig1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return rpc.SerializeConfirmedTx(tx), nil
 }
 
 func (r *Server) BlockHeight(context.Context, *pb.EmptyRequest) (*pb.BlockHeightResponse, error) {

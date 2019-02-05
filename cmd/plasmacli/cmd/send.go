@@ -12,16 +12,22 @@ import (
 	"sort"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
-		"github.com/kyokan/plasma/util"
+	"github.com/kyokan/plasma/util"
 	"github.com/kyokan/plasma/eth"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/kyokan/plasma/log"
 )
 
 type sendCmdOutput struct {
-	Value string `json:"value"`
-	To    string `json:"to"`
-	ConfirmationSignatures []string `json:"confirmationSignatures"`
+	Value            string `json:"value"`
+	To               string `json:"to"`
+	BlockNumber      uint64 `json:"blockNumber"`
+	TransactionIndex uint32 `json:"transactionIndex"`
+	MerkleRoot       string `json:"merkleRoot"`
+	ConfirmSignatures []string `json:"confirmSignatures"`
 }
+
+var sendCmdLog = log.ForSubsystem("SendCmd")
 
 var sendCmd = &cobra.Command{
 	Use:   "send to value",
@@ -43,6 +49,8 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 		defer conn.Close()
+
+		sendCmdLog.Info("selecting outputs")
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 		res, err := client.GetOutputs(ctx, &pb.GetOutputsRequest{
@@ -105,6 +113,8 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 
+		sendCmdLog.Info("sending transaction")
+
 		confirmed := &chain.ConfirmedTransaction{
 			Transaction: *tx,
 			Signatures: [2]chain.Signature{
@@ -112,21 +122,43 @@ var sendCmd = &cobra.Command{
 				confirmSig,
 			},
 		}
-
 		ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
-		_, err = client.Send(ctx, &pb.SendRequest{
+		sendRes, err := client.Send(ctx, &pb.SendRequest{
 			Confirmed: rpc.SerializeConfirmedTx(confirmed),
 		})
 		if err != nil {
 			return err
 		}
 
+		confirmed.Transaction.BlkNum = util.Uint642Big(sendRes.Inclusion.BlockNumber)
+		confirmed.Transaction.TxIdx = util.Uint322Big(sendRes.Inclusion.TransactionIndex)
+		realConfirmSig, err := eth.Sign(privKey, confirmed.Transaction.SignatureHash())
+		if err != nil {
+			return err
+		}
+
+		sendCmdLog.Info("confirming transaction")
+
+		ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
+		confirmRes, err := client.Confirm(ctx, &pb.ConfirmRequest{
+			BlockNumber:sendRes.Inclusion.BlockNumber,
+			TransactionIndex:sendRes.Inclusion.TransactionIndex,
+			ConfirmSig0: realConfirmSig[:],
+			ConfirmSig1: realConfirmSig[:],
+		})
+		if err != nil {
+			return err
+		}
+
 		out := &sendCmdOutput{
-			Value: value.Text(10),
-			To: to.Hex(),
-			ConfirmationSignatures: []string {
-				hexutil.Encode(confirmSig[:]),
-				hexutil.Encode(confirmSig[:]),
+			Value:            value.Text(10),
+			To:               to.Hex(),
+			BlockNumber:      sendRes.Inclusion.BlockNumber,
+			TransactionIndex: sendRes.Inclusion.TransactionIndex,
+			MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
+			ConfirmSignatures: []string {
+				hexutil.Encode(confirmRes.Signatures[0]),
+				hexutil.Encode(confirmRes.Signatures[1]),
 			},
 		}
 

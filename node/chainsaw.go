@@ -99,7 +99,8 @@ func (c *Chainsaw) processDeposits(logFields *logrus.Entry, head uint64) error {
 			Fee:     big.NewInt(0),
 		}
 		confirmed := chain.ConfirmedTransaction{Transaction: tx,}
-		if err := c.mPool.Append(confirmed); err != nil {
+		inclusion := c.mPool.Append(confirmed)
+		if inclusion.Error != nil {
 			logFields.WithFields(logrus.Fields{"err": err, "txHash": tx.SignatureHash().Hex()}).
 				Error("error while adding deposit to mempool")
 		}
