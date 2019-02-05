@@ -4,9 +4,13 @@ import (
 	"github.com/kyokan/plasma/db"
 	"github.com/kyokan/plasma/eth"
 	"sync"
-	"log"
-	"sync/atomic"
+		"sync/atomic"
+	log2 "github.com/kyokan/plasma/log"
+	"github.com/sirupsen/logrus"
+	"github.com/kyokan/plasma/util"
 )
+
+var bsLogger = log2.ForSubsystem("BlockSubmitter")
 
 type BlockSubmitter struct {
 	submissions  []db.BlockResult
@@ -38,16 +42,16 @@ func (s *BlockSubmitter) Enqueue(res db.BlockResult) {
 	defer s.mtx.Unlock()
 	s.submissions = append(s.submissions, res)
 	s.awakeDequeue <- true
-	log.Printf("enqueued submission for block %d", res.BlockNumber.Uint64())
+	bsLogger.WithFields(logrus.Fields{
+		"blockNumber": util.Big2Uint64(res.BlockNumber),
+	}).Info("enqueued block for submission")
 }
 
 func (s *BlockSubmitter) dequeue() {
 	if !atomic.CompareAndSwapUint32(&s.isBusy, 0, 1) {
 		return
 	}
-
 	defer atomic.StoreUint32(&s.isBusy, 0)
-
 	if len(s.submissions) == 0 {
 		return
 	}
@@ -59,14 +63,18 @@ func (s *BlockSubmitter) dequeue() {
 
 	err := s.client.SubmitBlock(latest.MerkleRoot, latest.NumberTransactions, latest.BlockFees, latest.BlockNumber)
 	if err != nil {
-		log.Println("error submitting block", err)
+		bsLogger.WithFields(logrus.Fields{
+			"blockNumber": util.Big2Uint64(latest.BlockNumber),
+			"err": err,
+		}).Error("failed to submit block!")
 		s.mtx.Lock()
 		s.submissions = append([]db.BlockResult{latest}, s.submissions...)
 		s.mtx.Unlock()
 		return
 	}
 
-	log.Printf("successfully submitted block %d", latest.BlockNumber.Uint64())
-
+	bsLogger.WithFields(logrus.Fields{
+		"blockNumber": util.Big2Uint64(latest.BlockNumber),
+	}).Info("successfully submitted block")
 	s.awakeDequeue <- true
 }
