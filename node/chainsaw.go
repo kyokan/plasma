@@ -30,6 +30,12 @@ func NewChainsaw(client eth.Client, mPool *Mempool, storage db.PlasmaStorage) *C
 }
 
 func (c *Chainsaw) Start() error {
+	lastBlock, err := c.storage.LastDepositEventIdx()
+	if err != nil {
+		return err
+	}
+	c.lastBlock = lastBlock
+
 	go func() {
 		logger.Info("chainsaw started")
 		tick := time.NewTicker(5 * time.Second)
@@ -65,6 +71,9 @@ func (c *Chainsaw) poll() {
 	logFields.Info("processing blocks")
 	if err := c.processDeposits(logFields, head); err != nil {
 		return
+	}
+	if err := c.storage.SaveDepositEventIdx(head); err != nil {
+		logFields.WithFields(logrus.Fields{"err": err}).Error("failed to persist deposit index")
 	}
 	c.lastBlock = head + 1
 }
@@ -106,11 +115,5 @@ func (c *Chainsaw) processDeposits(logFields *logrus.Entry, head uint64) error {
 		}
 	}
 	logFields.WithFields(logrus.Fields{"depositCount": len(events)}).Info("added deposits to mempool")
-
-	if err := c.storage.SaveDepositEventIdx(head); err != nil {
-		logFields.WithFields(logrus.Fields{"err": err}).Error("failed to persist deposit index")
-		return err
-	}
-
 	return nil
 }
