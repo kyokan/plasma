@@ -135,7 +135,7 @@ async function migrateContract () {
 async function startPlasma () {
   return new Promise((resolve, reject) => {
     setTimeout(() => reject(new Error('timed out starting plasma')), 10000);
-    plasma = spawn(path.resolve(__dirname, '..', '..', 'target', 'plasma'), [
+    plasma = spawn(path.resolve(__dirname, '..', '..', 'target', 'plasmad'), [
       'start-root',
       '--config',
       path.resolve(__dirname, '..', 'config', 'test-config.yml'),

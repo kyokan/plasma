@@ -11,9 +11,6 @@ var rootCmd = &cobra.Command{
 	Short: "Manages a local development test harness.",
 }
 
-func init() {
-}
-
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 	    fmt.Println(err)

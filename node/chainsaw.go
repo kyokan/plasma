@@ -10,7 +10,7 @@ import (
 	"github.com/kyokan/plasma/db"
 )
 
-var logger = log.ForSubsystem("chainsaw")
+var logger = log.ForSubsystem("Chainsaw")
 
 type Chainsaw struct {
 	lastBlock uint64

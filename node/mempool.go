@@ -3,12 +3,12 @@ package node
 import (
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/db"
-	"github.com/kyokan/plasma/util"
 	"errors"
 	"fmt"
 	"math/big"
 	"github.com/kyokan/plasma/log"
 	"github.com/sirupsen/logrus"
+	"github.com/kyokan/plasma/eth"
 )
 
 const MaxMempoolSize = 65534
@@ -151,12 +151,12 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 
 	prevTx0Output := prevTx0.Transaction.OutputAt(confirmed.Transaction.Input0.OutIdx)
 	sigHash0 := confirmed.Transaction.Input0.SignatureHash()
-	err = util.ValidateSignature(sigHash0, confirmed.Transaction.Sig0[:], prevTx0Output.Owner)
+	err = eth.ValidateSignature(sigHash0, confirmed.Transaction.Sig0[:], prevTx0Output.Owner)
 	if err != nil {
 		txLog.Warn("transaction rejected due to invalid sig 0")
 		return false, err
 	}
-	err = util.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
+	err = eth.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
 	if err != nil {
 		txLog.Warn("transaction rejected due to invalid confirm sig 0")
 		return false, err
@@ -176,12 +176,12 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 
 		prevTx1Output := prevTx1.Transaction.OutputAt(confirmed.Transaction.Input1.OutIdx)
 		sigHash1 := confirmed.Transaction.Input1.SignatureHash()
-		err = util.ValidateSignature(sigHash1, confirmed.Transaction.Sig1[:], prevTx1Output.Owner)
+		err = eth.ValidateSignature(sigHash1, confirmed.Transaction.Sig1[:], prevTx1Output.Owner)
 		if err != nil {
 			txLog.Warn("transaction rejected due to invalid sig 1")
 			return false, err
 		}
-		err = util.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[1][:], prevTx1Output.Owner)
+		err = eth.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[1][:], prevTx1Output.Owner)
 		if err != nil {
 			txLog.Warn("transaction rejected due to invalid confirm sig 1")
 			return false, err

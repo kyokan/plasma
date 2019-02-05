@@ -13,9 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"log"
 	"time"
+	log2 "github.com/kyokan/plasma/log"
+	"github.com/sirupsen/logrus"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const SignaturePreamble = "\x19Ethereum Signed Message:\n"
+
+var clientLogger = log2.ForSubsystem("EthClient")
 
 type PlasmaClient struct {
 	plasma      *contracts.Plasma
@@ -55,6 +60,7 @@ type Client interface {
 	UserAddress() common.Address
 	SubmitBlock(util.Hash, uint32, *big.Int, *big.Int) error
 	SubmitBlocks(merkleRoot []util.Hash, txCount []uint32, fees []*big.Int, blkNum *big.Int) error
+	Deposit(amount *big.Int) (*types.Receipt, error)
 
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
@@ -132,6 +138,35 @@ func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks []uint32
 	}
 
 	return nil
+}
+
+func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
+	opts := CreateKeyedTransactor(c.privateKey)
+	opts.Value = amount
+
+	clientLogger.WithFields(logrus.Fields{
+		"amount": amount.Text(10),
+	}).Info("depositing funds")
+
+	tx, err := c.contract.Deposit(opts, crypto.PubkeyToAddress(c.privateKey.PublicKey))
+	if err != nil {
+		return nil, err
+	}
+
+	rawReceipt, err := util.WithRetries(func() (interface{}, error) {
+		return c.client.TransactionReceipt(context.Background(), tx.Hash())
+	}, 10, 5 * time.Second)
+	if err != nil {
+		return nil, err
+	}
+	receipt := rawReceipt.(*types.Receipt)
+
+	clientLogger.WithFields(logrus.Fields{
+		"amount": amount.Text(10),
+		"txHash": receipt.TxHash.Hex(),
+	}).Info("successfully deposited funds")
+
+	return receipt, nil
 }
 
 func (c *clientState) EthereumBlockHeight() (uint64, error) {

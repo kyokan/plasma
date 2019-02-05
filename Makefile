@@ -5,11 +5,14 @@ deps:
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
-build-plasma:
-	go build -o ./target/plasma ./cmd/plasma/main.go
+build-plasmad:
+	go build -o ./target/plasmad ./cmd/plasmad/main.go
 
 build-harness:
 	go build -o ./target/plasma-harness ./cmd/harness/main.go
+
+build-plasmacli:
+	go build -o ./target/plasmacli ./cmd/plasmacli/main.go
 
 build-debug:
 	go build -gcflags "all=-N -l" -o ./target/plasma ./cmd/plasma/main.go
@@ -22,7 +25,7 @@ build-cross:
 	docker rm cp-tmp
 	
 install:
-	go install ./cmd/plasma
+	go install ./cmd/plasmad
 
 abigen: deps
 	cd plasma-mvp-rootchain && \
