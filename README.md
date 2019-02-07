@@ -61,7 +61,7 @@ mkdir ~/go
 mkdir ~/go/bin
 mkdir ~/go/src
 
-export PATH=$PATH:/Users/kirushanth/go/bin
+export PATH=$PATH:~/go/bin
 
 # install dep
 curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
