@@ -1,5 +1,6 @@
 deps:
 	@echo "--> Installing dependencies for Plasma MVP Rootchain..."
+	git submodule init
 	git submodule update --remote --recursive
 	npm install --prefix plasma-mvp-rootchain plasma-mvp-rootchain
 	@echo "--> Installing Go dependencies..."
@@ -23,7 +24,7 @@ build-cross:
 	docker run --name cp-tmp plasma-cross-compilation:latest /bin/true
 	docker cp cp-tmp:/go/src/github.com/kyokan/plasma/target/plasma ./target/plasma-linux-amd64
 	docker rm cp-tmp
-	
+
 install:
 	go install ./cmd/plasmad
 
