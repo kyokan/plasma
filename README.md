@@ -54,7 +54,13 @@ You likely won't need to run `plasma-harness` in production.
 
 ### 1. Checkout, install deps, and build:
 
+Prerequisites and local environment setup:
+
 ```bash
+# install node/npm
+brew install node # for Mac / OSX env
+sudo apt install nodejs npm # for Linux/Ubuntu env
+
 # install go from (https://golang.org/dl/)
 go env GOPATH # should be ~/go
 mkdir ~/go
@@ -71,9 +77,13 @@ curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 [sudo] npm install -g ganache-cli
 
 # install jq (https://stedolan.github.io/jq/download/)
-brew install jq # Mac / OSX
-sudo apt-get install jq # Linux/Ubuntu
+brew install jq # for Mac / OSX env
+sudo apt-get install jq # for Linux/Ubuntu env
+```
 
+Plasma specific setup:
+
+```bash
 mkdir -p $GOPATH/src/github.com/kyokan
 git clone https://github.com/kyokan/plasma.git
 cd plasma
