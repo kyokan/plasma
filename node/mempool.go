@@ -164,6 +164,10 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 		"hash": confirmed.Transaction.SignatureHash().Hex(),
 	})
 
+	if confirmed.Transaction.Output0.Denom.Cmp(big.NewInt(0)) == -1 {
+		return false, errors.New("transaction rejected due to negative output0 denomination")
+	}
+
 	prevTx0, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input0.BlkNum, confirmed.Transaction.Input0.TxIdx)
 	if err != nil {
 		return false, err
@@ -189,6 +193,10 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 	totalInput = totalInput.Add(totalInput, prevTx0Output.Denom)
 
 	if !confirmed.Transaction.Input1.IsZeroInput() {
+		if confirmed.Transaction.Output1.Denom.Cmp(big.NewInt(0)) == -1 {
+			return false, errors.New("transaction rejected due to negative output1 denomination")
+		}
+
 		prevTx1, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input1.BlkNum, confirmed.Transaction.Input1.TxIdx)
 		if err != nil {
 			return false, err
