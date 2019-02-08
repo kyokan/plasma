@@ -37,7 +37,9 @@ func (c *Chainsaw) Start() error {
 	c.lastBlock = lastBlock
 
 	go func() {
-		logger.Info("chainsaw started")
+		logger.WithFields(logrus.Fields{
+			"lastBlock": lastBlock,
+		}).Info("chainsaw started")
 		tick := time.NewTicker(5 * time.Second)
 
 		for {

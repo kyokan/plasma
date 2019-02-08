@@ -17,12 +17,12 @@ type PlasmaNode struct {
 	submitter *BlockSubmitter
 }
 
-func NewPlasmaNode(storage db.PlasmaStorage, mPool *Mempool, client eth.Client) *PlasmaNode {
+func NewPlasmaNode(storage db.PlasmaStorage, mPool *Mempool, client eth.Client, submitter *BlockSubmitter) *PlasmaNode {
 	return &PlasmaNode{
 		storage:   storage,
 		mPool:     mPool,
 		client:    client,
-		submitter: NewBlockSubmitter(client),
+		submitter: submitter,
 	}
 }
 

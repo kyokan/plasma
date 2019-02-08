@@ -27,6 +27,7 @@ const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
 const latestTxExitIdxKey = "LATEST_TRANSACTION_EXIT_IDX"
 const latestDepExitIdxKey = "LATEST_DEPOSIT_EXIT_IDX"
 const invalidKeyPrefix = "invalid"
+const lastSubmittedBlockKey = "LAST_SUBMITTED_BLOCK"
 
 func merklePrefixKey(parts ...string) []byte {
 	return prefixKey(merkleKeyPrefix, parts...)

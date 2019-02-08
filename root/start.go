@@ -39,8 +39,12 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	}
 
 	confirmer := node.NewTransactionConfirmer(storage)
+	submitter := node.NewBlockSubmitter(plasma, storage)
+	if err := submitter.Start(); err != nil {
+	    return err
+	}
 
-	p := node.NewPlasmaNode(storage, mpool, plasma)
+	p := node.NewPlasmaNode(storage, mpool, plasma, submitter)
 	go p.Start()
 	// TODO: ensure that 1 deposit tx is always 1 block
 

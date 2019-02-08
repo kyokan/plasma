@@ -56,6 +56,9 @@ type PlasmaStorage interface {
 	MarkExitsAsSpent([]chain.Input) error
 
 	IsDoubleSpent(tx *chain.ConfirmedTransaction) (bool, error)
+
+	SaveLastSubmittedBlock(num uint64) error
+	LastSubmittedBlock() (uint64, error)
 }
 
 type Storage struct {
@@ -271,13 +274,6 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 	batch.Put(key, enc)
 	batch.Put(blockPrefixKey(latestKey), key)
 	batch.Put(blockNumKey(block.Header.Number), key)
-	enc, err = rlp.EncodeToBytes(chain.BlockMetadata{
-		CreatedAt: uint64(time.Now().Unix()),
-	})
-	if err != nil {
-		return nil, err
-	}
-	batch.Put(blockMetaPrefixKey(block.Header.Number), enc)
 
 	currentFees := big.NewInt(0)
 	for i, tx := range txs {
@@ -289,6 +285,17 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 		currentFees = currentFees.Add(currentFees, tx.Transaction.Fee)
 	}
 	batch.Put(blockFeesKey(blkNum), currentFees.Bytes())
+
+	meta := &chain.BlockMetadata{
+		CreatedAt:        uint64(time.Now().Unix()),
+		TransactionCount: uint32(numberOfTransactions),
+		Fees:             currentFees,
+	}
+	metaEnc, err := meta.RLP()
+	if err != nil {
+		return nil, err
+	}
+	batch.Put(blockMetaPrefixKey(block.Header.Number), metaEnc)
 
 	err = ps.db.Write(batch, nil)
 	if err != nil {
@@ -591,7 +598,7 @@ func (ps *Storage) BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error) {
 	}
 
 	var meta chain.BlockMetadata
-	err = rlp.DecodeBytes(data, &meta)
+	err = meta.FromRLP(data)
 	if err != nil {
 		return nil, err
 	}
@@ -668,6 +675,14 @@ func (ps *Storage) LastDepositExitEventIdx() (uint64, error) {
 
 func (ps *Storage) SaveDepositExitEventIdx(idx uint64) error {
 	return ps.saveEventIdx(latestDepExitIdxKey, idx)
+}
+
+func (ps *Storage) SaveLastSubmittedBlock(num uint64) error {
+	return ps.saveEventIdx(lastSubmittedBlockKey, num)
+}
+
+func (ps *Storage) LastSubmittedBlock() (uint64, error) {
+	return ps.getMostRecentEventIdx(lastSubmittedBlockKey)
 }
 
 func (ps *Storage) saveEventIdx(eventKey string, idx uint64) error {

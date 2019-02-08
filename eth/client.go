@@ -129,7 +129,6 @@ func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks []uint32
 		return err
 	}
 
-	log.Printf("Submit block pending: 0x%x, start block num: %d\n", tx.Hash(), firstBlkNum.Uint64())
 	_, err = util.WithRetries(func() (interface{}, error) {
 		return c.client.TransactionReceipt(context.Background(), tx.Hash())
 	}, 10, 5*time.Second)
