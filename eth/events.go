@@ -99,12 +99,12 @@ func (c *clientState) FinalizedExitFilter(start uint64) ([]contracts.PlasmaFinal
 	return events, end, nil
 }
 
-func (c *clientState) StartedTransactionExitFilter(start uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error) {
+func (c *clientState) StartedTransactionExitFilter(start uint64, end uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error) {
 	opts, err := c.filterOpts(start)
 	if err != nil {
 		return nil, 0, err
 	}
-	end := *opts.End
+	opts.End = &end
 
 
 	itr, err := c.contract.FilterStartedTransactionExit(opts)

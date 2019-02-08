@@ -44,11 +44,11 @@ type PlasmaStorage interface {
 	ConfirmTransaction(blockNumber uint64, transactionIndex uint32, sigs [2]chain.Signature) (*chain.ConfirmedTransaction, error)
 	AuthSigsFor(blockNumber uint64, transactionIndex uint32) ([2]chain.Signature, error)
 
-	LastDepositEventIdx() (uint64, error)
-	SaveDepositEventIdx(idx uint64) error
+	LastDepositPoll() (uint64, error)
+	SaveDepositPoll(idx uint64) error
 
-	LastTransactionExitEventIdx() (uint64, error)
-	SaveTransactionExitEventIdx(idx uint64) error
+	LastTxExitPoll() (uint64, error)
+	SaveTxExitPoll(idx uint64) error
 
 	LastDepositExitEventIdx() (uint64, error)
 	SaveDepositExitEventIdx(idx uint64) error
@@ -59,6 +59,8 @@ type PlasmaStorage interface {
 
 	SaveLastSubmittedBlock(num uint64) error
 	LastSubmittedBlock() (uint64, error)
+
+	FindDoubleSpendingTransaction(blkNum uint64, txIdx uint32, outIndex uint8) (*chain.ConfirmedTransaction, error)
 }
 
 type Storage struct {
@@ -119,6 +121,13 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 
 	// Recording spends
 	if !confirmed.Transaction.Input0.IsZeroInput() {
+		outpointIdent := &chain.SpendIdentifier{
+			BlockNumber: blkNum,
+			TransactionIndex:txIdx,
+			InputIndex: 1,
+		}
+		identBytes, _ := outpointIdent.MarshalBinary()
+
 		prevTx0, _, err := ps.findPreviousTx(&confirmed, 0)
 		if err != nil {
 			return nil, err
@@ -128,19 +137,26 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 		prevOutput := prevTx0.Transaction.OutputAt(input.OutIdx)
 		outputOwner := prevOutput.Owner
 		if confirmed.Transaction.Output0.IsExit() {
-			batch.Put(spendExit(&outputOwner, confirmed.Transaction.Input0), empty)
+			batch.Put(spendExit(&outputOwner, confirmed.Transaction.Input0), identBytes)
 		} else {
-			batch.Put(spend(&outputOwner, confirmed.Transaction.Input0), empty)
+			batch.Put(spend(&outputOwner, confirmed.Transaction.Input0), identBytes)
 		}
 	}
 	if !confirmed.Transaction.Input1.IsZeroInput() {
+		outpointIdent := &chain.SpendIdentifier{
+			BlockNumber: blkNum,
+			TransactionIndex:txIdx,
+			InputIndex: 1,
+		}
+		identBytes, _ := outpointIdent.MarshalBinary()
+
 		prevTx1, _, err := ps.findPreviousTx(&confirmed, 1)
 		if err != nil {
 			return nil, err
 		}
 		input := confirmed.Transaction.InputAt(1)
 		outputOwner := prevTx1.Transaction.OutputAt(input.OutIdx).Owner
-		batch.Put(spend(&outputOwner, confirmed.Transaction.Input1), empty)
+		batch.Put(spend(&outputOwner, confirmed.Transaction.Input1), identBytes)
 	}
 
 	// Recording earns
@@ -222,6 +238,48 @@ func (ps *Storage) IsDoubleSpent(confirmed *chain.ConfirmedTransaction) (bool, e
 	return false, nil
 }
 
+func (ps *Storage) FindDoubleSpendingTransaction(blkNum uint64, txIdx uint32, outIndex uint8) (*chain.ConfirmedTransaction, error) {
+	confirmed, _, err := ps.findTransactionByBlockNumTxIdx(blkNum, txIdx)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := confirmed.Transaction
+	spendKeys := make([][]byte, 0)
+	addr := tx.OutputAt(outIndex).Owner
+	spendKeys = append(spendKeys, rawSpend(&addr, blkNum, txIdx, outIndex, big.NewInt(0)))
+	spendKeys = append(spendKeys, spendExit(&addr, tx.Input0))
+
+	var spendIdent *chain.SpendIdentifier
+	for _, spendKey := range spendKeys {
+		found, _ := ps.db.Has(spendKey, nil)
+		if !found {
+			continue
+		}
+
+		identBinary, err := ps.db.Get(spendKey, nil)
+		if err != nil {
+			return nil, err
+		}
+		var ident chain.SpendIdentifier
+		if err = ident.UnmarshalBinary(identBinary); err != nil {
+		    return nil, err
+		}
+		spendIdent = &ident
+		break
+	}
+
+	if spendIdent == nil {
+		return nil, nil
+	}
+
+	spendingTx, _, err := ps.findTransactionByBlockNumTxIdx(spendIdent.BlockNumber, spendIdent.TransactionIndex)
+	if err != nil {
+		return nil, err
+	}
+	return spendingTx, nil
+}
+
 func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResult, error) {
 	log.Printf("packaging %d txs", len(txs))
 
@@ -248,7 +306,7 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 	for i, tx := range txs {
 		hashables[i] = &tx
 	}
-	merkleRoot := merkle.GetMerkleRoot(hashables)
+	merkleRoot := merkle.Root(hashables)
 
 	header := chain.BlockHeader{
 		MerkleRoot: merkleRoot,
@@ -643,7 +701,7 @@ func (ps *Storage) PackageBlock(txs []chain.ConfirmedTransaction) (*BlockResult,
 }
 
 // Deposit
-func (ps *Storage) LastDepositEventIdx() (uint64, error) {
+func (ps *Storage) LastDepositPoll() (uint64, error) {
 	res, err := ps.getMostRecentEventIdx(latestDepositIdxKey)
 	if err != nil {
 		if err == leveldb.ErrNotFound {
@@ -656,17 +714,17 @@ func (ps *Storage) LastDepositEventIdx() (uint64, error) {
 	return res, nil
 }
 
-func (ps *Storage) SaveDepositEventIdx(idx uint64) error {
+func (ps *Storage) SaveDepositPoll(idx uint64) error {
 	return ps.saveEventIdx(latestDepositIdxKey, idx)
 }
 
 // Exits
-func (ps *Storage) LastTransactionExitEventIdx() (uint64, error) {
-	return ps.getMostRecentEventIdx(latestTxExitIdxKey)
+func (ps *Storage) LastTxExitPoll() (uint64, error) {
+	return ps.getMostRecentEventIdx(lastTxExitPollKey)
 }
 
-func (ps *Storage) SaveTransactionExitEventIdx(idx uint64) error {
-	return ps.saveEventIdx(latestTxExitIdxKey, idx)
+func (ps *Storage) SaveTxExitPoll(idx uint64) error {
+	return ps.saveEventIdx(lastTxExitPollKey, idx)
 }
 
 func (ps *Storage) LastDepositExitEventIdx() (uint64, error) {
@@ -694,6 +752,9 @@ func (ps *Storage) saveEventIdx(eventKey string, idx uint64) error {
 func (ps *Storage) getMostRecentEventIdx(eventKey string) (uint64, error) {
 	key := prefixKey(eventKey)
 	b, err := ps.db.Get(key, nil)
+	if err == leveldb.ErrNotFound {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}

@@ -46,15 +46,9 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 
 	p := node.NewPlasmaNode(storage, mpool, plasma, submitter)
 	go p.Start()
-	// TODO: ensure that 1 deposit tx is always 1 block
-
-	go node.StartExitListener(storage, plasma, context.Background())
 
 	server := NewServer(ctx, storage, mpool, confirmer)
 	go server.Start(config.RPCPort)
-
-	// TODO: add an exit listener to make sure to add an exit transaction to root node.
-	// Also add an exit block to the plasma contract.
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

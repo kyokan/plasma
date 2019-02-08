@@ -7,3 +7,9 @@ func ForSubsystem(subsystem string) *logrus.Entry {
 		"subsystem": subsystem,
 	})
 }
+
+func WithError(logger *logrus.Entry, err error) *logrus.Entry {
+	return logger.WithFields(logrus.Fields{
+		"err": err,
+	})
+}

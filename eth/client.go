@@ -11,9 +11,7 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
-	"log"
-	"time"
-	log2 "github.com/kyokan/plasma/log"
+			log2 "github.com/kyokan/plasma/log"
 	"github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -61,6 +59,7 @@ type Client interface {
 	SubmitBlock(util.Hash, uint32, *big.Int, *big.Int) error
 	SubmitBlocks(merkleRoot []util.Hash, txCount []uint32, fees []*big.Int, blkNum *big.Int) error
 	Deposit(amount *big.Int) (*types.Receipt, error)
+	Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte, authSig chain.Signature) (*types.Receipt, error)
 
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
@@ -68,7 +67,7 @@ type Client interface {
 
 	FinalizedExitFilter(uint64) ([]contracts.PlasmaFinalizedExit, uint64, error)
 
-	StartedTransactionExitFilter(uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
+	StartedTransactionExitFilter(uint64, uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
 	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
 
 	EthereumBlockHeight() (uint64, error)
@@ -124,19 +123,10 @@ func (c *clientState) SubmitBlocks(merkleHashes []util.Hash, txInBlocks []uint32
 		bigTxInBlocks[i] = big.NewInt(int64(count))
 	}
 
-	tx, err := c.contract.SubmitBlock(opts, hashes, bigTxInBlocks, feesInBlocks, firstBlkNum)
-	if err != nil {
-		return err
-	}
-
-	_, err = util.WithRetries(func() (interface{}, error) {
-		return c.client.TransactionReceipt(context.Background(), tx.Hash())
-	}, 10, 5*time.Second)
-	if err != nil {
-		log.Panicln("failed to submit block!", err)
-	}
-
-	return nil
+	_, err := ContractCall(c.client, func() (*types.Transaction, error) {
+		return c.contract.SubmitBlock(opts, hashes, bigTxInBlocks, feesInBlocks, firstBlkNum)
+	})
+	return err
 }
 
 func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
@@ -147,23 +137,47 @@ func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
 		"amount": amount.Text(10),
 	}).Info("depositing funds")
 
-	tx, err := c.contract.Deposit(opts, crypto.PubkeyToAddress(c.privateKey.PublicKey))
+	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {
+		return c.contract.Deposit(opts, crypto.PubkeyToAddress(c.privateKey.PublicKey))
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	rawReceipt, err := util.WithRetries(func() (interface{}, error) {
-		return c.client.TransactionReceipt(context.Background(), tx.Hash())
-	}, 10, 5 * time.Second)
-	if err != nil {
-		return nil, err
-	}
-	receipt := rawReceipt.(*types.Receipt)
 
 	clientLogger.WithFields(logrus.Fields{
 		"amount": amount.Text(10),
 		"txHash": receipt.TxHash.Hex(),
 	}).Info("successfully deposited funds")
+
+	return receipt, nil
+}
+
+func (c *clientState) Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte, authSig chain.Signature) (*types.Receipt, error) {
+	opts := CreateKeyedTransactor(c.privateKey)
+
+	exitingTxPos := [4]*big.Int{
+		exitingTx.Transaction.BlkNum,
+		exitingTx.Transaction.TxIdx,
+		util.Uint82Big(exitingOutput),
+		exitingDepositNonce,
+	}
+
+	challengingTxPos := [2]*big.Int{
+		challengingTx.Transaction.BlkNum,
+		challengingTx.Transaction.TxIdx,
+	}
+
+	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {
+		return c.contract.ChallengeExit(opts, exitingTxPos, challengingTxPos, challengingTx.RLP(), proof, authSig[:])
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		// TODO add'l fields
+		"txHash": receipt.TxHash.Hex(),
+	}).Info("successfully challenged exit")
 
 	return receipt, nil
 }

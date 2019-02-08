@@ -3,7 +3,7 @@ package chain
 import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-				)
+)
 
 type ConfirmedTransaction struct {
 	Transaction Transaction
@@ -12,18 +12,23 @@ type ConfirmedTransaction struct {
 
 type rlpConfirmedTransaction struct {
 	Transaction rlpTransaction
-	Signatures [2]Signature
+	Signatures  [2]Signature
 }
 
 func (c *ConfirmedTransaction) RLPHash(hasher util.Hasher) util.Hash {
+	bytes := c.RLP()
+	return hasher(bytes)
+}
+
+func (c *ConfirmedTransaction) RLP() []byte {
 	bytes, err := rlp.EncodeToBytes(rlpConfirmedTransaction{
 		Transaction: c.Transaction.rlpRepresentation(),
-		Signatures: c.Signatures,
+		Signatures:  c.Signatures,
 	})
 
 	if err != nil {
 		panic(err)
 	}
 
-	return hasher(bytes)
+	return bytes
 }

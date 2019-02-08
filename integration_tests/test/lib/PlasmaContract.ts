@@ -2,7 +2,7 @@ import Web3 from 'web3';
 import {Config} from '../Config';
 import {SharedWeb3} from './SharedWeb3';
 import abi from '../abi/PlasmaMVP.abi.json';
-import {TransactionReceipt} from 'web3/types';
+import {EventLog, TransactionReceipt} from 'web3/types';
 import {Tx} from 'web3/eth/types';
 import PromiEvent from 'web3/promiEvent';
 import {PlasmaMVP} from '../abi/PlasmaMVP';
@@ -46,6 +46,12 @@ export default class PlasmaContract {
       value: fee.toString(10),
       from,
     })));
+  }
+
+  public challengedExits(): Promise<EventLog[]> {
+    return this.contract.getPastEvents('ChallengedExit', {
+      fromBlock: 0
+    });
   }
 
   private decorateCall (args: Tx): Tx {

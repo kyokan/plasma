@@ -24,7 +24,7 @@ const authSigPrefix = "auth_sig"
 const depositPrefix = "deposit_nonce"
 const latestKey = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
-const latestTxExitIdxKey = "LATEST_TRANSACTION_EXIT_IDX"
+const lastTxExitPollKey = "LATEST_TRANSACTION_EXIT_IDX"
 const latestDepExitIdxKey = "LATEST_DEPOSIT_EXIT_IDX"
 const invalidKeyPrefix = "invalid"
 const lastSubmittedBlockKey = "LAST_SUBMITTED_BLOCK"
@@ -104,6 +104,17 @@ func spend(addr *common.Address, input *chain.Input) []byte {
 		strconv.FormatUint(uint64(input.TxIdx), 10),
 		strconv.FormatUint(uint64(input.OutIdx), 10),
 		input.DepositNonce.Text(10),
+	)
+}
+
+func rawSpend(addr *common.Address, blkNum uint64, txIdx uint32, outIdx uint8, depositNonce *big.Int) []byte {
+	return prefixKey(
+		spendKeyPrefix,
+		util.AddressToHex(addr),
+		strconv.FormatUint(blkNum, 10),
+		strconv.FormatUint(uint64(txIdx), 10),
+		strconv.FormatUint(uint64(outIdx), 10),
+		depositNonce.Text(10),
 	)
 }
 
