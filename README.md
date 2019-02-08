@@ -130,3 +130,12 @@ You're ready to start sending money! Just make a deposit and send funds when you
 ```
 
 Deposits require an on-chain transaction. Once you've deposited, though, new Plasma blocks are created every 100ms and feel effectively instant.
+
+## Running Integration Tests
+
+Integration tests are written in TypeScript in order to prove compatibility with other languages and dogfood our JavaScript libraries. To run them:
+
+1. Run `npm i` inside the `integration_tests` directory.
+2. Run `make test-integration` from the root of the repo.
+
+That's it! The test runner will set up a cleanroom environment to run the tests in, and output the results to your console.

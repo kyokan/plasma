@@ -70,29 +70,17 @@ func (m *Mempool) Start() error {
 				}
 
 				tx := req.tx
-				var valid bool
 				var err error
 				if tx.Transaction.IsDeposit() {
-					valid, err = m.VerifyDepositTransaction(&tx)
+					err = m.VerifyDepositTransaction(&tx)
 				} else {
-					valid, err = m.VerifySpendTransaction(&tx)
+					err = m.VerifySpendTransaction(&tx)
 				}
 				if err != nil {
 					mPoolLogger.WithFields(logrus.Fields{
-						"hash": tx.Transaction.SignatureHash().Hex(),
-						"err":  err,
-					}).Error("transaction encountered error during validation")
-
-					req.res <- TxInclusionResponse{
-						Error: err,
-					}
-					continue
-				}
-				if !valid {
-					mPoolLogger.WithFields(logrus.Fields{
 						"hash":   tx.Transaction.SignatureHash().Hex(),
 						"reason": err,
-					}).Warn("invalid transaction rejected from mempool")
+					}).Warn("transaction rejected from mempool")
 
 					req.res <- TxInclusionResponse{
 						Error: err,
@@ -159,21 +147,21 @@ func (m *Mempool) Append(tx chain.ConfirmedTransaction) TxInclusionResponse {
 	return <-res
 }
 
-func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) (bool, error) {
+func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) (error) {
 	txLog := mPoolLogger.WithFields(logrus.Fields{
 		"hash": confirmed.Transaction.SignatureHash().Hex(),
 	})
 
 	if confirmed.Transaction.Output0.Denom.Cmp(big.NewInt(0)) == -1 {
-		return false, errors.New("transaction rejected due to negative output0 denomination")
+		return errors.New("transaction rejected due to negative output0 denomination")
 	}
 
 	prevTx0, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input0.BlkNum, confirmed.Transaction.Input0.TxIdx)
 	if err != nil {
-		return false, err
+		return err
 	}
 	if prevTx0 == nil {
-		return false, errors.New("input 0 not found")
+		return errors.New("input 0 not found")
 	}
 
 	prevTx0Output := prevTx0.Transaction.OutputAt(confirmed.Transaction.Input0.OutIdx)
@@ -181,12 +169,12 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 	err = eth.ValidateSignature(sigHash0, confirmed.Transaction.Sig0[:], prevTx0Output.Owner)
 	if err != nil {
 		txLog.Warn("transaction rejected due to invalid sig 0")
-		return false, err
+		return  err
 	}
 	err = eth.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
 	if err != nil {
 		txLog.Warn("transaction rejected due to invalid confirm sig 0")
-		return false, err
+		return err
 	}
 
 	totalInput := big.NewInt(0)
@@ -194,15 +182,15 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 
 	if !confirmed.Transaction.Input1.IsZeroInput() {
 		if confirmed.Transaction.Output1.Denom.Cmp(big.NewInt(0)) == -1 {
-			return false, errors.New("transaction rejected due to negative output1 denomination")
+			return errors.New("transaction rejected due to negative output1 denomination")
 		}
 
 		prevTx1, err := m.storage.FindTransactionByBlockNumTxIdx(confirmed.Transaction.Input1.BlkNum, confirmed.Transaction.Input1.TxIdx)
 		if err != nil {
-			return false, err
+			return err
 		}
 		if prevTx1 == nil {
-			return false, errors.New("input 1 not found")
+			return errors.New("input 1 not found")
 		}
 
 		prevTx1Output := prevTx1.Transaction.OutputAt(confirmed.Transaction.Input1.OutIdx)
@@ -210,12 +198,12 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 		err = eth.ValidateSignature(sigHash1, confirmed.Transaction.Sig1[:], prevTx1Output.Owner)
 		if err != nil {
 			txLog.Warn("transaction rejected due to invalid sig 1")
-			return false, err
+			return err
 		}
 		err = eth.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[1][:], prevTx1Output.Owner)
 		if err != nil {
 			txLog.Warn("transaction rejected due to invalid confirm sig 1")
-			return false, err
+			return err
 		}
 
 		totalInput = totalInput.Add(totalInput, prevTx1Output.Denom)
@@ -230,19 +218,23 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 
 	if totalInput.Cmp(totalOutput) != 0 {
 		txLog.Warn("transaction rejected due inputs not equalling outputs plus fees")
-		return false, errors.New("inputs and outputs do not have the same sum")
+		return errors.New("inputs and outputs do not have the same sum")
 	}
 
 	isDoubleSpent, err := m.storage.IsDoubleSpent(confirmed)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return !isDoubleSpent, nil
+	if isDoubleSpent {
+		return errors.New("transaction double spent")
+	}
+
+	return nil
 }
 
-func (m *Mempool) VerifyDepositTransaction(tx *chain.ConfirmedTransaction) (bool, error) {
-	return true, nil
+func (m *Mempool) VerifyDepositTransaction(tx *chain.ConfirmedTransaction) (error) {
+	return nil
 }
 
 func (m *Mempool) updatePoolSpends(confirmed *chain.ConfirmedTransaction) {
