@@ -54,11 +54,41 @@ You likely won't need to run `plasma-harness` in production.
 
 ### 1. Checkout, install deps, and build:
 
+Prerequisites and local environment setup:
+
+```bash
+# install node/npm
+brew install node # for Mac / OSX env
+sudo apt install nodejs npm # for Linux/Ubuntu env
+
+# install go from (https://golang.org/dl/)
+go env GOPATH # should be ~/go
+mkdir ~/go
+mkdir ~/go/bin
+mkdir ~/go/src
+
+export PATH=$PATH:~/go/bin
+
+# install dep
+curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+
+# install blockchain tooling
+[sudo] npm install -g truffle@5.0.3
+[sudo] npm install -g ganache-cli
+
+# install jq (https://stedolan.github.io/jq/download/)
+brew install jq # for Mac / OSX env
+sudo apt-get install jq # for Linux/Ubuntu env
+```
+
+Plasma specific setup:
+
 ```bash
 mkdir -p $GOPATH/src/github.com/kyokan
 git clone https://github.com/kyokan/plasma.git
 cd plasma
-make deps
+make deps # installs git-submodules / go dependencies / node dependencies
+make abigen # compiles smart-contracts via truffle
 make build-plasmad
 make build-plasmacli
 make build-harness
@@ -96,7 +126,7 @@ You're ready to start sending money! Just make a deposit and send funds when you
 
 ```bash
 ./target/plasmacli deposit 0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da 1000000
-./target/plasmacli send 0x821aea9a577a9b44299b9c15c88cf3087f3b5544 100 
+./target/plasmacli send 0x821aea9a577a9b44299b9c15c88cf3087f3b5544 100
 ```
 
 Deposits require an on-chain transaction. Once you've deposited, though, new Plasma blocks are created every 100ms and feel effectively instant.
