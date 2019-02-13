@@ -59,8 +59,8 @@ message Transaction {
     Output output0 = 5;
     Output output1 = 6;
     BigInt fee = 7;
-    BigInt blockNum = 8;
-    BigInt txIdx = 9;
+    uint64 blockNum = 8;
+    uint32 txIdx = 9;
 }
 
 message ConfirmedTransaction {

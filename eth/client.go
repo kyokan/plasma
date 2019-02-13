@@ -156,15 +156,15 @@ func (c *clientState) Challenge(exitingTx *chain.ConfirmedTransaction, exitingOu
 	opts := CreateKeyedTransactor(c.privateKey)
 
 	exitingTxPos := [4]*big.Int{
-		exitingTx.Transaction.BlkNum,
-		exitingTx.Transaction.TxIdx,
+		util.Uint642Big(exitingTx.Transaction.BlkNum),
+		util.Uint322Big(exitingTx.Transaction.TxIdx),
 		util.Uint82Big(exitingOutput),
 		exitingDepositNonce,
 	}
 
 	challengingTxPos := [2]*big.Int{
-		challengingTx.Transaction.BlkNum,
-		challengingTx.Transaction.TxIdx,
+		util.Uint642Big(challengingTx.Transaction.BlkNum),
+		util.Uint322Big(challengingTx.Transaction.TxIdx),
 	}
 
 	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {

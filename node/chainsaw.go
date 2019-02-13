@@ -151,7 +151,7 @@ func (c *Chainsaw) processTxExits(wg *sync.WaitGroup, head uint64) {
 			return
 		}
 
-		txsInChallengeBlock, err := c.storage.FindTransactionsByBlockNum(util.Big2Uint64(challengingTx.Transaction.BlkNum))
+		txsInChallengeBlock, err := c.storage.FindTransactionsByBlockNum(challengingTx.Transaction.BlkNum)
 		if err != nil {
 			log.WithError(logFields, err).WithFields(evFields).Error("failed to query transactions in block")
 			return

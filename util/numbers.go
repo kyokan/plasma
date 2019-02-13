@@ -3,6 +3,7 @@ package util
 import (
 	"math/big"
 	"math"
+	"strconv"
 )
 
 var MaxUint64 = Uint642Big(math.MaxUint64)
@@ -26,7 +27,7 @@ func Big2Uint64(n *big.Int) uint64 {
 }
 
 func Big2Uint32(n *big.Int) uint32 {
-	if n.Cmp(MaxUint32) == 1{
+	if n.Cmp(MaxUint32) == 1 {
 		panic("overflow")
 	}
 
@@ -39,4 +40,28 @@ func Big2Uint8(n *big.Int) uint8 {
 	}
 
 	return uint8(n.Uint64())
+}
+
+func Uint642Str(n uint64) string {
+	return strconv.FormatUint(n, 10)
+}
+
+func Uint322Str(n uint32) string {
+	return Uint642Str(uint64(n))
+}
+
+func Str2Uint64(s string) (uint64, bool) {
+	res, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return uint64(res), true
+}
+
+func Str2Uint32(s string) (uint32, bool) {
+	res, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return 0, false
+	}
+	return uint32(res), true
 }

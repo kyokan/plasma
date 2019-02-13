@@ -58,8 +58,8 @@ export interface TransactionWire {
   output0: OutputWire
   output1: OutputWire
   fee: BNWire
-  blockNum: BNWire
-  txIdx: BNWire
+  blockNum: string
+  txIdx: number
 }
 
 export interface ConfirmedTransactionWire {

@@ -99,8 +99,8 @@ func (ps *Storage) findPreviousTx(tx *chain.ConfirmedTransaction, inputIdx uint8
 }
 
 func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.ConfirmedTransaction, batch *leveldb.Batch) (*chain.ConfirmedTransaction, error) {
-	confirmed.Transaction.TxIdx = big.NewInt(int64(txIdx))
-	confirmed.Transaction.BlkNum = new(big.Int).SetUint64(blkNum)
+	confirmed.Transaction.TxIdx = txIdx
+	confirmed.Transaction.BlkNum = blkNum
 
 	txEnc, err := rlp.EncodeToBytes(&confirmed)
 	if err != nil {
@@ -113,7 +113,7 @@ func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.
 
 	batch.Put(hashKey, txEnc)
 	batch.Put(blkNumHashkey(confirmed.Transaction.BlkNum, hexHash), txEnc)
-	batch.Put(blkNumTxIdxKey(confirmed.Transaction.BlkNum.Uint64(), uint32(confirmed.Transaction.TxIdx.Uint64())), txEnc)
+	batch.Put(blkNumTxIdxKey(confirmed.Transaction.BlkNum, confirmed.Transaction.TxIdx), txEnc)
 
 	var empty []byte
 
@@ -392,8 +392,8 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
 		// prefix looks like "tx::blkNum::1::txIdx::"
 		// key looks like    "tx::blkNum::1::txIdx::20"
 		idx := string(iter.Key()[len(prefix):])
-		txIdx, success := new(big.Int).SetString(idx, 10)
-		if success == false {
+		txIdx, ok := util.Str2Uint32(idx)
+		if ok == false {
 			return nil, errors.New("Failed to parse transaction index from key")
 		}
 		err := rlp.DecodeBytes(iter.Value(), &tx)
@@ -402,13 +402,13 @@ func findBlockTransactions(iter iterator.Iterator, prefix []byte, blkNum uint64)
 		}
 		// RLP encoding for tranctions doesn't contain TxIdx or BlkNum
 		tx.Transaction.TxIdx = txIdx
-		tx.Transaction.BlkNum = big.NewInt(int64(blkNum))
+		tx.Transaction.BlkNum = blkNum
 		buffer = append(buffer, tx)
 	}
 
 	txs := make([]chain.ConfirmedTransaction, len(buffer))
 	for _, tx := range buffer {
-		txs[tx.Transaction.TxIdx.Int64()] = tx
+		txs[tx.Transaction.TxIdx] = tx
 	}
 
 	return txs, nil
@@ -426,11 +426,11 @@ func (ps *Storage) findTransactionByDepositNonce(nonce *big.Int) (*chain.Confirm
 		if len(keyParts) != 4 {
 			return nil, nil, errors.New(fmt.Sprintf("Failed to parse deposit transaction position from key %s", key))
 		}
-		blkNum, success := new(big.Int).SetString(keyParts[2], 10)
+		blkNum, success := util.Str2Uint64(keyParts[2])
 		if success == false {
 			return nil, nil, errors.New(fmt.Sprintf("Failed to parse block number from key %s", key))
 		}
-		txIdx, success := new(big.Int).SetString(keyParts[3], 10)
+		txIdx, success := util.Str2Uint32(keyParts[3])
 		if success == false {
 			return nil, nil, errors.New(fmt.Sprintf("Failed to parse transaction index from key %s", key))
 		}
@@ -472,8 +472,8 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (
 	if err != nil {
 		return nil, nil, err
 	}
-	tx.Transaction.BlkNum = new(big.Int).SetUint64(blkNum)
-	tx.Transaction.TxIdx = big.NewInt(int64(txIdx))
+	tx.Transaction.BlkNum = blkNum
+	tx.Transaction.TxIdx = txIdx
 
 	return &tx, block.BlockHash, nil
 }

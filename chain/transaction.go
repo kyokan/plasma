@@ -17,8 +17,8 @@ type Transaction struct {
 	Output0 *Output
 	Output1 *Output
 	Fee     *big.Int
-	BlkNum  *big.Int
-	TxIdx   *big.Int
+	BlkNum  uint64
+	TxIdx   uint32
 }
 
 type rlpTransaction struct {

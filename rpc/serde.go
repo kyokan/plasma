@@ -51,8 +51,8 @@ func SerializeTx(tx *chain.Transaction) (*pb.Transaction) {
 		Output0:  SerializeOutput(tx.Output0),
 		Output1:  SerializeOutput(tx.Output1),
 		Fee:      SerializeBig(tx.Fee),
-		BlockNum: SerializeBig(tx.BlkNum),
-		TxIdx:    SerializeBig(tx.TxIdx),
+		BlockNum: tx.BlkNum,
+		TxIdx:    tx.TxIdx,
 	}
 }
 
@@ -66,8 +66,8 @@ func DeserializeTx(tx *pb.Transaction) (*chain.Transaction) {
 		result.Output0 = DeserializeOutput(tx.Output0)
 		result.Output1 = DeserializeOutput(tx.Output1)
 		result.Fee = DeserializeBig(tx.Fee)
-		result.BlkNum = DeserializeBig(tx.BlockNum)
-		result.TxIdx = DeserializeBig(tx.TxIdx)
+		result.BlkNum = tx.BlockNum
+		result.TxIdx = tx.TxIdx
 		copy(result.Sig0[:], tx.Sig0)
 	}
 	return result

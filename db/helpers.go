@@ -65,8 +65,8 @@ func spendPrefixKey(addr *common.Address) []byte {
 	return prefixKey(spendKeyPrefix, util.AddressToHex(addr))
 }
 
-func blkNumHashkey(blkNum *big.Int, hexHash string) []byte {
-	return txPrefixKey("blkNum", blkNum.String(), "hash", hexHash)
+func blkNumHashkey(blkNum uint64, hexHash string) []byte {
+	return txPrefixKey("blkNum", util.Uint642Str(blkNum), "hash", hexHash)
 }
 
 func blkNumTxIdxKey(blkNum uint64, txIdx uint32) []byte {
@@ -81,7 +81,7 @@ func blkNumTxIdxAuthSigKey(blkNum uint64, txIdx uint32) []byte {
 // for handling deposit exit
 func depositKey(confirmed *chain.ConfirmedTransaction) []byte {
 	tx := &confirmed.Transaction
-	return prefixKey(depositPrefix, tx.Output0.DepositNonce.String(), tx.BlkNum.String(), tx.TxIdx.String())
+	return prefixKey(depositPrefix, tx.Output0.DepositNonce.String(), util.Uint642Str(tx.BlkNum), util.Uint322Str(tx.TxIdx))
 }
 
 func depositPrefixKey(nonce *big.Int) []byte {
@@ -131,7 +131,7 @@ func spendExit(addr *common.Address, input *chain.Input) []byte {
 
 func earn(addr *common.Address, confirmed chain.ConfirmedTransaction, outputIdx uint8) []byte {
 	tx := &confirmed.Transaction
-	return prefixKey(earnKeyPrefix, util.AddressToHex(addr), tx.BlkNum.String(), tx.TxIdx.String(), strconv.FormatUint(uint64(outputIdx), 10))
+	return prefixKey(earnKeyPrefix, util.AddressToHex(addr), util.Uint642Str(tx.BlkNum), util.Uint322Str(tx.TxIdx), strconv.FormatUint(uint64(outputIdx), 10))
 }
 
 func parseSuffix(key []byte) (*common.Address, *big.Int, *big.Int, *big.Int, error) {

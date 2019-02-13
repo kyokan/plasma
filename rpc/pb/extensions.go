@@ -67,8 +67,8 @@ type rawTransaction struct {
 	Output0  *Output `json:"output0"`
 	Output1  *Output `json:"output1"`
 	Fee      *BigInt `json:"fee"`
-	BlockNum *BigInt `json:"blockNum"`
-	TxIdx    *BigInt `json:"txIdx"`
+	BlockNum uint64  `json:"blockNum"`
+	TxIdx    uint32  `json:"txIdx"`
 	RootSig  string  `json:"rootSig"`
 }
 
