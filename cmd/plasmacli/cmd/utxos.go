@@ -6,7 +6,6 @@ import (
 	"time"
 	"github.com/kyokan/plasma/rpc/pb"
 	"github.com/kyokan/plasma/rpc"
-	"github.com/kyokan/plasma/util"
 )
 
 type utxoCmdOutput struct {
@@ -49,8 +48,8 @@ var utxosCmd = &cobra.Command{
 			tx := deser.Transaction
 
 			out[i] = utxoCmdOutput{
-				BlockNumber:      util.Big2Uint64(tx.BlkNum),
-				TransactionIndex: util.Big2Uint32(tx.TxIdx),
+				BlockNumber:      tx.BlkNum,
+				TransactionIndex: tx.TxIdx,
 				OutputIndex:      tx.OutputIndexFor(&addr),
 				Amount:           tx.OutputFor(&addr).Denom.Text(10),
 				DepositNonce:     tx.OutputFor(&addr).DepositNonce.Text(10),

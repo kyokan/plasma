@@ -82,8 +82,8 @@ var sendCmd = &cobra.Command{
 				panic("too many inputs!")
 			}
 
-			input.BlkNum = util.Big2Uint64(utxo.BlkNum)
-			input.TxIdx = util.Big2Uint32(utxo.TxIdx)
+			input.BlkNum = utxo.BlkNum
+			input.TxIdx = utxo.TxIdx
 			input.OutIdx = utxo.OutputIndexFor(&addr)
 			input.Owner = addr
 			sig, err := eth.Sign(privKey, input.SignatureHash())
@@ -131,8 +131,8 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 
-		confirmed.Transaction.BlkNum = util.Uint642Big(sendRes.Inclusion.BlockNumber)
-		confirmed.Transaction.TxIdx = util.Uint322Big(sendRes.Inclusion.TransactionIndex)
+		confirmed.Transaction.BlkNum = sendRes.Inclusion.BlockNumber
+		confirmed.Transaction.TxIdx = sendRes.Inclusion.TransactionIndex
 		var buf bytes.Buffer
 		buf.Write(confirmed.RLPHash(util.Sha256))
 		buf.Write(sendRes.Inclusion.MerkleRoot)
