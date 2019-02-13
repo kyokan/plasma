@@ -44,10 +44,12 @@ func (node *PlasmaNode) awaitTxs(interval time.Duration) {
 				continue
 			}
 
-			spends := node.mPool.FlushSpends()
+			done := make(chan bool)
+			spends := node.mPool.FlushSpends(done)
 			if len(spends) > 0 {
 				node.packageBlock(spends)
 			}
+			done <- true
 		}
 	}
 }

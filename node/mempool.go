@@ -31,7 +31,7 @@ type TxInclusionResponse struct {
 type Mempool struct {
 	txReqs          chan *txRequest
 	quit            chan bool
-	flushSpendReq   chan chan []MempoolTx
+	flushSpendReq   chan flushSpendReq
 	flushDepositReq chan chan *MempoolTx
 	txPool          []MempoolTx
 	depositPool     []MempoolTx
@@ -44,11 +44,16 @@ type txRequest struct {
 	res chan TxInclusionResponse
 }
 
+type flushSpendReq struct {
+	res  chan []MempoolTx
+	done chan bool
+}
+
 func NewMempool(storage db.PlasmaStorage) *Mempool {
 	return &Mempool{
 		txReqs:          make(chan *txRequest),
 		quit:            make(chan bool),
-		flushSpendReq:   make(chan chan []MempoolTx),
+		flushSpendReq:   make(chan flushSpendReq),
 		flushDepositReq: make(chan chan *MempoolTx),
 		txPool:          make([]MempoolTx, 0),
 		depositPool:     make([]MempoolTx, 0),
@@ -99,11 +104,12 @@ func (m *Mempool) Start() error {
 					})
 				}
 				m.updatePoolSpends(&tx)
-			case resCh := <-m.flushSpendReq:
+			case req := <-m.flushSpendReq:
 				res := m.txPool
 				m.txPool = make([]MempoolTx, 0)
 				m.poolSpends = make(map[string]bool)
-				resCh <- res
+				req.res <- res
+				<-req.done
 			case resCh := <-m.flushDepositReq:
 				if len(m.depositPool) == 0 {
 					resCh <- nil
@@ -125,9 +131,12 @@ func (m *Mempool) Stop() error {
 	return nil
 }
 
-func (m *Mempool) FlushSpends() []MempoolTx {
+func (m *Mempool) FlushSpends(done chan bool) []MempoolTx {
 	res := make(chan []MempoolTx)
-	m.flushSpendReq <- res
+	m.flushSpendReq <- flushSpendReq{
+		res:  res,
+		done: done,
+	}
 	return <-res
 }
 
@@ -169,7 +178,7 @@ func (m *Mempool) VerifySpendTransaction(confirmed *chain.ConfirmedTransaction) 
 	err = eth.ValidateSignature(sigHash0, confirmed.Transaction.Sig0[:], prevTx0Output.Owner)
 	if err != nil {
 		txLog.Warn("transaction rejected due to invalid sig 0")
-		return  err
+		return err
 	}
 	err = eth.ValidateSignature(confirmed.Transaction.SignatureHash(), confirmed.Signatures[0][:], prevTx0Output.Owner)
 	if err != nil {

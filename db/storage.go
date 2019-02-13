@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"github.com/kyokan/plasma/merkle"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"log"
-	"math/big"
+		"math/big"
 	"strconv"
 	"strings"
 	"github.com/ethereum/go-ethereum/common"
@@ -102,7 +101,6 @@ func (ps *Storage) findPreviousTx(tx *chain.ConfirmedTransaction, inputIdx uint8
 func (ps *Storage) saveTransaction(blkNum uint64, txIdx uint32, confirmed chain.ConfirmedTransaction, batch *leveldb.Batch) (*chain.ConfirmedTransaction, error) {
 	confirmed.Transaction.TxIdx = big.NewInt(int64(txIdx))
 	confirmed.Transaction.BlkNum = new(big.Int).SetUint64(blkNum)
-	log.Println("recording tx", confirmed.Transaction.BlkNum)
 
 	txEnc, err := rlp.EncodeToBytes(&confirmed)
 	if err != nil {
@@ -281,8 +279,6 @@ func (ps *Storage) FindDoubleSpendingTransaction(blkNum uint64, txIdx uint32, ou
 }
 
 func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResult, error) {
-	log.Printf("packaging %d txs", len(txs))
-
 	prevBlock, err := ps.LatestBlock()
 	if err != nil {
 		return nil, err
@@ -297,7 +293,6 @@ func (ps *Storage) doPackageBlock(txs []chain.ConfirmedTransaction) (*BlockResul
 		prevHash = prevBlock.BlockHash
 	}
 
-	log.Printf("packaging block %d\n", blkNum)
 	// The batch will act as in-memory buffer
 	batch := new(leveldb.Batch)
 	numberOfTransactions := len(txs)
@@ -457,13 +452,11 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (
 
 	block, err := ps.BlockAtHeight(blkNum)
 	if err != nil {
-		log.Println("no block", blkNum)
 		return nil, nil, err
 	}
 
 	exists, err := ps.db.Has(key, nil)
 	if err != nil {
-		log.Println("existserr")
 		return nil, nil, err
 	}
 	if !exists {
@@ -471,7 +464,6 @@ func (ps *Storage) findTransactionByBlockNumTxIdx(blkNum uint64, txIdx uint32) (
 	}
 	data, err = ps.db.Get(key, nil)
 	if err != nil {
-		log.Println("notx")
 		return nil, nil, err
 	}
 
