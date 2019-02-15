@@ -9,7 +9,6 @@ import (
 func RandomInput() *Input {
 	return &Input{
 		DepositNonce: big.NewInt(rand.Int63()),
-		Owner:        RandomAddress(),
 		BlockNum:     rand.Uint64(),
 		TxIdx:        rand.Uint32(),
 		OutIdx:       1,

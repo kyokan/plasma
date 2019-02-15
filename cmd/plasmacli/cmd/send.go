@@ -18,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"fmt"
 	"sort"
-	)
+)
 
 type sendCmdOutput struct {
 	Value            string   `json:"value"`
@@ -27,7 +27,7 @@ type sendCmdOutput struct {
 	TransactionIndex uint32   `json:"transactionIndex"`
 	DepositNonce     string   `json:"depositNonce"`
 	MerkleRoot       string   `json:"merkleRoot"`
-	ConfirmSigs      []string `json:"configmSigs"`
+	ConfirmSigs      []string `json:"confirmSigs"`
 }
 
 var sendCmdLog = log.ForSubsystem("SendCmd")
@@ -208,7 +208,6 @@ func spendTx(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Address,
 		input.BlockNum = txBody.BlockNumber
 		input.TxIdx = txBody.TransactionIndex
 		input.OutIdx = txBody.OutputIndexFor(&from)
-		input.Owner = from
 
 		if i == 0 {
 			tx.Body.Input0ConfirmSig = utxo.ConfirmSigs[0]
@@ -267,21 +266,20 @@ func spendTx(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Address,
 	if err != nil {
 		return err
 	}
-	//
-	//out := &sendCmdOutput{
-	//	Value:            value.Text(10),
-	//	To:               to.Hex(),
-	//	BlockNumber:      sendRes.Inclusion.BlockNumber,
-	//	TransactionIndex: sendRes.Inclusion.TransactionIndex,
-	//	MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
-	//	AuthSignatures: []string{
-	//		hexutil.Encode(confirmSig[:]),
-	//		hexutil.Encode(confirmSig[:]),
-	//	},
-	//}
-	//
-	//return PrintJSON(out)
-	return nil
+
+	out := &sendCmdOutput{
+		Value:            value.Text(10),
+		To:               to.Hex(),
+		BlockNumber:      sendRes.Inclusion.BlockNumber,
+		TransactionIndex: sendRes.Inclusion.TransactionIndex,
+		MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
+		ConfirmSigs: []string{
+			hexutil.Encode(confirmSig[:]),
+			hexutil.Encode(confirmSig[:]),
+		},
+	}
+
+	return PrintJSON(out)
 }
 
 func selectUTXOs(confirmedTxs []chain.ConfirmedTransaction, addr common.Address, total *big.Int) ([]chain.ConfirmedTransaction, error) {

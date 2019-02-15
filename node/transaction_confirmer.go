@@ -72,7 +72,11 @@ func (t *TransactionConfirmer) Confirm(blockNumber uint64, transactionIndex uint
 				return nil, err
 			}
 		} else {
-			owner = input.Owner
+			prevTx, err := t.storage.FindTransactionByBlockNumTxIdx(input.BlockNum, input.TxIdx)
+			if err != nil {
+				return nil, err
+			}
+			owner = prevTx.Transaction.Body.OutputAt(input.OutIdx).Owner
 		}
 		fmt.Println(owner.Hex())
 

@@ -26,7 +26,6 @@ message BigInt {
 }
 
 message Input {
-    bytes owner = 1;
     BigInt depositNonce = 2;
     uint64 blockNum = 3;
     uint32 txIdx = 4;

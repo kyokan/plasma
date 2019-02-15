@@ -73,7 +73,6 @@ func (b *TransactionBody) EncodeRLP(w io.Writer) error {
 		itf.TxIdx0 = NewUint256(util.Uint322Big(b.Input0.TxIdx))
 		itf.OutIdx0 = NewUint256(util.Uint82Big(b.Input0.OutIdx))
 		itf.DepositNonce0 = NewUint256(b.Input0.DepositNonce)
-		itf.Owner0 = b.Input0.Owner
 		itf.Sig0 = b.Input0ConfirmSig
 	} else {
 		itf.BlkNum0 = NewUint256(nil)
@@ -86,7 +85,6 @@ func (b *TransactionBody) EncodeRLP(w io.Writer) error {
 		itf.TxIdx1 = NewUint256(util.Uint322Big(b.Input1.TxIdx))
 		itf.OutIdx1 = NewUint256(util.Uint82Big(b.Input1.OutIdx))
 		itf.DepositNonce1 = NewUint256(b.Input1.DepositNonce)
-		itf.Owner1 = b.Input1.Owner
 		itf.Sig1 = b.Input1ConfirmSig
 	} else {
 		itf.BlkNum1 = NewUint256(nil)
@@ -122,14 +120,12 @@ func (b *TransactionBody) DecodeRLP(s *rlp.Stream) error {
 		util.Big2Uint32(itf.TxIdx0.ToBig()),
 		util.Big2Uint8(itf.OutIdx0.ToBig()),
 		itf.DepositNonce0.ToBig(),
-		itf.Owner0,
 	)
 	b.Input1 = NewInput(
 		util.Big2Uint64(itf.BlkNum1.ToBig()),
 		util.Big2Uint32(itf.TxIdx1.ToBig()),
 		util.Big2Uint8(itf.OutIdx1.ToBig()),
 		itf.DepositNonce1.ToBig(),
-		itf.Owner1,
 	)
 	b.Output0 = NewOutput(itf.NewOwner0, itf.Denom0.ToBig())
 	b.Output1 = NewOutput(itf.NewOwner1, itf.Denom1.ToBig())
