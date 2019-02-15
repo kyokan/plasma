@@ -38,14 +38,8 @@ func (node *PlasmaNode) awaitTxs(interval time.Duration) {
 	for {
 		select {
 		case <-tick.C:
-			deposit := node.mPool.FlushDeposit()
-			if deposit != nil {
-				node.packageDepositBlocks(*deposit)
-				continue
-			}
-
 			done := make(chan bool)
-			spends := node.mPool.FlushSpends(done)
+			spends := node.mPool.Flush(done)
 			if len(spends) > 0 {
 				node.packageBlock(spends)
 			}
@@ -55,7 +49,7 @@ func (node *PlasmaNode) awaitTxs(interval time.Duration) {
 }
 
 func (node *PlasmaNode) packageBlock(mtxs []MempoolTx) {
-	txs := make([]chain.ConfirmedTransaction, len(mtxs), len(mtxs))
+	txs := make([]chain.Transaction, len(mtxs), len(mtxs))
 	chans := make([]chan TxInclusionResponse, len(mtxs), len(mtxs))
 	for i, mtx := range mtxs {
 		txs[i] = mtx.Tx
@@ -90,25 +84,5 @@ func (node *PlasmaNode) notifyAwaiters(awaiters []chan TxInclusionResponse, bloc
 				Error:            err,
 			}
 		}
-	}
-}
-
-func (node *PlasmaNode) packageDepositBlocks(depositMtx MempoolTx) {
-	log.Printf("packaging 1 deposit txs into block")
-	depositBlock, err := node.storage.ProcessDeposit(depositMtx.Tx)
-	if err != nil {
-		depositMtx.Response <- TxInclusionResponse{
-			Error: err,
-		}
-		log.Printf("Error packaging deposti block: %s", err.Error())
-		return
-	}
-
-	node.submitter.Enqueue(*depositBlock)
-	depositMtx.Response <- TxInclusionResponse{
-		MerkleRoot:       depositBlock.MerkleRoot,
-		BlockNumber:      util.Big2Uint64(depositBlock.BlockNumber),
-		TransactionIndex: 0,
-		Error:            nil,
 	}
 }

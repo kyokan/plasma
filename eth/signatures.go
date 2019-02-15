@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/kyokan/plasma/chain"
 	"github.com/kyokan/plasma/util"
+	"fmt"
 )
 
 func Sign(privKey *ecdsa.PrivateKey, hash util.Hash) (chain.Signature, error) {
@@ -35,6 +36,7 @@ func ValidateSignature(hash, signature []byte, address common.Address) error {
 	}
 
 	signatureAddress := crypto.PubkeyToAddress(*pubKey)
+	fmt.Println("pubkeyaddr", signatureAddress.Hex())
 	if !util.AddressesEqual(&address, &signatureAddress) {
 		return errors.New("invalid signature")
 	}

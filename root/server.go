@@ -59,7 +59,7 @@ func (r *Server) Start(rpcPort int) error {
 
 func (r *Server) GetBalance(ctx context.Context, req *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
 	addr := common.BytesToAddress(req.Address)
-	bal, err := r.storage.Balance(&addr)
+	bal, err := r.storage.Balance(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -74,17 +74,22 @@ func (r *Server) GetOutputs(ctx context.Context, req *pb.GetOutputsRequest) (*pb
 	var txs []chain.ConfirmedTransaction
 	var err error
 	if req.Spendable {
-		txs, err = r.storage.SpendableTxs(&addr)
+		txs, err = r.storage.SpendableTxs(addr)
 	} else {
-		txs, err = r.storage.UTXOs(&addr)
+		txs, err = r.storage.UTXOs(addr)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
+	var ret []*pb.ConfirmedTransaction
+	for _, tx := range txs {
+		ret = append(ret, tx.Proto())
+	}
+
 	return &pb.GetOutputsResponse{
-		ConfirmedTransactions: rpc.SerializeConfirmedTxs(txs),
+		ConfirmedTransactions: ret,
 	}, nil
 }
 
@@ -101,6 +106,10 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 	if err != nil {
 		return nil, err
 	}
+	var confirmedTxs []*pb.ConfirmedTransaction
+	for _, tx := range txs {
+		confirmedTxs = append(confirmedTxs, tx.Proto())
+	}
 
 	res := &pb.GetBlockResponse{
 		Block: &pb.Block{
@@ -112,7 +121,7 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 			},
 			Hash: block.BlockHash,
 		},
-		ConfirmedTransactions: rpc.SerializeConfirmedTxs(txs),
+		ConfirmedTransactions: confirmedTxs,
 		Metadata: &pb.GetBlockResponse_BlockMeta{
 			CreatedAt: meta.CreatedAt,
 		},
@@ -126,13 +135,17 @@ func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 		return nil, errors.New("no request provided")
 	}
 
-	confirmed := rpc.DeserializeConfirmedTx(req.Confirmed)
-	inclusion := r.mPool.Append(*confirmed)
+	tx, err := chain.TransactionFromProto(req.Transaction)
+	if err != nil {
+		return nil, err
+	}
+
+	inclusion := r.mPool.Append(*tx)
 	if inclusion.Error != nil {
 		return nil, inclusion.Error
 	}
 	return &pb.SendResponse{
-		Confirmed: rpc.SerializeConfirmedTx(confirmed),
+		Transaction: tx.Proto(),
 		Inclusion: &pb.TransactionInclusion{
 			MerkleRoot:       inclusion.MerkleRoot[:],
 			BlockNumber:      inclusion.BlockNumber,
@@ -143,9 +156,9 @@ func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 
 func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.ConfirmedTransaction, error) {
 	var sig0 chain.Signature
-	copy(sig0[:], req.AuthSig0)
+	copy(sig0[:], req.ConfirmSig0)
 	var sig1 chain.Signature
-	copy(sig1[:], req.AuthSig1)
+	copy(sig1[:], req.ConfirmSig1)
 
 	tx, err := r.confirmer.Confirm(req.BlockNumber, req.TransactionIndex, [2]chain.Signature{
 		sig0,
@@ -155,7 +168,7 @@ func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.Confi
 		return nil, err
 	}
 
-	return rpc.SerializeConfirmedTx(tx), nil
+	return tx.Proto(), nil
 }
 
 func (r *Server) GetConfirmations(ctx context.Context, req *pb.GetConfirmationsRequest) (*pb.GetConfirmationsResponse, error) {

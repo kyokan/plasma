@@ -59,79 +59,79 @@ func Test_NilBigIntRLP(t *testing.T) {
 }
 
 func Test_TransactionFullRLP(t *testing.T) {
-	tx := Transaction{
-		Input0:  RandomInput(),
-		Input1:  RandomInput(),
-		Sig0:    RandomConfirmationSig(),
-		Sig1:    RandomConfirmationSig(),
-		Output0: RandomOutput(),
-		Output1: RandomOutput(),
-		Fee:     big.NewInt(rand.Int63()),
-		BlkNum:  nil, // Not encoded in RLP
-		TxIdx:   nil, // Not encoded in RLP
+	tx := TransactionBody{
+		Input0:           RandomInput(),
+		Input1:           RandomInput(),
+		Input0ConfirmSig: RandomConfirmationSig(),
+		Input1ConfirmSig: RandomConfirmationSig(),
+		Output0:          RandomOutput(),
+		Output1:          RandomOutput(),
+		Fee:              big.NewInt(rand.Int63()),
+		BlockNumber:      nil, // Not encoded in RLP
+		TransactionIndex: nil, // Not encoded in RLP
 	}
 	encodeAndDecode(t, &tx)
 }
 
 func Test_TransactionFirstInputRLP(t *testing.T) {
-	tx := Transaction{
-		Input0:  RandomInput(),
-		Sig0:    RandomConfirmationSig(),
-		Input1:  ZeroInput(),
-		Output0: RandomOutput(),
-		Output1: ZeroOutput(),
-		Fee:     big.NewInt(rand.Int63()),
-		BlkNum:  nil,
-		TxIdx:   nil,
+	tx := TransactionBody{
+		Input0:           RandomInput(),
+		Input0ConfirmSig: RandomConfirmationSig(),
+		Input1:           ZeroInput(),
+		Output0:          RandomOutput(),
+		Output1:          ZeroOutput(),
+		Fee:              big.NewInt(rand.Int63()),
+		BlockNumber:      nil,
+		TransactionIndex: nil,
 	}
 	encodeAndDecode(t, &tx)
 }
 
 func Test_TransactionSecondInputRLP(t *testing.T) {
-	tx := Transaction{
-		Input0:  ZeroInput(),
-		Input1:  RandomInput(),
-		Sig1:    RandomConfirmationSig(),
-		Output0: ZeroOutput(),
-		Output1: RandomOutput(),
-		Fee:     big.NewInt(rand.Int63()),
-		BlkNum:  nil,
-		TxIdx:   nil,
+	tx := TransactionBody{
+		Input0:           ZeroInput(),
+		Input1:           RandomInput(),
+		Input1ConfirmSig: RandomConfirmationSig(),
+		Output0:          ZeroOutput(),
+		Output1:          RandomOutput(),
+		Fee:              big.NewInt(rand.Int63()),
+		BlockNumber:      nil,
+		TransactionIndex: nil,
 	}
 	encodeAndDecode(t, &tx)
 }
 
 func Test_ConfirmedTransactionRLP(t *testing.T) {
-	confirmed := ConfirmedTransaction{
-		Transaction: Transaction{
-			Input0:  RandomInput(),
-			Input1:  RandomInput(),
-			Sig0:    RandomConfirmationSig(),
-			Sig1:    RandomConfirmationSig(),
-			Output0: RandomOutput(),
-			Output1: RandomOutput(),
-			Fee:     big.NewInt(rand.Int63()),
-			BlkNum:  nil, // Not encoded in RLP
-			TxIdx:   nil, // Not encoded in RLP
+	confirmed := Transaction{
+		Body: TransactionBody{
+			Input0:           RandomInput(),
+			Input1:           RandomInput(),
+			Input0ConfirmSig: RandomConfirmationSig(),
+			Input1ConfirmSig: RandomConfirmationSig(),
+			Output0:          RandomOutput(),
+			Output1:          RandomOutput(),
+			Fee:              big.NewInt(rand.Int63()),
+			BlockNumber:      nil, // Not encoded in RLP
+			TransactionIndex: nil, // Not encoded in RLP
 		},
-		Signatures: [2]Signature{RandomConfirmationSig(), RandomConfirmationSig()},
+		Sigs: [2]Signature{RandomConfirmationSig(), RandomConfirmationSig()},
 	}
 	encodeAndDecode(t, &confirmed)
 }
 
 func Test_ConfirmedTransactionFirstInputRLP(t *testing.T) {
-	confirmed := ConfirmedTransaction{
-		Transaction: Transaction{
-			Input0:  RandomInput(),
-			Sig0:    RandomConfirmationSig(),
-			Input1:  ZeroInput(),
-			Output0: RandomOutput(),
-			Output1: RandomOutput(),
-			Fee:     big.NewInt(rand.Int63()),
-			BlkNum:  nil, // Not encoded in RLP
-			TxIdx:   nil, // Not encoded in RLP
+	confirmed := Transaction{
+		Body: TransactionBody{
+			Input0:           RandomInput(),
+			Input0ConfirmSig: RandomConfirmationSig(),
+			Input1:           ZeroInput(),
+			Output0:          RandomOutput(),
+			Output1:          RandomOutput(),
+			Fee:              big.NewInt(rand.Int63()),
+			BlockNumber:      nil, // Not encoded in RLP
+			TransactionIndex: nil, // Not encoded in RLP
 		},
-		Signatures: [2]Signature{RandomConfirmationSig(), },
+		Sigs: [2]Signature{RandomConfirmationSig(), },
 	}
 	encodeAndDecode(t, &confirmed)
 }

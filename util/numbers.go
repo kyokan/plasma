@@ -42,11 +42,19 @@ func Big2Uint8(n *big.Int) uint8 {
 	return uint8(n.Uint64())
 }
 
+func Big2Str(n *big.Int) string {
+	return n.Text(10)
+}
+
 func Uint642Str(n uint64) string {
 	return strconv.FormatUint(n, 10)
 }
 
 func Uint322Str(n uint32) string {
+	return Uint642Str(uint64(n))
+}
+
+func Uint82Str(n uint8) string {
 	return Uint642Str(uint64(n))
 }
 
@@ -64,4 +72,12 @@ func Str2Uint32(s string) (uint32, bool) {
 		return 0, false
 	}
 	return uint32(res), true
+}
+
+func Str2Uint8(s string) (uint8, bool) {
+	res, err := strconv.ParseUint(s, 10, 8)
+	if err != nil {
+		return 0, false
+	}
+	return uint8(res), true
 }

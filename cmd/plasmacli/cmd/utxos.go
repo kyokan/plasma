@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"context"
 	"time"
 	"github.com/kyokan/plasma/rpc/pb"
-	"github.com/kyokan/plasma/rpc"
+	"context"
+	"github.com/kyokan/plasma/chain"
 )
 
 type utxoCmdOutput struct {
@@ -13,7 +13,6 @@ type utxoCmdOutput struct {
 	TransactionIndex uint32 `json:"transactionIndex"`
 	OutputIndex      uint8  `json:"outputIndex"`
 	Amount           string `json:"amount"`
-	DepositNonce     string `json:"depositNonce"`
 }
 
 var utxosCmd = &cobra.Command{
@@ -44,15 +43,17 @@ var utxosCmd = &cobra.Command{
 		out := make([]utxoCmdOutput, len(res.ConfirmedTransactions), len(res.ConfirmedTransactions))
 
 		for i, conf := range res.ConfirmedTransactions {
-			deser := rpc.DeserializeConfirmedTx(conf)
-			tx := deser.Transaction
+			deser, err := chain.ConfirmedTransactionFromProto(conf)
+			if err != nil {
+				return err
+			}
+			tx := deser.Transaction.Body
 
 			out[i] = utxoCmdOutput{
-				BlockNumber:      tx.BlkNum,
-				TransactionIndex: tx.TxIdx,
+				BlockNumber:      tx.BlockNumber,
+				TransactionIndex: tx.TransactionIndex,
 				OutputIndex:      tx.OutputIndexFor(&addr),
-				Amount:           tx.OutputFor(&addr).Denom.Text(10),
-				DepositNonce:     tx.OutputFor(&addr).DepositNonce.Text(10),
+				Amount:           tx.OutputFor(&addr).Amount.Text(10),
 			}
 		}
 

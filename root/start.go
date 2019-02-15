@@ -16,7 +16,7 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	plasma, err := eth.NewClient(config.NodeURL, config.ContractAddr, privateKey)
+	ethClient, err := eth.NewClient(config.NodeURL, config.ContractAddr, privateKey)
 	if err != nil {
 		return err
 	}
@@ -27,24 +27,24 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	}
 	defer ldb.Close()
 
-	mpool := node.NewMempool(storage)
+	mpool := node.NewMempool(storage, ethClient)
 	err = mpool.Start()
 	if err != nil {
 		return err
 	}
 
-	chainsaw := node.NewChainsaw(plasma, mpool, storage)
+	chainsaw := node.NewChainsaw(ethClient, mpool, storage)
 	if err := chainsaw.Start(); err != nil {
 	    return err
 	}
 
-	confirmer := node.NewTransactionConfirmer(storage)
-	submitter := node.NewBlockSubmitter(plasma, storage)
+	confirmer := node.NewTransactionConfirmer(storage, ethClient)
+	submitter := node.NewBlockSubmitter(ethClient, storage)
 	if err := submitter.Start(); err != nil {
 	    return err
 	}
 
-	p := node.NewPlasmaNode(storage, mpool, plasma, submitter)
+	p := node.NewPlasmaNode(storage, mpool, ethClient, submitter)
 	go p.Start()
 
 	server := NewServer(ctx, storage, mpool, confirmer)
