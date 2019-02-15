@@ -50,7 +50,7 @@ export default class SendOperation {
     const confirmSigs = tx.sign(privateKey);
     const confirmData = await this.client.send(tx, confirmSigs);
     const confirmedTx = ConfirmedTransaction.fromTransaction(tx, confirmSigs);
-    const authSigs = confirmedTx.authSign(privateKey, confirmData.merkleRoot);
+    const authSigs = confirmedTx.confirmSign(privateKey, confirmData.merkleRoot);
     await this.client.confirm(confirmData.blockNumber, confirmData.transactionIndex, authSigs);
   }
 }

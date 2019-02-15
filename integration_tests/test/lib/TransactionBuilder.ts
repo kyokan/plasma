@@ -6,6 +6,7 @@ import Input from '../domain/Input';
 import {toBig} from './numbers';
 import Output from '../domain/Output';
 import BN = require('bn.js');
+import TransactionBody from '../domain/TransactionBody';
 
 export default class TransactionBuilder {
   private readonly utxos: Outpoint[];
@@ -68,7 +69,9 @@ export default class TransactionBuilder {
       ));
     }
 
-    return new Transaction(
+    if (!outpoints[0].confirmSigs)
+
+    return new TransactionBody(
       new Input(
         outpoints[0].blockNum,
         outpoints[0].txIdx,
@@ -77,9 +80,9 @@ export default class TransactionBuilder {
         toBig(0),
       ),
       outpoints[1] ? new Input(
-        outpoints[0].blockNum,
-        outpoints[0].txIdx,
-        outpoints[0].outIdx,
+        outpoints[1].blockNum,
+        outpoints[1].txIdx,
+        outpoints[1].outIdx,
         this.from,
         toBig(0),
       ) : Input.zero(),
@@ -87,7 +90,7 @@ export default class TransactionBuilder {
       outputs[1] ? outputs[1] : Output.zero(),
       0,
       0,
-      null,
+      outpoints[0].confirmSigs[0],
       null,
       this.fee!,
     );

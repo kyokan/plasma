@@ -36,16 +36,6 @@ export default class Input {
     return keccak256(buf);
   }
 
-  public sigHash (): Buffer {
-    const rlp = this.toRLP();
-    return keccak256(rlp);
-  }
-
-  public sign(privateKey: Buffer): Buffer {
-    const hash = this.sigHash();
-    return ethSign(hash, privateKey);
-  }
-
   public toRPC (): InputWire {
     return {
       blockNum: toBNWire(this.blockNum),
