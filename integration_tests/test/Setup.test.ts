@@ -19,6 +19,10 @@ let ganache: Ganache;
 let plasma: ChildProcess;
 let testsFinished = false;
 
+import * as chai from 'chai';
+import chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
+
 async function setup () {
   logRunner('Creating test directories...');
   fs.mkdirSync(tmpDir);
@@ -142,8 +146,8 @@ async function startPlasma () {
       '--db',
       plasmaDbDir
     ]);
-    plasma.stdout.on('data', (d:Buffer) => logPrefixed('plasma-stdout', 'yellow', d.toString('utf-8')));
-    plasma.stderr.on('data', (d:Buffer) => {
+    plasma.stdout.on('data', (d: Buffer) => logPrefixed('plasma-stdout', 'yellow', d.toString('utf-8')));
+    plasma.stderr.on('data', (d: Buffer) => {
       const dStr = d.toString('utf-8');
       if (dStr.match(/Started RPC server on port 6545/im)) {
         resolve();

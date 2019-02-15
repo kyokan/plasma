@@ -17,19 +17,28 @@ describe('Sends', () => {
     client = PlasmaClient.getShared();
     const depBal = toBig(1000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[2]);
-    await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[2]), (r) => r.eq(depBal), 30);
+    const nonce = (await contract.depositNonce()).sub(toBig(1));
+    const sendAmount = toBig(990);
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[2])
+      .forValue(sendAmount)
+      .toAddress(Config.USER_ADDRESSES[3])
+      .withFee(toBig(1))
+      .withDepositNonce(nonce);
+    await sendOp.send(Config.PRIVATE_KEYS[2]);
+    await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[3]), (r) => r.eq(sendAmount), 30);
   });
 
   it('should debit the sender and credit the receiver when a send is initiated', async () => {
-    const sent = toBig(532);
-    const fee = toBig(1);
-    const sendOp = new SendOperation(client, Config.USER_ADDRESSES[2])
-      .forValue(sent)
-      .toAddress(Config.USER_ADDRESSES[3])
-      .withFee(fee);
-    await sendOp.send(Config.PRIVATE_KEYS[2]);
+    const startBal3 = await client.getBalance(Config.USER_ADDRESSES[3]);
+    const startBal4 = await client.getBalance(Config.USER_ADDRESSES[4]);
+    const sendAmount = toBig(100);
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[3])
+      .forValue(sendAmount)
+      .toAddress(Config.USER_ADDRESSES[4])
+      .withFee(toBig(1));
+    await sendOp.send(Config.PRIVATE_KEYS[3]);
     await wait(1000);
-    assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[3]), sent);
-    assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[2]), toBig(1000).sub(sent).sub(fee));
+    assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[3]), startBal3.sub(sendAmount).sub(toBig(1)));
+    assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[4]), startBal4.add(sendAmount));
   });
 });

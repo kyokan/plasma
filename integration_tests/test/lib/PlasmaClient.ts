@@ -4,7 +4,7 @@ import * as path from 'path';
 import {pify} from './pify';
 import {
   BlockWire,
-  ConfirmedTransactionWire,
+  ConfirmedTransactionWire, ConfirmRequest,
   GetBalanceResponse,
   GetConfirmationsResponse,
   GetOutputsResponse,
@@ -18,6 +18,7 @@ import Block from '../domain/Block';
 import {ethSign} from './sign';
 import {keccak256} from './hash';
 import BN = require('bn.js');
+import ConfirmedTransaction from '../domain/ConfirmedTransaction';
 
 export type ClientCB<T> = (err: any, res: T) => void;
 
@@ -30,7 +31,7 @@ export interface IClient {
 
   send (args: any, cb: ClientCB<SendResponse>): void
 
-  confirm (args: any, cb: ClientCB<any>): void
+  confirm (args: ConfirmRequest, cb: ClientCB<any>): void
 
   getConfirmations (args: any, cb: ClientCB<GetConfirmationsResponse>): void
 }
@@ -73,35 +74,22 @@ export default class PlasmaClient {
     return res.confirmedTransactions.map((r: ConfirmedTransactionWire) => Outpoint.fromWireTx(r, address));
   }
 
-  public async send (tx: Transaction, confirmSigs: Buffer[]): Promise<SendResponse['inclusion']> {
-    const res = await pify<SendResponse>((cb) => this.client.send({confirmed: tx.toRPC(confirmSigs)}, cb));
+  public async send (tx: Transaction): Promise<SendResponse> {
+    const res = await pify<SendResponse>((cb) => this.client.send({transaction: tx.toRPC()}, cb));
     res.inclusion.blockNumber = Number(res.inclusion.blockNumber);
-    return res.inclusion;
+    return res;
   }
 
-  public async confirm (blockNumber: number, txIdx: number, authSigs: [Buffer, Buffer]) {
+  public async confirm (confirmedTx: ConfirmedTransaction) {
+    if (!confirmedTx.confirmSignatures) {
+      throw new Error('cannot confirm a transaction without confirm sigs');
+    }
+
     return pify((cb) => this.client.confirm({
-      blockNumber,
-      transactionIndex: txIdx,
-      authSig0: authSigs[0],
-      authSig1: authSigs[1],
-    }, cb));
-  }
-
-  public async getConfirmations (privateKey: Buffer, blockNumber: number, txIdx: number, outIdx: number) {
-    const now = Math.floor(Date.now() / 1000);
-    const buf = Buffer.concat([
-      Buffer.from(now.toString(), 'utf-8'),
-      Buffer.from('kyo-plasma-mvp', 'utf-8'),
-    ]);
-    const hash = keccak256(buf);
-    const sig = ethSign(hash, privateKey);
-    return pify<GetConfirmationsResponse>((cb) => this.client.getConfirmations({
-      blockNumber,
-      transactionIndex: txIdx,
-      outputIndex: outIdx,
-      sig,
-      nonce: now,
+      blockNumber: confirmedTx.transaction.body.blockNum,
+      transactionIndex: confirmedTx.transaction.body.txIdx,
+      confirmSig0: confirmedTx.confirmSignatures![0],
+      confirmSig1: confirmedTx.confirmSignatures![1],
     }, cb));
   }
 

@@ -1,151 +1,32 @@
 package chain
 
 import (
-				"fmt"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/kyokan/plasma/util"
-		)
+	"github.com/kyokan/plasma/rpc/pb"
+	"github.com/pkg/errors"
+)
 
 type Transaction struct {
-	Input0  *Input
-	Sig0    Signature
-	Input1  *Input
-	Sig1    Signature
-	Output0 *Output
-	Output1 *Output
-	Fee     *big.Int
-	BlkNum  uint64
-	TxIdx   uint32
+	Body *TransactionBody
+	Sigs [2]Signature
 }
 
-type rlpTransaction struct {
-	BlkNum0       *UInt256
-	TxIdx0        *UInt256
-	OutIdx0       *UInt256
-	DepositNonce0 *UInt256
-	Sig0          Signature
-	BlkNum1       *UInt256
-	TxIdx1        *UInt256
-	OutIdx1       *UInt256
-	DepositNonce1 *UInt256
-	Sig1          Signature
-	Owner0        common.Address
-	Amount0       *UInt256
-	Owner1        common.Address
-	Amount1       *UInt256
-	Fee           *UInt256
+type rlpConfirmedTransaction struct {
+	Transaction rlpTransactionBody
+	Body        [2]Signature
 }
 
-func ZeroTransaction() *Transaction {
-	return &Transaction{
-		Input0:  ZeroInput(),
-		Input1:  ZeroInput(),
-		Output0: ZeroOutput(),
-		Output1: ZeroOutput(),
-		Fee:     Zero(),
-	}
+func (c *Transaction) RLPHash(hasher util.Hasher) util.Hash {
+	bytes := c.RLP()
+	return hasher(bytes)
 }
 
-func (tx *Transaction) IsDeposit() bool {
-	return tx.Output0.IsDeposit()
-}
-
-func (tx *Transaction) IsExit() bool {
-	return tx != nil &&
-			tx.Input1.IsZeroInput() &&
-			tx.Output1.IsZeroOutput() &&
-			tx.Output0.IsExit()
-}
-
-func (tx *Transaction) GetFee() *big.Int {
-	return tx.Fee
-}
-
-func (tx *Transaction) IsZeroTransaction() bool {
-	if tx.IsDeposit() {
-		return false
-	}
-	return tx.Input0.IsZeroInput() &&
-			tx.Input1.IsZeroInput() &&
-			tx.Output0.IsZeroOutput() &&
-			tx.Output1.IsZeroOutput()
-}
-
-func (tx *Transaction) InputAt(idx uint8) *Input {
-	if idx != 0 && idx != 1 {
-		panic(fmt.Sprint("Invalid input index: ", idx))
-	}
-
-	if idx == 0 {
-		return tx.Input0
-	}
-
-	return tx.Input1
-}
-
-func (tx *Transaction) OutputAt(idx uint8) *Output {
-	if idx == 0 {
-		return tx.Output0
-	}
-
-	return tx.Output1
-}
-
-func (tx *Transaction) lookupOutput(addr *common.Address) (*Output, uint8) {
-	output := tx.OutputAt(0)
-
-	if util.AddressesEqual(&output.Owner, addr) {
-		return output, 0
-	}
-
-	output = tx.OutputAt(1)
-
-	if util.AddressesEqual(&output.Owner, addr) {
-		return output, 1
-	}
-
-	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
-}
-
-func (tx *Transaction) OutputFor(addr *common.Address) *Output {
-	out, _ := tx.lookupOutput(addr)
-	return out
-}
-
-func (tx *Transaction) OutputIndexFor(addr *common.Address) uint8 {
-	_, idx := tx.lookupOutput(addr)
-	return idx
-}
-
-func (tx *Transaction) rlpRepresentation() rlpTransaction {
-	return rlpTransaction{
-		BlkNum0:       NewUint256(util.Uint642Big(tx.Input0.BlkNum)),
-		TxIdx0:        NewUint256(util.Uint322Big(tx.Input0.TxIdx)),
-		OutIdx0:       NewUint256(util.Uint82Big(tx.Input0.OutIdx)),
-		DepositNonce0: NewUint256(tx.Input0.DepositNonce),
-		Sig0:          tx.Sig0,
-		BlkNum1:       NewUint256(util.Uint642Big(tx.Input1.BlkNum)),
-		TxIdx1:        NewUint256(util.Uint322Big(tx.Input1.TxIdx)),
-		OutIdx1:       NewUint256(util.Uint82Big(tx.Input1.OutIdx)),
-		DepositNonce1: NewUint256(tx.Input1.DepositNonce),
-		Sig1:          tx.Sig1,
-		Owner0:        tx.Output0.Owner,
-		Amount0:       NewUint256(tx.Output0.Denom),
-		Owner1:        tx.Output1.Owner,
-		Amount1:       NewUint256(tx.Output1.Denom),
-		Fee:           NewUint256(tx.Fee),
-	}
-}
-
-func (tx *Transaction) SignatureHash() util.Hash {
-	return tx.RLPHash(util.Keccak256)
-}
-
-func (tx *Transaction) RLP() []byte {
-	bytes, err := rlp.EncodeToBytes(tx.rlpRepresentation())
+func (c *Transaction) RLP() []byte {
+	bytes, err := rlp.EncodeToBytes(rlpConfirmedTransaction{
+		Transaction: c.Body.rlpRepresentation(),
+		Body:        c.Sigs,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -153,6 +34,50 @@ func (tx *Transaction) RLP() []byte {
 	return bytes
 }
 
-func (tx *Transaction) RLPHash(hasher util.Hasher) util.Hash {
-	return hasher(tx.RLP())
+func (c *Transaction) Proto() (*pb.Transaction) {
+	sig0 := make([]byte, len(c.Sigs[0]), len(c.Sigs[0]))
+	copy(sig0, c.Sigs[0][:])
+	sig1 := make([]byte, len(c.Sigs[1]), len(c.Sigs[1]))
+	copy(sig1, c.Sigs[1][:])
+
+	return &pb.Transaction{
+		Body: c.Body.Proto(),
+		Sig0: sig0,
+		Sig1: sig1,
+	}
+}
+
+func (c *Transaction) Clone() (*Transaction) {
+	proto := c.Proto()
+	clone, err := TransactionFromProto(proto)
+	if err != nil {
+		// should never happen
+		panic(err)
+	}
+
+	return clone
+}
+
+func TransactionFromProto(protoTx *pb.Transaction) (*Transaction, error) {
+	if protoTx == nil {
+		return nil, errors.New("proto tx cannot be nil")
+	}
+
+	body, err := TransactionBodyFromProto(protoTx.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var sig0 Signature
+	copy(sig0[:], protoTx.Sig0)
+	var sig1 Signature
+	copy(sig1[:], protoTx.Sig0)
+
+	return &Transaction{
+		Body: body,
+		Sigs: [2]Signature{
+			sig0,
+			sig1,
+		},
+	}, nil
 }

@@ -5,6 +5,7 @@ import PlasmaClient from '../lib/PlasmaClient';
 import MerkleTree from '../lib/MerkleTree';
 import {sha256} from '../lib/hash';
 import BN = require('bn.js');
+import {wait} from '../lib/wait';
 
 export default class ExitOperation {
   private contract: PlasmaContract;
@@ -33,18 +34,19 @@ export default class ExitOperation {
     return this;
   }
 
-  async exit (privateKey: Buffer) {
+  async exit () {
     assert(this.outpoint, 'an outpoint to exit must be provided');
     assert(this.committedFee, 'a fee must be provided');
     const block = await this.client.getBlock(this.outpoint!.blockNum);
     const merkle = new MerkleTree();
     for (const tx of block.transactions) {
-      merkle.addItem(sha256(tx.toRLP()));
+      merkle.addItem(sha256(tx.transaction.toRLP()));
     }
     const {proof} = merkle.generateProofAndRoot(this.outpoint!.txIdx);
-    const confirmedTx = this.outpoint!.transaction;
-    const callSigRes = await this.client.getConfirmations(privateKey, this.outpoint!.blockNum, this.outpoint!.txIdx, this.outpoint!.outIdx);
-    const callSigs: [Buffer, Buffer] = confirmedTx.input1.owner === this.from ? [callSigRes.authSig0, callSigRes.authSig1] : [callSigRes.authSig0, Buffer.from('')];
-    await this.contract.startExit(this.outpoint!, proof, callSigs, this.committedFee!, this.from);
+    const confirmSigs: [Buffer, Buffer] = [
+      this.outpoint!.confirmSig,
+      Buffer.from('')
+    ];
+    await this.contract.startExit(this.outpoint!, proof, confirmSigs, this.committedFee!, this.from);
   }
 }

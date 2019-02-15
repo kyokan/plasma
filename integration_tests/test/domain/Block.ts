@@ -30,7 +30,7 @@ export default class Block {
         number: Number(blockWire.block.header.number),
       },
       blockWire.block.hash,
-      blockWire.confirmedTransactions.map((ct) => ConfirmedTransaction.fromConfirmedTransactionWire(ct)),
+      blockWire.confirmedTransactions.map((ct) => ConfirmedTransaction.fromWire(ct)),
     );
   }
 }

@@ -1,56 +1,38 @@
 import Transaction from './Transaction';
-import Input from './Input';
-import Output from './Output';
-import BN = require('bn.js');
 import * as ejs from 'ethereumjs-util';
 import {ConfirmedTransactionWire} from '../lib/PlasmaRPC';
-import {sha256, tmSHA256} from '../lib/hash';
+import {sha256} from '../lib/hash';
 import {ethSign} from '../lib/sign';
 
-export default class ConfirmedTransaction extends Transaction {
-  public readonly confirmSignatures: [Buffer, Buffer];
+export default class ConfirmedTransaction {
+  public readonly transaction: Transaction;
 
-  constructor (input0: Input, input1: Input, output0: Output, output1: Output, blockNum: number, txIdx: number, sig0: Buffer | null, sig1: Buffer | null, fee: BN, confirmSignatures: [Buffer, Buffer]) {
-    super(input0, input1, output0, output1, blockNum, txIdx, sig0, sig1, fee);
+  public confirmSignatures: [Buffer, Buffer] | null;
+
+  constructor (transaction: Transaction, confirmSignatures: [Buffer, Buffer] | null) {
+    this.transaction = transaction;
     this.confirmSignatures = confirmSignatures;
   }
 
-  toArray (): Buffer[] {
-    throw new Error('not implemented directly');
+  confirmHash (merkleRoot: Buffer) {
+    return sha256(Buffer.concat([
+      sha256(this.transaction.toRLP()),
+      merkleRoot,
+    ]));
   }
 
-  toRLP (): Buffer {
-    const arr = [
-      super.toArray(),
-      this.confirmSignatures,
+  confirmSign (privateKey: Buffer, merkleRoot: Buffer) {
+    const confirmSigHash = this.confirmHash(merkleRoot);
+    const confirmSig = ethSign(confirmSigHash, privateKey);
+    this.confirmSignatures = [
+      confirmSig, confirmSig,
     ];
-
-    return (ejs as any).rlp.encode(arr) as Buffer;
   }
 
-  authSign(privateKey: Buffer, merkleRoot: Buffer): [Buffer, Buffer] {
-    const authSigHash = sha256(Buffer.concat([ sha256(this.toRLP()), merkleRoot ]));
-    const authSig = ethSign(authSigHash, privateKey);
-    return [authSig, authSig];
-  }
-
-  static fromTransaction (tx: Transaction, confirmSignatures: [Buffer, Buffer]) {
+  static fromWire (wireTx: ConfirmedTransactionWire): ConfirmedTransaction {
     return new ConfirmedTransaction(
-      tx.input0,
-      tx.input1,
-      tx.output0,
-      tx.output1,
-      tx.blockNum,
-      tx.txIdx,
-      tx.sig0,
-      tx.sig1,
-      tx.fee,
-      confirmSignatures,
+      Transaction.fromWire(wireTx.transaction),
+      [wireTx.confirmSig0, wireTx.confirmSig1],
     );
-  }
-
-  static fromConfirmedTransactionWire(wireTx: ConfirmedTransactionWire): ConfirmedTransaction {
-    const tx = Transaction.fromWire(wireTx.transaction);
-    return ConfirmedTransaction.fromTransaction(tx, wireTx.signatures as [Buffer, Buffer]);
   }
 }

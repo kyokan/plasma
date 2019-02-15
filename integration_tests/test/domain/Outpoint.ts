@@ -11,25 +11,34 @@ export default class Outpoint {
 
   public amount: BN;
 
-  public transaction: ConfirmedTransaction;
+  public confirmSig: Buffer;
 
-  constructor (txIdx: number, blockNum: number, outIdx: number, amount: BN, transaction: ConfirmedTransaction) {
+  public transaction: ConfirmedTransaction|null;
+
+  constructor (txIdx: number, blockNum: number, outIdx: number, amount: BN, confirmSig: Buffer, transaction: ConfirmedTransaction|null) {
     this.txIdx = txIdx;
     this.blockNum = blockNum;
     this.outIdx = outIdx;
     this.amount = amount;
+    this.confirmSig = confirmSig;
     this.transaction = transaction;
   }
 
   static fromWireTx (txWire: ConfirmedTransactionWire, owner: string): Outpoint {
-    const tx = ConfirmedTransaction.fromConfirmedTransactionWire(txWire);
-    const outIdx = owner === tx.output0.newOwner ? 0 : 1;
+    const tx = ConfirmedTransaction.fromWire(txWire);
+    const body = tx.transaction.body;
+    const outIdx = owner === body.output0.owner ? 0 : 1;
+
+    if (!tx.confirmSignatures) {
+      throw new Error('cannot create outpoint from unconfirmed transaction');
+    }
 
     return new Outpoint(
-      tx.txIdx,
-      tx.blockNum,
+      body.txIdx,
+      body.blockNum,
       outIdx,
-      outIdx === 0 ? tx.output0.amount : tx.output1.amount,
+      outIdx === 0 ? body.output0.amount : body.output1.amount,
+      tx.confirmSignatures[outIdx],
       tx,
     );
   }

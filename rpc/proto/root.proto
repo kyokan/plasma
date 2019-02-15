@@ -12,7 +12,7 @@ service Root {
     }
     rpc Confirm (ConfirmRequest) returns (ConfirmedTransaction) {
     }
-    rpc GetConfirmations(GetConfirmationsRequest) returns (GetConfirmationsResponse) {
+    rpc GetConfirmations (GetConfirmationsRequest) returns (GetConfirmationsResponse) {
     }
     rpc BlockHeight (EmptyRequest) returns (BlockHeightResponse) {
     }
@@ -26,17 +26,15 @@ message BigInt {
 }
 
 message Input {
-    bytes owner = 1;
     BigInt depositNonce = 2;
-    BigInt blockNum = 3;
-    BigInt txIdx = 4;
-    BigInt outIdx = 5;
+    uint64 blockNum = 3;
+    uint32 txIdx = 4;
+    uint32 outIdx = 5;
 }
 
 message Output {
-    bytes newOwner = 1;
+    bytes owner = 1;
     BigInt amount = 2;
-    BigInt depositNonce = 3;
 }
 
 message BlockHeader {
@@ -51,11 +49,11 @@ message Block {
     bytes hash = 2;
 }
 
-message Transaction {
+message TransactionBody {
     Input input0 = 1;
-    bytes sig0 = 2;
+    bytes input0ConfirmSig = 2;
     Input input1 = 3;
-    bytes sig1 = 4;
+    bytes input1ConfirmSig = 4;
     Output output0 = 5;
     Output output1 = 6;
     BigInt fee = 7;
@@ -63,9 +61,16 @@ message Transaction {
     uint32 txIdx = 9;
 }
 
+message Transaction {
+    TransactionBody body = 1;
+    bytes sig0 = 2;
+    bytes sig1 = 3;
+}
+
 message ConfirmedTransaction {
     Transaction transaction = 1;
-    repeated bytes signatures = 2;
+    bytes confirmSig0 = 2;
+    bytes confirmSig1 = 3;
 }
 
 message GetBalanceRequest {
@@ -100,11 +105,11 @@ message GetBlockResponse {
 }
 
 message SendRequest {
-    ConfirmedTransaction confirmed = 1;
+    Transaction transaction = 1;
 }
 
 message SendResponse {
-    ConfirmedTransaction confirmed = 1;
+    Transaction transaction = 1;
     TransactionInclusion inclusion = 2;
 }
 
@@ -117,8 +122,8 @@ message TransactionInclusion {
 message ConfirmRequest {
     uint64 blockNumber = 1;
     uint32 transactionIndex = 2;
-    bytes authSig0 = 3;
-    bytes authSig1 = 4;
+    bytes confirmSig0 = 3;
+    bytes confirmSig1 = 4;
 }
 
 message GetConfirmationsRequest {

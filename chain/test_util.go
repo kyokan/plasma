@@ -9,8 +9,7 @@ import (
 func RandomInput() *Input {
 	return &Input{
 		DepositNonce: big.NewInt(rand.Int63()),
-		Owner:        RandomAddress(),
-		BlkNum:       rand.Uint64(),
+		BlockNum:     rand.Uint64(),
 		TxIdx:        rand.Uint32(),
 		OutIdx:       1,
 	}
@@ -31,8 +30,7 @@ func RandomConfirmationSig() [65]byte {
 
 func RandomOutput() *Output {
 	result := &Output{}
-	result.Denom = big.NewInt(rand.Int63())
-	result.DepositNonce = big.NewInt(0)
+	result.Amount = big.NewInt(rand.Int63())
 	buf := make([]byte, 20)
 	rand.Read(buf)
 	for i := range result.Owner {

@@ -15,7 +15,7 @@ export function toBNWire (num: BN | number): BNWire {
   };
 }
 
-export function fromBNWire(num: BNWire): BN {
+export function fromBNWire (num: BNWire): BN {
   return toBig(num.hex);
 }
 
@@ -37,24 +37,22 @@ export interface BlockWire {
 }
 
 export interface InputWire {
-  owner: Buffer
   depositNonce: BNWire
-  blockNum: BNWire
-  txIdx: BNWire
-  outIdx: BNWire
+  blockNum: string
+  txIdx: number
+  outIdx: number
 }
 
 export interface OutputWire {
-  newOwner: Buffer
+  owner: Buffer
   amount: BNWire
-  depositNonce: BNWire
 }
 
-export interface TransactionWire {
+export interface TransactionBodyWire {
   input0: InputWire
-  sig0: Buffer
+  input0ConfirmSig: Buffer
   input1: InputWire
-  sig1: Buffer
+  input1ConfirmSig: Buffer
   output0: OutputWire
   output1: OutputWire
   fee: BNWire
@@ -62,8 +60,15 @@ export interface TransactionWire {
   txIdx: number
 }
 
+export interface TransactionWire {
+  body: TransactionBodyWire
+  sig0: Buffer
+  sig1: Buffer
+}
+
 export interface ConfirmedTransactionWire {
-  signatures: Buffer[]
+  confirmSig0: Buffer
+  confirmSig1: Buffer
   transaction: TransactionWire
 }
 
@@ -72,7 +77,7 @@ export interface GetOutputsResponse {
 }
 
 export interface SendResponse {
-  confirmed: any
+  transaction: TransactionWire
   inclusion: {
     merkleRoot: Buffer
     blockNumber: number
@@ -80,7 +85,14 @@ export interface SendResponse {
   }
 }
 
-export interface GetConfirmationsResponse{
+export interface GetConfirmationsResponse {
   authSig0: Buffer
   authSig1: Buffer
+}
+
+export interface ConfirmRequest {
+  blockNumber: number
+  transactionIndex: number
+  confirmSig0: Buffer
+  confirmSig1: Buffer
 }

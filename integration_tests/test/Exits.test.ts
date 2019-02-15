@@ -9,7 +9,7 @@ import {wait} from './lib/wait';
 import {EventLog} from 'web3/types';
 import { assert } from 'chai';
 
-describe('Exits', () => {
+describe.only('Exits', () => {
   let contract: PlasmaContract;
   let client: PlasmaClient;
 
@@ -19,33 +19,34 @@ describe('Exits', () => {
     client = PlasmaClient.getShared();
     const depBal = toBig(10000000000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[4]);
-    await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[4]), (r) => r.eq(depBal), 30);
+    const nonce = (await contract.depositNonce()).sub(toBig(1));
     const sendBal = toBig(999000000);
-    const sendOp = new SendOperation(client, Config.USER_ADDRESSES[4])
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[4])
       .forValue(sendBal)
       .toAddress(Config.USER_ADDRESSES[5])
-      .withFee(toBig(1));
+      .withFee(toBig(1))
+      .withDepositNonce(nonce);
     await sendOp.send(Config.PRIVATE_KEYS[4]);
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[5]), (r) => r.eq(sendBal), 30);
   });
 
   it('should exit', async function () {
     this.timeout(30000);
-    await wait(15000);
+    await wait(5000);
     const outpoints = await client.getUTXOs(Config.USER_ADDRESSES[5]);
     const exitOp = new ExitOperation(contract, client, Config.USER_ADDRESSES[5])
       .withOutpoint(outpoints[0])
       .withCommittedFee(toBig(500000));
 
-    await exitOp.exit(Config.PRIVATE_KEYS[5]);
+    await exitOp.exit();
   });
 
-  it('should challenge exits', async function () {
+  it.only('should challenge exits', async function () {
     this.timeout(60000);
 
     // send to party A
     const sendBal = toBig(1000000);
-    const sendOp = new SendOperation(client, Config.USER_ADDRESSES[4])
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[4])
       .forValue(sendBal)
       .toAddress(Config.USER_ADDRESSES[6])
       .withFee(toBig(1));
@@ -57,7 +58,7 @@ describe('Exits', () => {
     // A sends to B
     console.log('Spending input...');
     const sendOtherBal = toBig(800000);
-    const sendOpOther = new SendOperation(client, Config.USER_ADDRESSES[6])
+    const sendOpOther = new SendOperation(client, contract, Config.USER_ADDRESSES[6])
       .forValue(sendOtherBal)
       .toAddress(Config.USER_ADDRESSES[7])
       .withFee(toBig(1));
@@ -73,7 +74,7 @@ describe('Exits', () => {
       .withCommittedFee(toBig(500000));
 
     console.log('Attempting exit with spent input...');
-    await exitOp.exit(Config.PRIVATE_KEYS[6]);
+    await exitOp.exit();
 
     // let chainsaw catch the exit
     await wait(20000);

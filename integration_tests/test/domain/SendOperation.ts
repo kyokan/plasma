@@ -1,11 +1,16 @@
 import PlasmaClient from '../lib/PlasmaClient';
 import TransactionBuilder from '../lib/TransactionBuilder';
 import {assert} from 'chai';
-import BN = require('bn.js');
 import ConfirmedTransaction from './ConfirmedTransaction';
+import PlasmaContract from '../lib/PlasmaContract';
+import BN = require('bn.js');
+import {addressesEqual} from '../util/addresses';
+import Transaction from './Transaction';
 
 export default class SendOperation {
   private readonly client: PlasmaClient;
+
+  private readonly contract: PlasmaContract;
 
   private readonly from: string;
 
@@ -15,8 +20,11 @@ export default class SendOperation {
 
   private fee: BN | null = null;
 
-  constructor (client: PlasmaClient, from: string) {
+  private depositNonce: BN | null = null;
+
+  constructor (client: PlasmaClient, contract: PlasmaContract, from: string) {
     this.client = client;
+    this.contract = contract;
     this.from = from;
   }
 
@@ -35,22 +43,42 @@ export default class SendOperation {
     return this;
   }
 
+  public withDepositNonce (depositNonce: BN): SendOperation {
+    this.depositNonce = depositNonce;
+    return this;
+  }
+
   public async send (privateKey: Buffer): Promise<void> {
     assert(this.to, 'a to address must be set');
     assert(this.value, 'a value must be set');
     assert(this.fee, 'a fee must be set');
 
-    const utxos = await this.client.getUTXOs(this.from);
-    const tx = new TransactionBuilder(utxos, this.from)
+    const builder = new TransactionBuilder(this.from)
       .forValue(this.value!)
       .toAddress(this.to!)
-      .withFee(this.fee!)
-      .build();
+      .withFee(this.fee!);
 
-    const confirmSigs = tx.sign(privateKey);
-    const confirmData = await this.client.send(tx, confirmSigs);
-    const confirmedTx = ConfirmedTransaction.fromTransaction(tx, confirmSigs);
-    const authSigs = confirmedTx.authSign(privateKey, confirmData.merkleRoot);
-    await this.client.confirm(confirmData.blockNumber, confirmData.transactionIndex, authSigs);
+    if (this.depositNonce) {
+      const deposit = await this.contract.depositFor(this.depositNonce);
+      if (!addressesEqual(this.from, deposit.owner)) {
+        throw new Error('cannot spend non-owned deposit');
+      }
+      if (this.value!.gt(deposit.amount)) {
+        throw new Error('cannot spend more than the deposit');
+      }
+
+      builder.withDepositNonce(this.depositNonce, deposit.amount);
+    } else {
+      const utxos = await this.client.getUTXOs(this.from);
+      builder.withUTXOs(utxos);
+    }
+
+    const tx = builder.build();
+    tx.sign(privateKey);
+    const confirmData = await this.client.send(tx);
+    const inclusion = confirmData.inclusion;
+    const confirmedTx = new ConfirmedTransaction(Transaction.fromWire(confirmData.transaction), null)
+    confirmedTx.confirmSign(privateKey, inclusion.merkleRoot);
+    await this.client.confirm(confirmedTx);
   }
 }

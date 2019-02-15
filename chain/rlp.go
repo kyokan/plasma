@@ -38,7 +38,7 @@ func (uint *UInt256) ToBig() *big.Int {
 	return result
 }
 
-// Transaction encoding:
+// TransactionBody encoding:
 // [Blknum1, TxIndex1, Oindex1, DepositNonce1, Owner1, Input1ConfirmSig,
 //  Blknum2, TxIndex2, Oindex2, DepositNonce2, Owner2, Input2ConfirmSig,
 //  Owner, Denom1, Owner, Denom2, Fee]
@@ -66,76 +66,72 @@ type rlpTransactionHelper struct {
 	Fee *UInt256 // transaction
 }
 
-func (tx *Transaction) EncodeRLP(w io.Writer) error {
+func (b *TransactionBody) EncodeRLP(w io.Writer) error {
 	var itf rlpTransactionHelper
-	if tx.Input0 != nil {
-		itf.BlkNum0 = NewUint256(util.Uint642Big(tx.Input0.BlkNum))
-		itf.TxIdx0 = NewUint256(util.Uint322Big(tx.Input0.TxIdx))
-		itf.OutIdx0 = NewUint256(util.Uint82Big(tx.Input0.OutIdx))
-		itf.DepositNonce0 = NewUint256(tx.Input0.DepositNonce)
-		itf.Owner0 = tx.Input0.Owner
-		itf.Sig0 = tx.Sig0
+	if b.Input0 != nil {
+		itf.BlkNum0 = NewUint256(util.Uint642Big(b.Input0.BlockNum))
+		itf.TxIdx0 = NewUint256(util.Uint322Big(b.Input0.TxIdx))
+		itf.OutIdx0 = NewUint256(util.Uint82Big(b.Input0.OutIdx))
+		itf.DepositNonce0 = NewUint256(b.Input0.DepositNonce)
+		itf.Sig0 = b.Input0ConfirmSig
 	} else {
 		itf.BlkNum0 = NewUint256(nil)
 		itf.TxIdx0 = NewUint256(nil)
 		itf.OutIdx0 = NewUint256(nil)
 		itf.DepositNonce0 = NewUint256(nil)
 	}
-	if tx.Input1 != nil {
-		itf.BlkNum1 = NewUint256(util.Uint642Big(tx.Input1.BlkNum))
-		itf.TxIdx1 = NewUint256(util.Uint322Big(tx.Input1.TxIdx))
-		itf.OutIdx1 = NewUint256(util.Uint82Big(tx.Input1.OutIdx))
-		itf.DepositNonce1 = NewUint256(tx.Input1.DepositNonce)
-		itf.Owner1 = tx.Input1.Owner
-		itf.Sig1 = tx.Sig1
+	if b.Input1 != nil {
+		itf.BlkNum1 = NewUint256(util.Uint642Big(b.Input1.BlockNum))
+		itf.TxIdx1 = NewUint256(util.Uint322Big(b.Input1.TxIdx))
+		itf.OutIdx1 = NewUint256(util.Uint82Big(b.Input1.OutIdx))
+		itf.DepositNonce1 = NewUint256(b.Input1.DepositNonce)
+		itf.Sig1 = b.Input1ConfirmSig
 	} else {
 		itf.BlkNum1 = NewUint256(nil)
 		itf.TxIdx1 = NewUint256(nil)
 		itf.OutIdx1 = NewUint256(nil)
 		itf.DepositNonce1 = NewUint256(nil)
 	}
-	if tx.Output0 != nil {
-		itf.NewOwner0 = tx.Output0.Owner
-		itf.Denom0 = NewUint256(tx.Output0.Denom)
+	if b.Output0 != nil {
+		itf.NewOwner0 = b.Output0.Owner
+		itf.Denom0 = NewUint256(b.Output0.Amount)
 	} else {
 		itf.Denom0 = NewUint256(nil)
 	}
-	if tx.Output1 != nil {
-		itf.NewOwner1 = tx.Output1.Owner
-		itf.Denom1 = NewUint256(tx.Output1.Denom)
+	if b.Output1 != nil {
+		itf.NewOwner1 = b.Output1.Owner
+		itf.Denom1 = NewUint256(b.Output1.Amount)
 	} else {
 		itf.Denom1 = NewUint256(nil)
 	}
-	itf.Fee = NewUint256(tx.Fee)
+	itf.Fee = NewUint256(b.Fee)
 
 	return rlp.Encode(w, &itf)
 }
 
-func (tx *Transaction) DecodeRLP(s *rlp.Stream) error {
+func (b *TransactionBody) DecodeRLP(s *rlp.Stream) error {
 	var itf rlpTransactionHelper
 	err := s.Decode(&itf)
 	if err != nil {
 		return err
 	}
-	tx.Input0 = NewInput(
+	b.Input0 = NewInput(
 		util.Big2Uint64(itf.BlkNum0.ToBig()),
 		util.Big2Uint32(itf.TxIdx0.ToBig()),
 		util.Big2Uint8(itf.OutIdx0.ToBig()),
 		itf.DepositNonce0.ToBig(),
-		itf.Owner0,
 	)
-	tx.Input1 = NewInput(
+	b.Input1 = NewInput(
 		util.Big2Uint64(itf.BlkNum1.ToBig()),
 		util.Big2Uint32(itf.TxIdx1.ToBig()),
 		util.Big2Uint8(itf.OutIdx1.ToBig()),
 		itf.DepositNonce1.ToBig(),
-		itf.Owner1,
 	)
-	tx.Output0 = NewOutput(itf.NewOwner0, itf.Denom0.ToBig(), Zero())
-	tx.Output1 = NewOutput(itf.NewOwner1, itf.Denom1.ToBig(), Zero())
-	tx.Sig0 = itf.Sig0
-	tx.Sig1 = itf.Sig1
-	tx.Fee = itf.Fee.ToBig()
+	b.Output0 = NewOutput(itf.NewOwner0, itf.Denom0.ToBig())
+	b.Output1 = NewOutput(itf.NewOwner1, itf.Denom1.ToBig())
+	b.Input0ConfirmSig = itf.Sig0
+	b.Input1ConfirmSig = itf.Sig1
+	b.Fee = itf.Fee.ToBig()
 
 	return nil
 }

@@ -5,12 +5,14 @@ import (
 	"github.com/kyokan/plasma/eth"
 	"math/big"
 	"github.com/pkg/errors"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type depositCmdOutput struct {
 	TransactionHash string `json:"transactionHash"`
 	ContractAddress string `json:"contractAddress"`
 	Amount          string `json:"amount"`
+	DepositNonce    string `json:"depositNonce"`
 }
 
 var depositCmd = &cobra.Command{
@@ -42,6 +44,7 @@ var depositCmd = &cobra.Command{
 			TransactionHash: receipt.TxHash.Hex(),
 			ContractAddress: args[0],
 			Amount:          amount.Text(10),
+			DepositNonce:    hexutil.Encode(receipt.Logs[0].Data),
 		})
 	},
 }

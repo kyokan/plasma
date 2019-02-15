@@ -11,9 +11,10 @@ import (
 	"github.com/kyokan/plasma/chain"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
-			log2 "github.com/kyokan/plasma/log"
+	log2 "github.com/kyokan/plasma/log"
 	"github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 const SignaturePreamble = "\x19Ethereum Signed Message:\n"
@@ -41,7 +42,7 @@ type Block struct {
 }
 
 type StartExitOpts struct {
-	Transaction      chain.Transaction
+	Transaction      chain.TransactionBody
 	Input            chain.Input
 	Signature        []byte
 	Proof            []byte
@@ -59,7 +60,7 @@ type Client interface {
 	SubmitBlock(util.Hash, uint32, *big.Int, *big.Int) error
 	SubmitBlocks(merkleRoot []util.Hash, txCount []uint32, fees []*big.Int, blkNum *big.Int) error
 	Deposit(amount *big.Int) (*types.Receipt, error)
-	Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte, authSig chain.Signature) (*types.Receipt, error)
+	Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte) (*types.Receipt, error)
 
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
 
@@ -71,6 +72,7 @@ type Client interface {
 	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
 
 	EthereumBlockHeight() (uint64, error)
+	LookupDeposit(depositNonce *big.Int) (*big.Int, common.Address, error)
 }
 
 type DepositEvent struct {
@@ -152,23 +154,23 @@ func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
 	return receipt, nil
 }
 
-func (c *clientState) Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte, authSig chain.Signature) (*types.Receipt, error) {
+func (c *clientState) Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte) (*types.Receipt, error) {
 	opts := CreateKeyedTransactor(c.privateKey)
 
 	exitingTxPos := [4]*big.Int{
-		util.Uint642Big(exitingTx.Transaction.BlkNum),
-		util.Uint322Big(exitingTx.Transaction.TxIdx),
+		util.Uint642Big(exitingTx.Transaction.Body.BlockNumber),
+		util.Uint322Big(exitingTx.Transaction.Body.TransactionIndex),
 		util.Uint82Big(exitingOutput),
 		exitingDepositNonce,
 	}
 
 	challengingTxPos := [2]*big.Int{
-		util.Uint642Big(challengingTx.Transaction.BlkNum),
-		util.Uint322Big(challengingTx.Transaction.TxIdx),
+		util.Uint642Big(challengingTx.Transaction.Body.BlockNumber),
+		util.Uint322Big(challengingTx.Transaction.Body.TransactionIndex),
 	}
 
 	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {
-		return c.contract.ChallengeExit(opts, exitingTxPos, challengingTxPos, challengingTx.RLP(), proof, authSig[:])
+		return c.contract.ChallengeExit(opts, exitingTxPos, challengingTxPos, challengingTx.Transaction.RLP(), proof, challengingTx.ConfirmSigs[0][:])
 	})
 	if err != nil {
 		return nil, err
@@ -189,4 +191,15 @@ func (c *clientState) EthereumBlockHeight() (uint64, error) {
 	}
 
 	return header.Number.Uint64(), nil
+}
+
+func (c *clientState) LookupDeposit(depositNonce *big.Int) (*big.Int, common.Address, error) {
+	var addr common.Address
+	res, err := c.contract.Deposits(&bind.CallOpts{
+		Pending: false,
+	}, depositNonce)
+	if err != nil {
+		return nil, addr, err
+	}
+	return res.Amount, res.Owner, nil
 }

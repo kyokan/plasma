@@ -1,11 +1,11 @@
 import PlasmaContract from './lib/PlasmaContract';
+import { assert } from 'chai';
 import {toBig} from './lib/numbers';
 import {Config} from './Config';
 import PlasmaClient from './lib/PlasmaClient';
-import {assertBigEqual} from './lib/assertBigEqual';
 import {withRetryCondition} from './lib/withRetries';
+import SendOperation from './domain/SendOperation';
 import BN = require('bn.js');
-import {wait} from './lib/wait';
 
 describe('Deposits', () => {
   let contract: PlasmaContract;
@@ -16,20 +16,30 @@ describe('Deposits', () => {
     client = PlasmaClient.getShared();
   });
 
-  it('should increase the user\'s balance upon deposit', async function () {
+  it('should allow spends via the deposit nonce', async function () {
     this.timeout(60000);
     const depBal = toBig(1000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[1]);
-    const balance = await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.gt(toBig(0)), 30);
-    assertBigEqual(balance, depBal);
-    await wait(10000);
+    const nonce = (await contract.depositNonce()).sub(new BN(1));
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[1])
+      .forValue(toBig(100))
+      .toAddress(Config.USER_ADDRESSES[2])
+      .withFee(toBig(1))
+      .withDepositNonce(nonce);
+    await sendOp.send(Config.PRIVATE_KEYS[1]);
+    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.eq(toBig(899)), 30);
+    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[2]), (r) => r.eq(toBig(100)), 30);
   });
 
-  it('should increase the user\'s balance upon further deposits', async function () {
+  it('should disallow subsequent spends from used deposit nonces', async function () {
     this.timeout(60000);
-    const depBal = toBig(1500);
-    await contract.deposit(depBal, Config.USER_ADDRESSES[1]);
-    const balance = await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.gt(toBig(1000)), 30);
-    assertBigEqual(balance, depBal.add(toBig(1000)));
+
+    const nonce = (await contract.depositNonce()).sub(new BN(1));
+    const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[1])
+      .forValue(toBig(100))
+      .toAddress(Config.USER_ADDRESSES[2])
+      .withFee(toBig(1))
+      .withDepositNonce(nonce);
+    await assert.isRejected(sendOp.send(Config.PRIVATE_KEYS[1]));
   });
 });

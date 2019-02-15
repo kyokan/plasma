@@ -5,10 +5,11 @@ import {selectUTXOs} from './selectUTXOs';
 import Input from '../domain/Input';
 import {toBig} from './numbers';
 import Output from '../domain/Output';
+import TransactionBody from '../domain/TransactionBody';
 import BN = require('bn.js');
 
 export default class TransactionBuilder {
-  private readonly utxos: Outpoint[];
+  private utxos: Outpoint[] | null = null;
 
   private readonly from: string;
 
@@ -18,9 +19,23 @@ export default class TransactionBuilder {
 
   private fee: BN | null = null;
 
-  constructor (utxos: Outpoint[], from: string) {
-    this.utxos = utxos;
+  private depositNonce: BN | null = null;
+
+  private depositAmount: BN | null = null;
+
+  constructor (from: string) {
     this.from = from;
+  }
+
+  public withUTXOs (utxos: Outpoint[]): TransactionBuilder {
+    this.utxos = utxos;
+    return this;
+  }
+
+  public withDepositNonce (depositNonce: BN, depositAmount: BN): TransactionBuilder {
+    this.depositNonce = depositNonce;
+    this.depositAmount = depositAmount;
+    return this;
   }
 
   public toAddress (to: string): TransactionBuilder {
@@ -44,7 +59,22 @@ export default class TransactionBuilder {
     assert(this.fee, 'a fee must be set');
 
     const totalAmount = this.value!.add(this.fee!);
-    const outpoints = selectUTXOs(this.utxos, totalAmount);
+    let outpoints: Outpoint[];
+    if (this.depositNonce) {
+      outpoints = [new Outpoint(
+        0,
+        0,
+        0,
+        this.depositAmount!,
+        Buffer.alloc(65),
+        null,
+      )];
+    } else if (this.utxos) {
+      outpoints = selectUTXOs(this.utxos, totalAmount);
+    } else {
+      throw new Error('must provide either deposit nonce or UTXOs');
+    }
+
     const totalOutpoints = outpoints.reduce((total: BN, outpoint: Outpoint) => {
       return total.add(outpoint.amount);
     }, toBig(0));
@@ -54,42 +84,43 @@ export default class TransactionBuilder {
       outputs.push(new Output(
         this.to!,
         this.value!,
-        toBig(0),
       ));
     } else {
       outputs.push(new Output(
         this.to!,
         this.value!,
-        toBig(0),
       ), new Output(
         this.from,
         totalOutpoints.sub(totalAmount),
-        toBig(0),
       ));
     }
 
-    return new Transaction(
+    const body = new TransactionBody(
       new Input(
         outpoints[0].blockNum,
         outpoints[0].txIdx,
         outpoints[0].outIdx,
-        this.from,
-        toBig(0),
+        this.depositNonce ? this.depositNonce : toBig(0),
       ),
       outpoints[1] ? new Input(
-        outpoints[0].blockNum,
-        outpoints[0].txIdx,
-        outpoints[0].outIdx,
-        this.from,
+        outpoints[1].blockNum,
+        outpoints[1].txIdx,
+        outpoints[1].outIdx,
         toBig(0),
       ) : Input.zero(),
       outputs[0],
       outputs[1] ? outputs[1] : Output.zero(),
       0,
       0,
-      null,
-      null,
+      outpoints[0].confirmSig,
+      outpoints[1] ? outpoints[1].confirmSig : Buffer.alloc(65),
       this.fee!,
+    );
+
+    return new Transaction(
+      body,
+      null,
+      null,
     );
   }
 }

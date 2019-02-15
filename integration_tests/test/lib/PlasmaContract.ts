@@ -8,6 +8,7 @@ import PromiEvent from 'web3/promiEvent';
 import {PlasmaMVP} from '../abi/PlasmaMVP';
 import Outpoint from '../domain/Outpoint';
 import {toHex} from './parseHex';
+import {OnChainDeposit} from '../domain/OnChainDeposit';
 import BN = require('bn.js');
 
 let cachedContract: PlasmaContract;
@@ -30,14 +31,34 @@ export default class PlasmaContract {
     })));
   }
 
+  public async depositNonce (): Promise<BN> {
+    const nonce = await this.contract.methods.depositNonce().call();
+    return new BN(nonce);
+  }
+
+  public async depositFor (nonce: BN): Promise<OnChainDeposit> {
+    const deposit = await this.contract.methods.deposits(nonce.toString(10)).call();
+    return {
+      nonce,
+      owner: deposit.owner,
+      amount: new BN(deposit.amount),
+      createdAt: deposit.createdAt,
+      ethBlockNum: deposit.ethBlockNum,
+    };
+  }
+
   public startExit (outpoint: Outpoint, proof: Buffer, confirmSignatures: [Buffer, Buffer], fee: BN, from: string): Promise<TransactionReceipt> {
+    if (!outpoint.transaction) {
+      throw new Error('exiting outpoint must have associated transaction');
+    }
+
     return this.awaitReceipt(() => this.contract.methods.startTransactionExit(
       [
         outpoint.blockNum,
         outpoint.txIdx,
         outpoint.outIdx,
       ],
-      toHex(outpoint.transaction.toRLP()),
+      toHex(outpoint.transaction!.transaction.toRLP()),
       toHex(proof),
       toHex(Buffer.concat(confirmSignatures)),
       fee.toString(10),
@@ -48,7 +69,7 @@ export default class PlasmaContract {
     })));
   }
 
-  public challengedExits(): Promise<EventLog[]> {
+  public challengedExits (): Promise<EventLog[]> {
     return this.contract.getPastEvents('ChallengedExit', {
       fromBlock: 0
     });

@@ -1,12 +1,9 @@
 import {Uint64BE} from 'int64-buffer';
 import {keccak256} from '../lib/hash';
 import {fromBNWire, InputWire, toBNWire} from '../lib/PlasmaRPC';
-import {parseHex, toHex} from '../lib/parseHex';
 import {toBig, toBuffer} from '../lib/numbers';
 import * as ejs from 'ethereumjs-util';
-import {ZERO_ADDRESS} from './Addresses';
 import BN = require('bn.js');
-import {ethSign, sign} from '../lib/sign';
 
 export default class Input {
   public readonly blockNum: number;
@@ -15,15 +12,12 @@ export default class Input {
 
   public readonly outIdx: number;
 
-  public readonly owner: string;
-
   public readonly depositNonce: BN;
 
-  constructor (blockNum: number, txIdx: number, outIdx: number, owner: string, depositNonce: BN) {
+  constructor (blockNum: number, txIdx: number, outIdx: number, depositNonce: BN) {
     this.blockNum = blockNum;
     this.txIdx = txIdx;
     this.outIdx = outIdx;
-    this.owner = owner;
     this.depositNonce = depositNonce;
   }
 
@@ -36,22 +30,11 @@ export default class Input {
     return keccak256(buf);
   }
 
-  public sigHash (): Buffer {
-    const rlp = this.toRLP();
-    return keccak256(rlp);
-  }
-
-  public sign(privateKey: Buffer): Buffer {
-    const hash = this.sigHash();
-    return ethSign(hash, privateKey);
-  }
-
   public toRPC (): InputWire {
     return {
-      blockNum: toBNWire(this.blockNum),
-      txIdx: toBNWire(this.txIdx),
-      outIdx: toBNWire(this.outIdx),
-      owner: parseHex(this.owner),
+      blockNum: this.blockNum.toString(),
+      txIdx: this.txIdx,
+      outIdx: this.outIdx,
       depositNonce: toBNWire(this.depositNonce),
     };
   }
@@ -62,11 +45,10 @@ export default class Input {
       toBuffer(this.txIdx),
       toBuffer(this.outIdx),
       toBuffer(this.depositNonce),
-      toBuffer(this.owner, 20),
     ];
   }
 
-  public toConfirmSigArray() {
+  public toConfirmSigArray () {
     return [
       toBuffer(this.blockNum),
       toBuffer(this.txIdx),
@@ -84,18 +66,16 @@ export default class Input {
       0,
       0,
       0,
-      ZERO_ADDRESS,
       toBig(0),
     );
   }
 
-  static fromWire(input: InputWire): Input {
+  static fromWire (input: InputWire): Input {
     return new Input(
-      fromBNWire(input.blockNum).toNumber(),
-      fromBNWire(input.txIdx).toNumber(),
-      fromBNWire(input.outIdx).toNumber(),
-      toHex(input.owner),
+      Number(input.blockNum),
+      input.txIdx,
+      input.outIdx,
       fromBNWire(input.depositNonce),
-    )
+    );
   }
 }

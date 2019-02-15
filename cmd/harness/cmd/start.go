@@ -36,7 +36,7 @@ var plasmaRepoDir string
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.Flags().StringVar(&dbPath, FlagGanacheDBPath, "./.ganache", "path to where ganache should store its chain data")
+	startCmd.Flags().StringVar(&dbPath, FlagGanacheDBPath, "/tmp/.ganache", "path to where ganache should store its chain data")
 	startCmd.Flags().IntVar(&ganachePort, FlagGanachePort, 8545, "ganache port")
 	startCmd.Flags().IntVar(&ganacheBlockTime, FlagGanacheBlockTime, 1, "ganache block time")
 	startCmd.Flags().StringVar(&plasmaRepoDir, FlagPlasmaRepoDir, ".", "path to the plasma repository")
