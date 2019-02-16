@@ -9,7 +9,7 @@ import {wait} from './lib/wait';
 import {EventLog} from 'web3/types';
 import { assert } from 'chai';
 
-describe.only('Exits', () => {
+describe('Exits', () => {
   let contract: PlasmaContract;
   let client: PlasmaClient;
 
@@ -41,7 +41,7 @@ describe.only('Exits', () => {
     await exitOp.exit();
   });
 
-  it.only('should challenge exits', async function () {
+  it('should challenge exits', async function () {
     this.timeout(60000);
 
     // send to party A
