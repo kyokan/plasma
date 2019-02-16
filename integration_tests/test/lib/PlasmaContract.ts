@@ -69,9 +69,17 @@ export default class PlasmaContract {
     })));
   }
 
+  public startDepositExit (nonce: BN, fee: BN, from: string): Promise<TransactionReceipt> {
+    return this.awaitReceipt(() => this.contract.methods.startDepositExit(nonce.toString(10), fee.toString(10)).send(this.decorateCall({
+      to: this.contract.options.address,
+      value: fee.toString(10),
+      from,
+    })));
+  }
+
   public challengedExits (): Promise<EventLog[]> {
     return this.contract.getPastEvents('ChallengedExit', {
-      fromBlock: 0
+      fromBlock: 0,
     });
   }
 

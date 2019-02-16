@@ -69,7 +69,7 @@ type Client interface {
 	FinalizedExitFilter(uint64) ([]contracts.PlasmaFinalizedExit, uint64, error)
 
 	StartedTransactionExitFilter(uint64, uint64) ([]contracts.PlasmaStartedTransactionExit, uint64, error)
-	StartedDepositExitFilter(uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
+	StartedDepositExitFilter(uint64, uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error)
 
 	EthereumBlockHeight() (uint64, error)
 	LookupDeposit(depositNonce *big.Int) (*big.Int, common.Address, error)

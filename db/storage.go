@@ -48,8 +48,8 @@ type PlasmaStorage interface {
 	LastTxExitPoll() (uint64, error)
 	SaveTxExitPoll(idx uint64) error
 
-	LastDepositExitEventIdx() (uint64, error)
-	SaveDepositExitEventIdx(idx uint64) error
+	LastDepositExitPoll() (uint64, error)
+	SaveDepositExitPoll(idx uint64) error
 
 	MarkExitsAsSpent([]chain.Input) error
 
@@ -59,6 +59,7 @@ type PlasmaStorage interface {
 	LastSubmittedBlock() (uint64, error)
 
 	FindDoubleSpendingTransaction(blkNum uint64, txIdx uint32, outIndex uint8) (*chain.ConfirmedTransaction, error)
+	FindDoubleSpendingDeposit(nonce *big.Int) (*chain.ConfirmedTransaction, error)
 }
 
 type Storage struct {
@@ -224,6 +225,22 @@ func (ps *Storage) IsDoubleSpent(tx *chain.Transaction) (bool, error) {
 
 func (ps *Storage) FindDoubleSpendingTransaction(blkNum uint64, txIdx uint32, outIndex uint8) (*chain.ConfirmedTransaction, error) {
 	spendingHash, err := ps.db.Get(spendByTxIdxKey(blkNum, txIdx, outIndex), nil)
+	if err == leveldb.ErrNotFound {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hash, err := hexutil.Decode(string(spendingHash))
+	if err != nil {
+		return nil, err
+	}
+	return ps.findTransactionByHash(hash)
+}
+
+func (ps *Storage) FindDoubleSpendingDeposit(nonce *big.Int) (*chain.ConfirmedTransaction, error) {
+	spendingHash, err := ps.db.Get(depositKey(nonce), nil)
 	if err == leveldb.ErrNotFound {
 		return nil, nil
 	}
@@ -582,11 +599,11 @@ func (ps *Storage) SaveTxExitPoll(idx uint64) error {
 	return ps.saveEventIdx(lastTxExitPollKey, idx)
 }
 
-func (ps *Storage) LastDepositExitEventIdx() (uint64, error) {
+func (ps *Storage) LastDepositExitPoll() (uint64, error) {
 	return ps.getMostRecentEventIdx(latestDepExitIdxKey)
 }
 
-func (ps *Storage) SaveDepositExitEventIdx(idx uint64) error {
+func (ps *Storage) SaveDepositExitPoll(idx uint64) error {
 	return ps.saveEventIdx(latestDepExitIdxKey, idx)
 }
 

@@ -124,12 +124,12 @@ func (c *clientState) StartedTransactionExitFilter(start uint64, end uint64) ([]
 	return events, end, nil
 }
 
-func (c *clientState) StartedDepositExitFilter(start uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error) {
+func (c *clientState) StartedDepositExitFilter(start uint64, end uint64) ([]contracts.PlasmaStartedDepositExit, uint64, error) {
 	opts, err := c.filterOpts(start)
 	if err != nil {
 		return nil, 0, err
 	}
-	end := *opts.End
+	opts.End = &end
 
 
 	itr, err := c.contract.FilterStartedDepositExit(opts)

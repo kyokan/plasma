@@ -5,7 +5,6 @@ import PlasmaClient from '../lib/PlasmaClient';
 import MerkleTree from '../lib/MerkleTree';
 import {sha256} from '../lib/hash';
 import BN = require('bn.js');
-import {wait} from '../lib/wait';
 
 export default class ExitOperation {
   private contract: PlasmaContract;
@@ -45,7 +44,7 @@ export default class ExitOperation {
     const {proof} = merkle.generateProofAndRoot(this.outpoint!.txIdx);
     const confirmSigs: [Buffer, Buffer] = [
       this.outpoint!.confirmSig,
-      Buffer.from('')
+      Buffer.from(''),
     ];
     await this.contract.startExit(this.outpoint!, proof, confirmSigs, this.committedFee!, this.from);
   }

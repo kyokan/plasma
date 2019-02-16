@@ -1,5 +1,4 @@
 import Transaction from './Transaction';
-import * as ejs from 'ethereumjs-util';
 import {ConfirmedTransactionWire} from '../lib/PlasmaRPC';
 import {sha256} from '../lib/hash';
 import {ethSign} from '../lib/sign';

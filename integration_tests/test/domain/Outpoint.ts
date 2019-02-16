@@ -15,9 +15,9 @@ export default class Outpoint {
 
   public transaction: ConfirmedTransaction|null;
 
-  constructor (txIdx: number, blockNum: number, outIdx: number, amount: BN, confirmSig: Buffer, transaction: ConfirmedTransaction|null) {
-    this.txIdx = txIdx;
+  constructor (blockNum: number, txIdx: number, outIdx: number, amount: BN, confirmSig: Buffer, transaction: ConfirmedTransaction|null) {
     this.blockNum = blockNum;
+    this.txIdx = txIdx;
     this.outIdx = outIdx;
     this.amount = amount;
     this.confirmSig = confirmSig;
@@ -34,8 +34,8 @@ export default class Outpoint {
     }
 
     return new Outpoint(
-      body.txIdx,
       body.blockNum,
+      body.txIdx,
       outIdx,
       outIdx === 0 ? body.output0.amount : body.output1.amount,
       tx.confirmSignatures[outIdx],
