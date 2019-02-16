@@ -5,7 +5,9 @@ import (
 	"github.com/kyokan/plasma/eth"
 	"math/big"
 	"github.com/pkg/errors"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/kyokan/plasma/chain"
+	"bytes"
 )
 
 type depositCmdOutput struct {
@@ -13,6 +15,13 @@ type depositCmdOutput struct {
 	ContractAddress string `json:"contractAddress"`
 	Amount          string `json:"amount"`
 	DepositNonce    string `json:"depositNonce"`
+}
+
+type DepositReceipt struct {
+	TransactionHash common.Hash
+	ContractAddress common.Address
+	Amount          *big.Int
+	DepositNonce    *big.Int
 }
 
 var depositCmd = &cobra.Command{
@@ -35,18 +44,37 @@ var depositCmd = &cobra.Command{
 			return err
 		}
 
-		receipt, err := client.Deposit(amount)
-		if err != nil {
-			return err
-		}
+		receipt, err := Deposit(client, amount)
 
 		return PrintJSON(&depositCmdOutput{
-			TransactionHash: receipt.TxHash.Hex(),
-			ContractAddress: args[0],
+			TransactionHash: receipt.TransactionHash.Hex(),
+			ContractAddress: receipt.ContractAddress.Hex(),
 			Amount:          amount.Text(10),
-			DepositNonce:    hexutil.Encode(receipt.Logs[0].Data),
+			DepositNonce:    receipt.DepositNonce.Text(10),
 		})
 	},
+}
+
+func Deposit(client eth.Client, amount *big.Int) (*DepositReceipt, error) {
+	receipt, err := client.Deposit(amount)
+	if err != nil {
+		return nil, err
+	}
+
+	logData := receipt.Logs[0].Data
+	dataReader := bytes.NewReader(logData)
+	var depositNonce chain.UInt256
+	_, err = dataReader.ReadAt(depositNonce[:], 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DepositReceipt{
+		TransactionHash: receipt.TxHash,
+		ContractAddress: receipt.ContractAddress,
+		Amount:          amount,
+		DepositNonce:    depositNonce.ToBig(),
+	}, nil
 }
 
 func init() {

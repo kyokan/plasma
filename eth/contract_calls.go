@@ -23,6 +23,9 @@ func ContractCall(client *ethclient.Client, generator TxGenerator) (*types.Recei
 	if err != nil {
 		return nil, err
 	}
+	if rawReceipt == nil {
+		return nil, errors.New("receipt is nil")
+	}
 
 	receipt := rawReceipt.(*types.Receipt)
 	if receipt.Status == 0 {

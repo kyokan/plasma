@@ -47,31 +47,35 @@ var sendCmd = &cobra.Command{
 			return errors.New("invalid send value")
 		}
 
+		url := cmd.Flag(FlagNodeURL).Value.String()
+		if url == "" {
+			return errors.New("no node url set")
+		}
+		client, conn, err := CreateRootClient(url)
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+
 		if len(args) == 4 {
 			depositNonce, ok := new(big.Int).SetString(args[2], 10)
 			if !ok {
 				return errors.New("invalid deposit nonce")
 			}
 			contractAddr := common.HexToAddress(args[3])
-			return spendDeposit(cmd, privKey, from, to, value, depositNonce, contractAddr)
+			contract, err := eth.NewClient(cmd.Flag(FlagEthereumNodeUrl).Value.String(), contractAddr.Hex(), privKey)
+			if err != nil {
+				return err
+			}
+			return SpendDeposit(client, contract, privKey, from, to, value, depositNonce)
 		}
 
-		return spendTx(cmd, privKey, from, to, value)
+		return SpendTx(client, privKey, from, to, value)
 	},
 }
 
-func spendDeposit(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int, depositNonce *big.Int, contractAddr common.Address) error {
-	client, conn, err := CreateRootClient(cmd)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
+func SpendDeposit(client pb.RootClient, contract eth.Client, privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int, depositNonce *big.Int) error {
 	sendCmdLog.Info("spending deposit")
-	contract, err := eth.NewClient(cmd.Flag(FlagEthereumNodeUrl).Value.String(), contractAddr.Hex(), privKey)
-	if err != nil {
-		return err
-	}
 	total, owner, err := contract.LookupDeposit(depositNonce)
 	if err != nil {
 		return err
@@ -156,13 +160,7 @@ func spendDeposit(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Add
 	return PrintJSON(out)
 }
 
-func spendTx(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int) error {
-	client, conn, err := CreateRootClient(cmd)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
+func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int) error {
 	sendCmdLog.Info("selecting outputs")
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)

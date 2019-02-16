@@ -6,7 +6,8 @@ import (
 	"time"
 	"github.com/kyokan/plasma/rpc/pb"
 	"github.com/kyokan/plasma/rpc"
-			)
+	"errors"
+)
 
 type balanceCmdOutput struct {
 	Address string `json:"address"`
@@ -23,7 +24,11 @@ var balanceCmd = &cobra.Command{
 			return err
 		}
 
-		client, conn, err := CreateRootClient(cmd)
+		url := cmd.Flag(FlagNodeURL).Value.String()
+		if url == "" {
+			return errors.New("no node url set")
+		}
+		client, conn, err := CreateRootClient(url)
 		if err != nil {
 			return err
 		}

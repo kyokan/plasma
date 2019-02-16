@@ -50,12 +50,7 @@ func ParsePrivateKey(cmd *cobra.Command) (*ecdsa.PrivateKey, error) {
 	return crypto.HexToECDSA(strings.TrimSpace(string(keyBytes)))
 }
 
-func CreateRootClient(cmd *cobra.Command) (pb.RootClient, *grpc.ClientConn, error) {
-	url := cmd.Flag(FlagNodeURL).Value.String()
-	if url == "" {
-		return nil, nil, errors.New("no node url set")
-	}
-
+func CreateRootClient(url string) (pb.RootClient, *grpc.ClientConn, error) {
 	conn, err := grpc.Dial(url, grpc.WithInsecure())
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to dial node")
@@ -63,10 +58,6 @@ func CreateRootClient(cmd *cobra.Command) (pb.RootClient, *grpc.ClientConn, erro
 
 	client := pb.NewRootClient(conn)
 	return client, conn, nil
-}
-
-func CreateEthClient(cmd *cobra.Command) {
-
 }
 
 func PrintJSON(in interface{}) error {

@@ -14,6 +14,7 @@ import (
 	"net"
 	"time"
 	"path"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -132,6 +133,75 @@ func startHarness(_ *cobra.Command, _ []string) error {
 	signal.Notify(c, os.Interrupt)
 	<-c
 
+	return nil
+}
+
+func StartGanache(port int, blockTime int, accountCount int, dbPath string) (*exec.Cmd, error) {
+	ganache := exec.Command(
+		"ganache-cli",
+		"-m",
+		"candy maple cake sugar pudding cream honey rich smooth crumble sweet treat",
+		"-p",
+		strconv.Itoa(port),
+		"-a",
+		strconv.Itoa(accountCount),
+		"--deterministic",
+		"--networkId",
+		"development",
+		"--db",
+		dbPath,
+		"-b",
+		strconv.Itoa(blockTime),
+	)
+	if err := LogCmd(ganache, "ganache"); err != nil {
+	    return nil, err
+	}
+	if err := ganache.Start(); err != nil {
+		return nil, err
+	}
+
+	var started bool
+	for i := 0; i < 10; i++ {
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), time.Second)
+		if conn != nil {
+			conn.Close()
+			started = true
+			break
+		}
+		time.Sleep(time.Second)
+	}
+
+	if !started {
+		return nil, errors.New("timeout starting ganache")
+	}
+
+	return ganache, nil
+}
+
+func MigrateGanache(repoDir string) error {
+	truffle := exec.Command("truffle", "migrate", "--reset")
+	truffle.Dir = path.Join(repoDir, "plasma-mvp-rootchain")
+	if err := LogCmd(truffle, "truffle"); err != nil {
+		return err
+	}
+
+	if err := truffle.Start(); err != nil {
+		return err
+	}
+	return truffle.Wait()
+}
+
+func LogCmd(cmd *exec.Cmd, prefix string) error {
+	stdOut, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stdErr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	printPipe(fmt.Sprintf("%s-out", prefix), stdOut)
+	printPipe(fmt.Sprintf("%s-err", prefix), stdErr)
 	return nil
 }
 

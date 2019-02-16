@@ -6,6 +6,7 @@ import (
 	"github.com/kyokan/plasma/rpc/pb"
 	"context"
 	"github.com/kyokan/plasma/chain"
+	"errors"
 )
 
 type utxoCmdOutput struct {
@@ -25,7 +26,11 @@ var utxosCmd = &cobra.Command{
 			return err
 		}
 
-		client, conn, err := CreateRootClient(cmd)
+		url := cmd.Flag(FlagNodeURL).Value.String()
+		if url == "" {
+			return errors.New("no node url set")
+		}
+		client, conn, err := CreateRootClient(url)
 		if err != nil {
 			return err
 		}

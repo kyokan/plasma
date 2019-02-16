@@ -137,6 +137,7 @@ func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
 
 	clientLogger.WithFields(logrus.Fields{
 		"amount": amount.Text(10),
+		"address": crypto.PubkeyToAddress(c.privateKey.PublicKey).Hex(),
 	}).Info("depositing funds")
 
 	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {
