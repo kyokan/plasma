@@ -8,7 +8,7 @@ import (
 
 func main() {
 	fmt.Println("Running benchmarker. This will take a while.")
-	res, err := bench.BenchmarkSend100()
+	res, err := bench.BenchmarkSend(10, 10)
 	if err != nil {
 		fmt.Println("benchmarking failed", err)
 		os.Exit(1)

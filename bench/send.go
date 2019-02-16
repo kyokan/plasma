@@ -79,7 +79,7 @@ func startPlasma(dbPath string) (*exec.Cmd, error) {
 	return plasma, nil
 }
 
-func initSendBench() (StopFunc, error) {
+func initSendBench(accountCount int) (StopFunc, error) {
 	ganacheDbPath, err := ioutil.TempDir("", "ganache")
 	if err != nil {
 		return nil, err
@@ -88,14 +88,14 @@ func initSendBench() (StopFunc, error) {
 	if err != nil {
 		return nil, err
 	}
-	ganache, err := harness.StartGanache(8545, 1, 100, ganacheDbPath)
+	ganache, err := harness.StartGanache(8545, 1, accountCount, ganacheDbPath)
 	if err != nil {
 		return nil, err
 	}
 	harness.MigrateGanache(getRepoBase())
 
 	var ethClients []eth.Client
-	for _, privStr := range benchPrivateKeys {
+        for _, privStr := range benchPrivateKeys[0:accountCount] {
 		priv, err := crypto.HexToECDSA(privStr)
 		if err != nil {
 			return nil, err
@@ -171,8 +171,8 @@ func initSendBench() (StopFunc, error) {
 	}, nil
 }
 
-func BenchmarkSend100() (*SendBenchmarkResult, error) {
-	stop, err := initSendBench()
+func BenchmarkSend(accountCount int, benchCallMultiper int) (*SendBenchmarkResult, error) {
+	stop, err := initSendBench(accountCount)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func BenchmarkSend100() (*SendBenchmarkResult, error) {
 	failureCount := int64(0)
 	completionCount := int64(0)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < benchCallMultiper; i++ {
 		var wg sync.WaitGroup
 		wg.Add(len(accounts))
 		for _, account := range accounts {
