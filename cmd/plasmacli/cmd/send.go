@@ -252,7 +252,6 @@ func spendTx(cmd *cobra.Command, privKey *ecdsa.PrivateKey, from common.Address,
 	if err != nil {
 		return err
 	}
-	fmt.Println(hexutil.Encode(buf.Bytes()))
 
 	sendCmdLog.Info("confirming transaction")
 
