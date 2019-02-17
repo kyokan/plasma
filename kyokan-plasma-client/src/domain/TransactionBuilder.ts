@@ -1,11 +1,11 @@
 import {assert} from 'chai';
-import Outpoint from '../domain/Outpoint';
-import Transaction from '../domain/Transaction';
+import Outpoint from './Outpoint';
+import Transaction from './Transaction';
 import {selectUTXOs} from './selectUTXOs';
-import Input from '../domain/Input';
-import {toBig} from './numbers';
-import Output from '../domain/Output';
-import TransactionBody from '../domain/TransactionBody';
+import Input from './Input';
+import {toBig} from '../util/numbers';
+import Output from './Output';
+import TransactionBody from './TransactionBody';
 import BN = require('bn.js');
 
 export default class TransactionBuilder {

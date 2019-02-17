@@ -1,34 +1,49 @@
 import Web3 from 'web3';
-import {Config} from '../Config';
-import {SharedWeb3} from './SharedWeb3';
 import abi from '../abi/PlasmaMVP.abi.json';
 import {EventLog, TransactionReceipt} from 'web3/types';
 import {Tx} from 'web3/eth/types';
 import PromiEvent from 'web3/promiEvent';
 import {PlasmaMVP} from '../abi/PlasmaMVP';
 import Outpoint from '../domain/Outpoint';
-import {toHex} from './parseHex';
+import {toHex} from '../util/hex';
 import {OnChainDeposit} from '../domain/OnChainDeposit';
+import {toBig} from '../util/numbers';
 import BN = require('bn.js');
 
-let cachedContract: PlasmaContract;
+interface DepositEvent {
+  nonce: string
+  owner: string;
+  amount: string;
+  createdAt: string;
+  ethBlockNum: string;
+}
 
 export default class PlasmaContract {
   private web3: Web3;
 
   private contract: PlasmaMVP;
 
-  constructor (web3: Web3) {
+  constructor (web3: Web3, address: string) {
     this.web3 = web3;
-    this.contract = new this.web3.eth.Contract(abi, Config.PLASMA_CONTRACT_ADDRESS) as PlasmaMVP;
+    this.contract = new this.web3.eth.Contract(abi, address) as PlasmaMVP;
   }
 
-  public deposit (value: BN, from: string): Promise<TransactionReceipt> {
-    return this.awaitReceipt(() => this.contract.methods.deposit(from).send(this.decorateCall({
+  public async deposit (value: BN, from: string): Promise<OnChainDeposit> {
+    const receipt = await this.awaitReceipt(() => this.contract.methods.deposit(from).send(this.decorateCall({
       to: this.contract.options.address,
       value: value.toString(10),
       from,
     })));
+
+    const ev = receipt.events!.Deposit.returnValues as DepositEvent;
+
+    return {
+      nonce: toBig(ev.nonce),
+      owner: ev.owner,
+      amount: toBig(ev.amount),
+      createdAt: ev.createdAt,
+      ethBlockNum: ev.ethBlockNum,
+    };
   }
 
   public async depositNonce (): Promise<BN> {
@@ -95,14 +110,5 @@ export default class PlasmaContract {
       cb().on('receipt', resolve)
         .on('error', reject);
     });
-  }
-
-  static getShared (): PlasmaContract {
-    if (cachedContract) {
-      return cachedContract;
-    }
-
-    cachedContract = new PlasmaContract(SharedWeb3.getShared());
-    return cachedContract;
   }
 }

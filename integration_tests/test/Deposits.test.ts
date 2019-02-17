@@ -1,19 +1,21 @@
-import PlasmaContract from './lib/PlasmaContract';
-import { assert } from 'chai';
-import {toBig} from './lib/numbers';
+import PlasmaContract from 'kyokan-plasma-client/lib/contract/PlasmaContract';
+import IRootClient from 'kyokan-plasma-client/lib/rpc/IRootClient';
+import SendOperation from 'kyokan-plasma-client/lib/operations/SendOperation';
+import {toBig} from 'kyokan-plasma-client/lib/util/numbers';
+import {assert} from 'chai';
 import {Config} from './Config';
-import PlasmaClient from './lib/PlasmaClient';
 import {withRetryCondition} from './lib/withRetries';
-import SendOperation from './domain/SendOperation';
+import SharedRootClient from './lib/SharedRootClient';
+import SharedContract from './lib/SharedContract';
 import BN = require('bn.js');
 
 describe('Deposits', () => {
   let contract: PlasmaContract;
-  let client: PlasmaClient;
+  let client: IRootClient;
 
   before(() => {
-    contract = PlasmaContract.getShared();
-    client = PlasmaClient.getShared();
+    contract = SharedContract.get();
+    client = SharedRootClient.get();
   });
 
   it('should allow spends via the deposit nonce', async function () {

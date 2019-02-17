@@ -1,4 +1,4 @@
-import {tmSHA256} from './hash';
+import {tmSHA256} from './crypto/hash';
 
 export default class MerkleTree {
   private leaves: Buffer[] = [];

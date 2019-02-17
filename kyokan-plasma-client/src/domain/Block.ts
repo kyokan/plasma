@@ -1,4 +1,3 @@
-import {BlockWire} from '../lib/PlasmaRPC';
 import ConfirmedTransaction from './ConfirmedTransaction';
 
 export interface BlockHeader {
@@ -19,18 +18,5 @@ export default class Block {
     this.header = header;
     this.hash = hash;
     this.transactions = transactions;
-  }
-
-  static fromWire (blockWire: BlockWire): Block {
-    return new Block(
-      {
-        merkleRoot: blockWire.block.header.merkleRoot,
-        rlpMerkleRoot: blockWire.block.header.rlpMerkleRoot,
-        prevHash: blockWire.block.header.prevHash,
-        number: Number(blockWire.block.header.number),
-      },
-      blockWire.block.hash,
-      blockWire.confirmedTransactions.map((ct) => ConfirmedTransaction.fromWire(ct)),
-    );
   }
 }

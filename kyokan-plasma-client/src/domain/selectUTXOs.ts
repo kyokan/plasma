@@ -1,4 +1,4 @@
-import Outpoint from '../domain/Outpoint';
+import Outpoint from './Outpoint';
 import BN = require('bn.js');
 
 export function selectUTXOs (utxos: Outpoint[], total: BN): Outpoint[] {

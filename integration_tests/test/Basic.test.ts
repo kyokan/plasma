@@ -1,12 +1,13 @@
-import PlasmaClient from './lib/PlasmaClient';
+import {toBig} from 'kyokan-plasma-client/lib/util/numbers';
+import IRootClient from 'kyokan-plasma-client/lib/rpc/IRootClient';
 import {assertBigEqual} from './lib/assertBigEqual';
-import {toBig} from './lib/numbers';
+import SharedRootClient from './lib/SharedRootClient';
 
 describe('Basic functionality', () => {
-  let client: PlasmaClient;
+  let client: IRootClient;
 
   before(() => {
-    client = PlasmaClient.getShared();
+    client = SharedRootClient.get();
   });
 
   it('should return a zero balance for a non-existent account', async () => {

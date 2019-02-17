@@ -1,7 +1,6 @@
 import {Uint64BE} from 'int64-buffer';
-import {keccak256} from '../lib/hash';
-import {fromBNWire, InputWire, toBNWire} from '../lib/PlasmaRPC';
-import {toBig, toBuffer} from '../lib/numbers';
+import {keccak256} from '../crypto/hash';
+import {toBig, toBuffer} from '../util/numbers';
 import * as ejs from 'ethereumjs-util';
 import BN = require('bn.js');
 
@@ -28,15 +27,6 @@ export default class Input {
       ejs.toBuffer(this.outIdx),
     ]);
     return keccak256(buf);
-  }
-
-  public toRPC (): InputWire {
-    return {
-      blockNum: this.blockNum.toString(),
-      txIdx: this.txIdx,
-      outIdx: this.outIdx,
-      depositNonce: toBNWire(this.depositNonce),
-    };
   }
 
   public toArray () {
@@ -67,15 +57,6 @@ export default class Input {
       0,
       0,
       toBig(0),
-    );
-  }
-
-  static fromWire (input: InputWire): Input {
-    return new Input(
-      Number(input.blockNum),
-      input.txIdx,
-      input.outIdx,
-      fromBNWire(input.depositNonce),
     );
   }
 }

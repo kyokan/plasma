@@ -1,24 +1,30 @@
 import * as protoLoader from '@grpc/proto-loader';
 import * as grpc from 'grpc';
+import {ChannelCredentials} from 'grpc';
 import * as path from 'path';
-import {pify} from './pify';
-import {
-  BlockWire,
-  ConfirmedTransactionWire, ConfirmRequest,
-  GetBalanceResponse,
-  GetConfirmationsResponse,
-  GetOutputsResponse,
-  SendResponse,
-} from './PlasmaRPC';
-import {toBig} from './numbers';
-import {parseHex} from './parseHex';
+import {pify} from '../util/pify';
+import {toBig} from '../util/numbers';
+import {parseHex} from '../util/hex';
 import Outpoint from '../domain/Outpoint';
 import Transaction from '../domain/Transaction';
 import Block from '../domain/Block';
-import {ethSign} from './sign';
-import {keccak256} from './hash';
-import BN = require('bn.js');
 import ConfirmedTransaction from '../domain/ConfirmedTransaction';
+import {
+  blockFromWire,
+  BlockWire,
+  ConfirmedTransactionWire,
+  ConfirmRequest,
+  GetBalanceResponse,
+  GetConfirmationsResponse,
+  GetOutputsResponse,
+  outpointFromConfirmedTxWire,
+  sendResponseFromWire,
+  SendResponseWire,
+  transactionToWire,
+} from './GRPCWire';
+import {SendResponse} from '../domain/SendResponse';
+import IRootClient from './IRootClient';
+import BN = require('bn.js');
 
 export type ClientCB<T> = (err: any, res: T) => void;
 
@@ -29,21 +35,19 @@ export interface IClient {
 
   getOutputs (args: { address: Buffer, spendable: boolean }, cb: ClientCB<GetOutputsResponse>): void
 
-  send (args: any, cb: ClientCB<SendResponse>): void
+  send (args: any, cb: ClientCB<SendResponseWire>): void
 
   confirm (args: ConfirmRequest, cb: ClientCB<any>): void
 
   getConfirmations (args: any, cb: ClientCB<GetConfirmationsResponse>): void
 }
 
-let cachedClient: PlasmaClient;
-
-export default class PlasmaClient {
+export default class GRPCRootClient implements IRootClient {
   private client: IClient;
 
-  constructor (protoFile: string, url: string) {
+  constructor (url: string, creds?: ChannelCredentials) {
     const definition = protoLoader.loadSync(
-      protoFile,
+      path.join(__dirname, 'pb', 'root.proto'),
       {
         keepCase: true,
         longs: String,
@@ -53,7 +57,7 @@ export default class PlasmaClient {
       },
     );
     const pb = grpc.loadPackageDefinition(definition).pb;
-    this.client = new (pb as any).Root(url, grpc.credentials.createInsecure());
+    this.client = new (pb as any).Root(url, creds || grpc.credentials.createInsecure());
   }
 
   public async getBalance (address: string): Promise<BN> {
@@ -63,7 +67,7 @@ export default class PlasmaClient {
 
   public async getBlock (number: number): Promise<Block> {
     const blockWire = await pify<BlockWire>((cb) => this.client.getBlock({number}, cb));
-    return Block.fromWire(blockWire);
+    return blockFromWire(blockWire);
   }
 
   public async getUTXOs (address: string): Promise<Outpoint[]> {
@@ -71,16 +75,16 @@ export default class PlasmaClient {
       address: parseHex(address),
       spendable: true,
     }, cb));
-    return res.confirmedTransactions.map((r: ConfirmedTransactionWire) => Outpoint.fromWireTx(r, address));
+    return res.confirmedTransactions.map((r: ConfirmedTransactionWire) => outpointFromConfirmedTxWire(r, address));
   }
 
   public async send (tx: Transaction): Promise<SendResponse> {
-    const res = await pify<SendResponse>((cb) => this.client.send({transaction: tx.toRPC()}, cb));
+    const res = await pify<SendResponseWire>((cb) => this.client.send({transaction: transactionToWire(tx)}, cb));
     res.inclusion.blockNumber = Number(res.inclusion.blockNumber);
-    return res;
+    return sendResponseFromWire(res);
   }
 
-  public async confirm (confirmedTx: ConfirmedTransaction) {
+  public async confirm (confirmedTx: ConfirmedTransaction): Promise<void> {
     if (!confirmedTx.confirmSignatures) {
       throw new Error('cannot confirm a transaction without confirm sigs');
     }
@@ -91,14 +95,5 @@ export default class PlasmaClient {
       confirmSig0: confirmedTx.confirmSignatures![0],
       confirmSig1: confirmedTx.confirmSignatures![1],
     }, cb));
-  }
-
-  static getShared (): PlasmaClient {
-    if (cachedClient) {
-      return cachedClient;
-    }
-
-    cachedClient = new PlasmaClient(path.resolve(__dirname, '..', '..', '..', 'rpc', 'proto', 'root.proto'), 'localhost:6545');
-    return cachedClient;
   }
 }

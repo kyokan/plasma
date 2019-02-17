@@ -1,9 +1,8 @@
 import Input from './Input';
 import Output from './Output';
-import {toBuffer} from '../lib/numbers';
+import {toBuffer} from '../util/numbers';
 import * as ejs from 'ethereumjs-util';
-import {keccak256} from '../lib/hash';
-import {fromBNWire, toBNWire, TransactionBodyWire} from '../lib/PlasmaRPC';
+import {keccak256} from '../crypto/hash';
 import BN = require('bn.js');
 
 export default class TransactionBody {
@@ -53,37 +52,8 @@ export default class TransactionBody {
     return (ejs as any).rlp.encode(this.toArray()) as Buffer;
   }
 
-  toRPC (): TransactionBodyWire {
-    return {
-      blockNum: this.blockNum.toString(),
-      txIdx: this.txIdx,
-      input0ConfirmSig: this.input0ConfirmSig,
-      input1ConfirmSig: this.input1ConfirmSig,
-      fee: toBNWire(this.fee),
-      input0: this.input0.toRPC(),
-      input1: this.input1.toRPC(),
-      output0: this.output0.toRPC(),
-      output1: this.output1.toRPC(),
-    };
-  }
-
-
   sigHash () {
     const rlp = this.toRLP();
     return keccak256(rlp);
-  }
-
-  static fromWire (tx: TransactionBodyWire): TransactionBody {
-    return new TransactionBody(
-      Input.fromWire(tx.input0),
-      Input.fromWire(tx.input1),
-      Output.fromWire(tx.output0),
-      Output.fromWire(tx.output1),
-      Number(tx.blockNum),
-      tx.txIdx,
-      tx.input0ConfirmSig,
-      tx.input1ConfirmSig,
-      fromBNWire(tx.fee),
-    );
   }
 }

@@ -1,6 +1,5 @@
-import {TransactionWire} from '../lib/PlasmaRPC';
 import TransactionBody from './TransactionBody';
-import {ethSign} from '../lib/sign';
+import {ethSign} from '../crypto/sign';
 import ejs = require('ethereumjs-util');
 
 export default class Transaction {
@@ -26,18 +25,6 @@ export default class Transaction {
     ];
   }
 
-  toRPC (): TransactionWire {
-    if (!this.signature0 || !this.signature1) {
-      throw new Error('Cannot serialize un-signed transaction.');
-    }
-
-    return {
-      body: this.body.toRPC(),
-      sig0: this.signature0,
-      sig1: this.signature1,
-    };
-  }
-
   toRLP (): Buffer {
     return (ejs as any).rlp.encode(this.toArray()) as Buffer;
   }
@@ -47,13 +34,5 @@ export default class Transaction {
     const sig = ethSign(hash, privateKey);
     this.signature0 = sig;
     this.signature1 = sig;
-  }
-
-  static fromWire (tx: TransactionWire): Transaction {
-    return new Transaction(
-      TransactionBody.fromWire(tx.body),
-      tx.sig0,
-      tx.sig1,
-    );
   }
 }

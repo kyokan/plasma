@@ -1,14 +1,13 @@
-import PlasmaClient from '../lib/PlasmaClient';
-import TransactionBuilder from '../lib/TransactionBuilder';
+import TransactionBuilder from '../domain/TransactionBuilder';
 import {assert} from 'chai';
-import ConfirmedTransaction from './ConfirmedTransaction';
-import PlasmaContract from '../lib/PlasmaContract';
-import BN = require('bn.js');
+import ConfirmedTransaction from '../domain/ConfirmedTransaction';
+import PlasmaContract from '../contract/PlasmaContract';
 import {addressesEqual} from '../util/addresses';
-import Transaction from './Transaction';
+import IRootClient from '../rpc/IRootClient';
+import BN = require('bn.js');
 
 export default class SendOperation {
-  private readonly client: PlasmaClient;
+  private readonly client: IRootClient;
 
   private readonly contract: PlasmaContract;
 
@@ -22,7 +21,7 @@ export default class SendOperation {
 
   private depositNonce: BN | null = null;
 
-  constructor (client: PlasmaClient, contract: PlasmaContract, from: string) {
+  constructor (client: IRootClient, contract: PlasmaContract, from: string) {
     this.client = client;
     this.contract = contract;
     this.from = from;
@@ -48,7 +47,7 @@ export default class SendOperation {
     return this;
   }
 
-  public async send (privateKey: Buffer): Promise<void> {
+  public async send (privateKey: Buffer): Promise<ConfirmedTransaction> {
     assert(this.to, 'a to address must be set');
     assert(this.value, 'a value must be set');
     assert(this.fee, 'a fee must be set');
@@ -77,8 +76,9 @@ export default class SendOperation {
     tx.sign(privateKey);
     const confirmData = await this.client.send(tx);
     const inclusion = confirmData.inclusion;
-    const confirmedTx = new ConfirmedTransaction(Transaction.fromWire(confirmData.transaction), null)
+    const confirmedTx = new ConfirmedTransaction(confirmData.transaction, null);
     confirmedTx.confirmSign(privateKey, inclusion.merkleRoot);
     await this.client.confirm(confirmedTx);
+    return confirmedTx;
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "plasma-integration-tests",
+  "name": "kyokan-plasma-integration-tests",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,7 +8,7 @@
     "build": "tsc --project .",
     "clean": "rm -rf ./dist"
   },
-  "author": "Matthew Slipper",
+  "author": "Kyokan Group Incorporated",
   "license": "AGPL",
   "dependencies": {
     "@babel/runtime": "^7.3.1",
@@ -30,6 +30,7 @@
     "ganache-cli": "^6.2.5",
     "grpc": "1.18.0",
     "int64-buffer": "0.99.1007",
+    "kyokan-plasma-client": "0.0.3",
     "mocha": "^5.2.0",
     "rimraf": "2.6.3",
     "truffle": "5.0.2",

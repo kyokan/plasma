@@ -55,7 +55,7 @@ async function setup () {
   });
   logRunner('Done. Waiting for ganache to initialize...');
 
-  const w3 = SharedWeb3.getShared();
+  const w3 = SharedWeb3.get();
   let started = false;
 
   for (let i = 0; i < 3; i++) {

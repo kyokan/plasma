@@ -1,9 +1,8 @@
 import BN = require('bn.js');
-import {parseHex, toHex} from '../lib/parseHex';
-import {keccak256} from '../lib/hash';
-import {fromBNWire, OutputWire, toBNWire} from '../lib/PlasmaRPC';
+import {parseHex} from '../util/hex';
+import {keccak256} from '../crypto/hash';
 import {ZERO_ADDRESS} from './Addresses';
-import {toBig, toBuffer} from '../lib/numbers';
+import {toBig, toBuffer} from '../util/numbers';
 
 export default class Output {
   public readonly owner: string;
@@ -18,16 +17,9 @@ export default class Output {
   public hash () {
     const buf = Buffer.concat([
       parseHex(this.owner),
-      this.amount.toBuffer('be')
+      this.amount.toBuffer('be'),
     ]);
     return keccak256(buf);
-  }
-
-  public toRPC (): OutputWire {
-    return {
-      owner: parseHex(this.owner),
-      amount: toBNWire(this.amount),
-    };
   }
 
   public toArray () {
@@ -41,13 +33,6 @@ export default class Output {
     return new Output(
       ZERO_ADDRESS,
       toBig(0),
-    );
-  }
-
-  static fromWire (output: OutputWire): Output {
-    return new Output(
-      toHex(output.owner),
-      fromBNWire(output.amount),
     );
   }
 }

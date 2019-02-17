@@ -1,15 +1,15 @@
 import {assert} from 'chai';
-import Outpoint from './Outpoint';
-import PlasmaContract from '../lib/PlasmaContract';
-import PlasmaClient from '../lib/PlasmaClient';
-import MerkleTree from '../lib/MerkleTree';
-import {sha256} from '../lib/hash';
+import Outpoint from '../domain/Outpoint';
+import PlasmaContract from '../contract/PlasmaContract';
+import MerkleTree from '../MerkleTree';
+import {sha256} from '../crypto/hash';
+import IRootClient from '../rpc/IRootClient';
 import BN = require('bn.js');
 
 export default class ExitOperation {
   private contract: PlasmaContract;
 
-  private client: PlasmaClient;
+  private client: IRootClient;
 
   private from: string;
 
@@ -17,7 +17,7 @@ export default class ExitOperation {
 
   private committedFee: BN | null = null;
 
-  constructor (contract: PlasmaContract, client: PlasmaClient, from: string) {
+  constructor (contract: PlasmaContract, client: IRootClient, from: string) {
     this.contract = contract;
     this.client = client;
     this.from = from;

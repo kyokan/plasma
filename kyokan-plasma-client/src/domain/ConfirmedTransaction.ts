@@ -1,7 +1,6 @@
 import Transaction from './Transaction';
-import {ConfirmedTransactionWire} from '../lib/PlasmaRPC';
-import {sha256} from '../lib/hash';
-import {ethSign} from '../lib/sign';
+import {sha256} from '../crypto/hash';
+import {ethSign} from '../crypto/sign';
 
 export default class ConfirmedTransaction {
   public readonly transaction: Transaction;
@@ -26,12 +25,5 @@ export default class ConfirmedTransaction {
     this.confirmSignatures = [
       confirmSig, confirmSig,
     ];
-  }
-
-  static fromWire (wireTx: ConfirmedTransactionWire): ConfirmedTransaction {
-    return new ConfirmedTransaction(
-      Transaction.fromWire(wireTx.transaction),
-      [wireTx.confirmSig0, wireTx.confirmSig1],
-    );
   }
 }
