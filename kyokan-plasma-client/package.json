@@ -11,7 +11,8 @@
     "build": "tsc --project . && npm run copy-protofile",
     "clean": "rm -rf ./dist",
     "copy-protofile": "mkdir -p ./lib/rpc/pb && cp ../rpc/proto/root.proto ./lib/rpc/pb",
-    "protogen-web": "protoc -I=../rpc/proto root.proto --grpc-web_out=import_style=commonjs+dts,mode=grpcwebtext:./lib/rpc/pb"
+    "protogen-web": "protoc -I=../rpc/proto root.proto --grpc-web_out=import_style=commonjs+dts,mode=grpcwebtext:./lib/rpc/pb",
+    "build-docs": "typedoc --excludeNotExported --excludePrivate --mode file --out ./docs src/"
   },
   "repository": {
     "type": "git",
@@ -33,8 +34,9 @@
     "@types/chai-as-promised": "7.1.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
-    "typescript": "3.2.4",
-    "mocha": "5.2.0"
+    "mocha": "5.2.0",
+    "typedoc": "0.14.2",
+    "typescript": "3.2.4"
   },
   "dependencies": {
     "@babel/runtime": "7.3.1",

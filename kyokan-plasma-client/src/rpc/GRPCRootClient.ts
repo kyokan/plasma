@@ -26,9 +26,9 @@ import {SendResponse} from '../domain/SendResponse';
 import IRootClient from './IRootClient';
 import BN = require('bn.js');
 
-export type ClientCB<T> = (err: any, res: T) => void;
+type ClientCB<T> = (err: any, res: T) => void;
 
-export interface IClient {
+interface InternalGRPCClient {
   getBalance (args: { address: Buffer }, cb: ClientCB<GetBalanceResponse>): void
 
   getBlock (args: { number: number }, cb: ClientCB<BlockWire>): void
@@ -42,9 +42,21 @@ export interface IClient {
   getConfirmations (args: any, cb: ClientCB<GetConfirmationsResponse>): void
 }
 
+/**
+ * gRPC client for the root node. Uses raw gRPC (i.e., not gRPC web) and
+ * is therefore unsuitable for browser use.
+ *
+ * See [[IRootClient]] for descriptions of each method.
+ */
 export default class GRPCRootClient implements IRootClient {
-  private client: IClient;
+  private client: InternalGRPCClient;
 
+  /**
+   * Constructs a new GRPCRootClient.
+   *
+   * @param url URL to the root node (without a protocol).
+   * @param creds gRPC credentials to use while communicating with the root node.
+   */
   constructor (url: string, creds?: ChannelCredentials) {
     const definition = protoLoader.loadSync(
       path.join(__dirname, 'pb', 'root.proto'),

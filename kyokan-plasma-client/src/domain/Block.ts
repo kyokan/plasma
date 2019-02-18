@@ -1,5 +1,8 @@
 import ConfirmedTransaction from './ConfirmedTransaction';
 
+/**
+ * A Plasma block's header. The `merkleRoot` is committed to chain.
+ */
 export interface BlockHeader {
   merkleRoot: Buffer
   rlpMerkleRoot: Buffer
@@ -7,6 +10,9 @@ export interface BlockHeader {
   number: number
 }
 
+/**
+ * A Plasma block.
+ */
 export default class Block {
   public header: BlockHeader;
 

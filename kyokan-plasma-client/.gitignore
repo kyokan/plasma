@@ -1,4 +1,5 @@
 lib
+docs
 node_modules
 abi/PlasmaMVP.abi.json
 src/lib/rpc/pb/*.ts

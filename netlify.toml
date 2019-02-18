@@ -1,0 +1,4 @@
+[build]
+    base = "kyokan-plasma-client"
+    command = "npm run build-docs"
+    publish = "kyokan-plasma-client/docs"
