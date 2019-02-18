@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/kyokan/plasma/rpc/pb"
+	"github.com/kyokan/plasma/pkg/rpc/pb"
 	"google.golang.org/grpc"
 	"encoding/json"
 	"fmt"

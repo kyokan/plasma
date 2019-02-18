@@ -149,7 +149,7 @@ async function startPlasma () {
     plasma.stdout.on('data', (d: Buffer) => logPrefixed('plasma-stdout', 'yellow', d.toString('utf-8')));
     plasma.stderr.on('data', (d: Buffer) => {
       const dStr = d.toString('utf-8');
-      if (dStr.match(/Started RPC server on port 6545/im)) {
+      if (dStr.match(/started gRPC server/im)) {
         resolve();
       }
 

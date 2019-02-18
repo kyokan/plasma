@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/kyokan/plasma/eth"
+	"github.com/kyokan/plasma/pkg/eth"
 	"math/big"
 	"github.com/pkg/errors"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/chain"
+	"github.com/kyokan/plasma/pkg/chain"
 	"bytes"
 )
 

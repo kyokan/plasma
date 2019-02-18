@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/kyokan/plasma/db"
+	"github.com/kyokan/plasma/pkg/db"
 	"github.com/spf13/cobra"
 	"fmt"
 	"github.com/spf13/viper"
@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&configFile, FlagConfig, "", "filepath to Plasma's configuration file")
-	rootCmd.PersistentFlags().String(FlagDB, db.DefaultLocation(), "filepath to Plasma's database")
+	rootCmd.PersistentFlags().String(FlagDB, db.DefaultLevelLocation(), "filepath to Plasma's database")
 	rootCmd.PersistentFlags().String(FlagNodeURL, "", "full URL to a running Ethereum node")
 	rootCmd.PersistentFlags().String(FlagContractAddr, "", "address of the Plasma contract")
 	rootCmd.PersistentFlags().String(FlagPrivateKey, "", "node operator's private key")

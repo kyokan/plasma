@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/kyokan/plasma/root"
+	"github.com/kyokan/plasma/internal/root"
 )
 
 var startRootCmd = &cobra.Command{

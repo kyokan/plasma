@@ -3,9 +3,9 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	"time"
-	"github.com/kyokan/plasma/rpc/pb"
+	"github.com/kyokan/plasma/pkg/rpc/pb"
 	"context"
-	"github.com/kyokan/plasma/chain"
+	"github.com/kyokan/plasma/pkg/chain"
 	"errors"
 )
 
