@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"github.com/kyokan/plasma/bench"
 	"os"
-        "runtime"
         "runtime/trace"
         "time"
 )
 
 func main() {
-        runtime.GOMAXPROCS(16)
-
-        f, err := os.Create(time.Now().Format("2006-01-02T150405.pprof"))
+        f, err := os.Create(time.Now().Format("bench-trace-2006-01-02T150405.pprof"))
         if err != nil {
           panic(err)
         }

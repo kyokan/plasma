@@ -14,7 +14,7 @@ import (
 	"sync"
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
-	"path"
+        "path"
         "math"
 	"github.com/kyokan/plasma/rpc/pb"
 	"time"
@@ -60,7 +60,7 @@ func getRepoBase() string {
 
 func startPlasma(dbPath string) (*exec.Cmd, error) {
 	plasma := exec.Command(
-		path.Join(getRepoBase(), "target", "plasmad"),
+                path.Join(getRepoBase(), "target", "plasmad"),
 		"--node-url",
 		"http://localhost:8545",
 		"--contract-addr",
@@ -77,6 +77,10 @@ func startPlasma(dbPath string) (*exec.Cmd, error) {
 	if err := plasma.Start(); err != nil {
 		return nil, err
 	}
+
+        // needed this sleep here for the above plasma cmd stdout/stderr to show up in logs,
+        // not sure why...
+        time.Sleep(5 * time.Second)
 
 	return plasma, nil
 }
@@ -161,7 +165,7 @@ func initSendBench(accountCount int) (StopFunc, error) {
 		if err := ganache.Process.Kill(); err != nil {
 			fmt.Println("failed to stop ganache", err)
 		}
-		if err := plasma.Process.Kill(); err != nil {
+		if err := plasma.Process.Signal(os.Interrupt); err != nil {
 			fmt.Println("failed to stop plasma", err)
 		}
 		if err := os.RemoveAll(ganacheDbPath); err != nil {
