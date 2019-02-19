@@ -6,7 +6,12 @@ import (
 	"github.com/kyokan/plasma/pkg/eth"
 	"github.com/kyokan/plasma/pkg/db"
 	"github.com/syndtr/goleveldb/leveldb"
-)
+	"github.com/kyokan/plasma/util"
+	"bytes"
+	"github.com/ethereum/go-ethereum/common"
+	"errors"
+	"github.com/kyokan/plasma/pkg/merkle"
+		)
 
 func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error) {
 	if tx.Body.Output0.Amount.Cmp(big.NewInt(0)) == -1 {
@@ -126,6 +131,80 @@ func ValidateDepositTransaction(storage db.Storage, client eth.Client, tx *chain
 	}
 	if isDoubleSpent {
 		return NewErrDoubleSpent()
+	}
+
+	return nil
+}
+
+func ValidateConfirmSigs(storage db.Storage, client eth.Client, blk *chain.Block, confirmed *chain.ConfirmedTransaction) error {
+	var emptySig chain.Signature
+	tx := confirmed.Transaction
+	merkleRoot := blk.Header.MerkleRoot
+	txHash := tx.RLPHash(util.Sha256)
+	var sigBuf bytes.Buffer
+	sigBuf.Write(txHash[:])
+	sigBuf.Write(merkleRoot[:])
+	sigHash := util.Sha256(sigBuf.Bytes())
+	for i, sig := range confirmed.ConfirmSigs {
+		if sig == emptySig {
+			return errors.New("confirmation signature is empty")
+		}
+
+		input := tx.Body.InputAt(uint8(i))
+		if i > 0 && input.IsZero() {
+			continue
+		}
+
+		var err error
+		var owner common.Address
+		if input.IsDeposit() {
+			_, owner, err = client.LookupDeposit(input.DepositNonce)
+			if err != nil {
+				return err
+			}
+		} else {
+			prevTx, err := storage.FindTransactionByBlockNumTxIdx(input.BlockNum, input.TxIdx)
+			if err != nil {
+				return err
+			}
+			owner = prevTx.Transaction.Body.OutputAt(input.OutIdx).Owner
+		}
+
+		if err := eth.ValidateSignature(sigHash, sig[:], owner); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ValidateConfirmedTransaction(storage db.Storage, client eth.Client, block *chain.Block, confirmed *chain.ConfirmedTransaction) error {
+	var err error
+	if confirmed.Transaction.Body.IsDeposit() {
+		err = ValidateDepositTransaction(storage, client, confirmed.Transaction)
+	} else {
+		err = ValidateSpendTransaction(storage, confirmed.Transaction)
+	}
+	if err != nil {
+		return err
+	}
+
+	return ValidateConfirmSigs(storage, client, block, confirmed)
+}
+
+func ValidateBlock(storage db.Storage, client eth.Client, block *chain.Block, confirmedTxs []chain.ConfirmedTransaction) error {
+	hashables := make([]util.RLPHashable, len(confirmedTxs), len(confirmedTxs))
+	for i, tx := range confirmedTxs {
+		err := ValidateConfirmedTransaction(storage, client, block, &tx)
+		if err != nil {
+			return err
+		}
+		hashables[i] = tx.Transaction
+	}
+
+	merkleRoot := merkle.Root(hashables)
+	if !bytes.Equal(merkleRoot, block.Header.MerkleRoot) {
+		return errors.New("invalid block merkle root")
 	}
 
 	return nil

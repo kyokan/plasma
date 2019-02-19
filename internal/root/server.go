@@ -98,32 +98,7 @@ func (r *Server) GetOutputs(ctx context.Context, req *pb.GetOutputsRequest) (*pb
 }
 
 func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.GetBlockResponse, error) {
-	block, err := r.storage.BlockAtHeight(req.Number)
-	if err != nil {
-		log.WithError(logger, err).Error("failed to fetch block at height")
-		return nil, err
-	}
-	txs, err := r.storage.FindTransactionsByBlockNum(block.Header.Number)
-	if err != nil {
-		log.WithError(logger, err).Error("failed to fetch transactions")
-		return nil, err
-	}
-	meta, err := r.storage.BlockMetaAtHeight(req.Number)
-	if err != nil {
-		return nil, err
-	}
-	var confirmedTxs []*pb.ConfirmedTransaction
-	for _, tx := range txs {
-		confirmedTxs = append(confirmedTxs, tx.Proto())
-	}
-
-	res := &pb.GetBlockResponse{
-		Block:                 block.Proto(),
-		ConfirmedTransactions: confirmedTxs,
-		Metadata:              meta.Proto(),
-	}
-
-	return res, nil
+	return r.getBlock(req.Number)
 }
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
@@ -188,18 +163,46 @@ func (r *Server) Sync(req *pb.SyncRequest, stream pb.Root_SyncServer) error {
 		return err
 	}
 	if req.Start > head.Header.Number || req.Start == 0 {
-		return errors.New("block not found")
+		return nil
 	}
 
 	num := req.Start
 	for num <= head.Header.Number {
-		block, err := r.storage.BlockAtHeight(num)
+		res, err := r.getBlock(num)
 		if err != nil {
 			return err
 		}
-		if err := stream.Send(block.Proto()); err != nil {
+		if err := stream.Send(res); err != nil {
 			return err
 		}
+		num++
 	}
 	return nil
+}
+
+func (r *Server) getBlock(height uint64) (*pb.GetBlockResponse, error) {
+	block, err := r.storage.BlockAtHeight(height)
+	if err != nil {
+		log.WithError(logger, err).Error("failed to fetch block at height")
+		return nil, err
+	}
+	txs, err := r.storage.FindTransactionsByBlockNum(block.Header.Number)
+	if err != nil {
+		log.WithError(logger, err).Error("failed to fetch transactions")
+		return nil, err
+	}
+	meta, err := r.storage.BlockMetaAtHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	var confirmedTxs []*pb.ConfirmedTransaction
+	for _, tx := range txs {
+		confirmedTxs = append(confirmedTxs, tx.Proto())
+	}
+
+	return &pb.GetBlockResponse{
+		Block:                 block.Proto(),
+		ConfirmedTransactions: confirmedTxs,
+		Metadata:              meta.Proto(),
+	}, nil
 }

@@ -29,14 +29,6 @@ func NewLevelStorage(db *leveldb.DB) Storage {
 	return result
 }
 
-func (ps *LevelStorage) Put(key, value []byte) {
-	ps.db.Put(key, value, nil)
-}
-
-func (ps *LevelStorage) Delete(key []byte) {
-	ps.db.Delete(key, nil)
-}
-
 func (ps *LevelStorage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*chain.ConfirmedTransaction, error) {
 	var input *chain.Input
 	if inputIdx != 0 && inputIdx != 1 {
@@ -60,15 +52,24 @@ func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalT
 	confirmed := &chain.ConfirmedTransaction{
 		Transaction: tx,
 	}
+	if err := ps.batchWriteConfirmedTransaction(confirmed, batch); err != nil {
+	    return nil, err
+	}
+
+	return confirmed, nil
+}
+
+func (ps *LevelStorage) batchWriteConfirmedTransaction(confirmed *chain.ConfirmedTransaction, batch *leveldb.Batch) error {
+	tx := confirmed.Transaction
 	confirmedEnc, err := proto.Marshal(confirmed.Proto())
 	if err != nil {
-		return nil, err
+		return err
 	}
 	hash := confirmed.Hash()
 	hexHash := hexutil.Encode(hash)
 
 	batch.Put(txByHashKey(hexHash), confirmedEnc)
-	batch.Put(txByBlockNumTxIdxKey(blockNum, txIdx), []byte(hexHash))
+	batch.Put(txByBlockNumTxIdxKey(tx.Body.BlockNumber, tx.Body.TransactionIndex), []byte(hexHash))
 
 	var empty []byte
 
@@ -78,7 +79,7 @@ func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalT
 	} else {
 		prevConfirmed0, err := ps.findPreviousTx(tx, 0)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		prevTx := prevConfirmed0.Transaction
@@ -90,7 +91,7 @@ func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalT
 	if !tx.Body.Input1.IsZero() {
 		prevConfirmed1, err := ps.findPreviousTx(tx, 1)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		prevTx := prevConfirmed1.Transaction
@@ -108,7 +109,7 @@ func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalT
 		batch.Put(utxoKey(output.Owner, hash, 1), empty)
 	}
 
-	return confirmed, batch.Replay(ps)
+	return nil
 }
 
 func (ps *LevelStorage) MarkExitsAsSpent(inputs []chain.Input) error {
@@ -240,26 +241,10 @@ func (ps *LevelStorage) doPackageBlock(txs []chain.Transaction) (*chain.BlockRes
 		PrevHash:   prevHash,
 		Number:     blkNum,
 	}
-	block := chain.Block{
+	block := &chain.Block{
 		Header:    &header,
 		BlockHash: header.Hash(),
 	}
-
-	enc, err := rlp.EncodeToBytes(merkleRoot)
-	if err != nil {
-		return nil, err
-	}
-	batch.Put(merklePrefixKey(hexutil.Encode(merkleRoot)), enc)
-
-	enc, err = rlp.EncodeToBytes(block)
-	if err != nil {
-		return nil, err
-	}
-	key := blockPrefixKey(hexutil.Encode(block.BlockHash))
-	batch.Put(key, enc)
-	batch.Put(blockPrefixKey(latestKey), key)
-	batch.Put(blockNumKey(block.Header.Number), key)
-
 	currentFees := big.NewInt(0)
 	for i, tx := range txs {
 		_, err := ps.saveTransaction(blkNum, uint32(i), tx, batch)
@@ -269,18 +254,18 @@ func (ps *LevelStorage) doPackageBlock(txs []chain.Transaction) (*chain.BlockRes
 
 		currentFees = currentFees.Add(currentFees, tx.Body.Fee)
 	}
-	batch.Put(blockFeesKey(blkNum), currentFees.Bytes())
-
 	meta := &chain.BlockMetadata{
 		CreatedAt:        uint64(time.Now().Unix()),
 		TransactionCount: uint32(numberOfTransactions),
 		Fees:             currentFees,
 	}
-	metaEnc, err := meta.RLP()
-	if err != nil {
-		return nil, err
+
+	if err := ps.batchWriteBlock(block, batch); err != nil {
+	    return nil, err
 	}
-	batch.Put(blockMetaPrefixKey(block.Header.Number), metaEnc)
+	if err := ps.batchWriteBlockMeta(block, meta, batch); err != nil {
+	    return nil, err
+	}
 
 	err = ps.db.Write(batch, nil)
 	if err != nil {
@@ -293,6 +278,64 @@ func (ps *LevelStorage) doPackageBlock(txs []chain.Transaction) (*chain.BlockRes
 		BlockFees:          currentFees,
 		BlockNumber:        big.NewInt(int64(block.Header.Number)),
 	}, nil
+}
+
+func (ps *LevelStorage) batchWriteBlock(block *chain.Block, batch *leveldb.Batch) error {
+	merkleRoot := block.Header.MerkleRoot
+	enc, err := rlp.EncodeToBytes(merkleRoot)
+	if err != nil {
+		return err
+	}
+	batch.Put(merklePrefixKey(hexutil.Encode(merkleRoot)), enc)
+
+	enc, err = rlp.EncodeToBytes(block)
+	if err != nil {
+		return err
+	}
+	key := blockPrefixKey(hexutil.Encode(block.BlockHash))
+	batch.Put(key, enc)
+	batch.Put(blockPrefixKey(latestKey), key)
+	batch.Put(blockNumKey(block.Header.Number), key)
+	return nil
+}
+
+func (ps *LevelStorage) batchWriteBlockMeta(block *chain.Block, meta *chain.BlockMetadata, batch *leveldb.Batch) error {
+	metaEnc, err := meta.RLP()
+	if err != nil {
+		return err
+	}
+	batch.Put(blockMetaPrefixKey(block.Header.Number), metaEnc)
+	return nil
+}
+
+func (ps *LevelStorage) InsertBlock(block *chain.Block, meta *chain.BlockMetadata, txs []chain.ConfirmedTransaction) error {
+	latest, err := ps.LatestBlock()
+	if err != nil {
+		return err
+	}
+	height := uint64(0)
+	if latest != nil {
+		height = latest.Header.Number
+	}
+
+	if block.Header.Number != height + 1 {
+		return errors.New("cannot insert a block more than 1 block number ahead")
+	}
+
+	batch := new(leveldb.Batch)
+	if err := ps.batchWriteBlock(block, batch); err != nil {
+	    return err
+	}
+	if err := ps.batchWriteBlockMeta(block, meta, batch); err != nil {
+	    return err
+	}
+	for _, tx := range txs {
+		if err := ps.batchWriteConfirmedTransaction(&tx, batch); err != nil {
+			return err
+		}
+	}
+
+	return ps.db.Write(batch, nil)
 }
 
 func (ps *LevelStorage) ProcessDeposit(confirmed chain.Transaction) (deposit *chain.BlockResult, err error) {

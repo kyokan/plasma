@@ -14,7 +14,7 @@ service Root {
     }
     rpc BlockHeight (EmptyRequest) returns (BlockHeightResponse) {
     }
-    rpc Sync (SyncRequest) returns (stream Block) {
+    rpc Sync (SyncRequest) returns (stream GetBlockResponse) {
     }
 }
 
@@ -96,6 +96,8 @@ message GetBlockRequest {
 
 message BlockMeta {
     uint64 createdAt = 1;
+    uint32 transactionCount = 2;
+    BigInt fees = 3;
 }
 
 message GetBlockResponse {

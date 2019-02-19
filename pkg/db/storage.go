@@ -21,6 +21,7 @@ type Storage interface {
 	PackageBlock(txs []chain.Transaction) (result *chain.BlockResult, err error)
 	ConfirmTransaction(blockNumber uint64, transactionIndex uint32, sigs [2]chain.Signature) (*chain.ConfirmedTransaction, error)
 	ConfirmSigsFor(blockNumber uint64, transactionIndex uint32) ([2]chain.Signature, error)
+	InsertBlock(block *chain.Block, meta *chain.BlockMetadata, txs []chain.ConfirmedTransaction) error
 
 	LastDepositPoll() (uint64, error)
 	SaveDepositPoll(idx uint64) error
