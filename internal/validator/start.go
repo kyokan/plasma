@@ -12,11 +12,15 @@ import (
 	"github.com/kyokan/plasma/pkg/rpc/pb"
 	"google.golang.org/grpc"
 	"github.com/kyokan/plasma/pkg/log"
-)
+	"context"
+	)
 
 var valStartLogger = log.ForSubsystem("ValidatorStart")
 
 func Start(config *config.GlobalConfig, rootUrl string, privateKey *ecdsa.PrivateKey) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	ethClient, err := eth.NewClient(config.NodeURL, config.ContractAddr, privateKey)
 	if err != nil {
 		return err
@@ -39,6 +43,14 @@ func Start(config *config.GlobalConfig, rootUrl string, privateKey *ecdsa.Privat
 	if err := syncer.Start(); err != nil {
 		return err
 	}
+
+	server := NewServer(ctx, storage, rootClient)
+	go func() {
+		if err := server.Start(config.RPCPort); err != nil {
+		    log.WithError(valStartLogger, err).Error("failed to start server")
+		    os.Exit(1)
+		}
+	}()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

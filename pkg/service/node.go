@@ -30,8 +30,6 @@ func (node *PlasmaNode) Start() {
 }
 
 func (node *PlasmaNode) awaitTxs(interval time.Duration) {
-	log.Print("Awaiting transactions.")
-
 	tick := time.NewTicker(interval)
 
 	for {

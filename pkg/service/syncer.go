@@ -11,7 +11,7 @@ import (
 	"github.com/kyokan/plasma/pkg/eth"
 	"github.com/kyokan/plasma/pkg/log"
 	"github.com/sirupsen/logrus"
-	)
+)
 
 type Syncer struct {
 	storage    db.Storage
@@ -20,7 +20,7 @@ type Syncer struct {
 	quit       chan bool
 }
 
-const syncerPollInterval = 5 * time.Second
+const syncerPollInterval = time.Second
 
 var syncerLogger = log.ForSubsystem("Syncer")
 
@@ -53,6 +53,7 @@ func (s *Syncer) Start() error {
 			}
 		}
 	}()
+
 	return nil
 }
 
