@@ -67,7 +67,7 @@ func (node *PlasmaNode) packageBlock(mtxs []MempoolTx) {
 		node.submitter.Enqueue(*blockResult)
 	}
 
-	node.notifyAwaiters(chans, blockResult, nil)
+	go node.notifyAwaiters(chans, blockResult, nil)
 }
 
 func (node *PlasmaNode) notifyAwaiters(awaiters []chan TxInclusionResponse, blockRes *db.BlockResult, err error) {
