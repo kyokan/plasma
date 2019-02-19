@@ -3,7 +3,8 @@ package bench
 import (
 	harness "github.com/kyokan/plasma/cmd/harness/cmd"
 	plasmacli "github.com/kyokan/plasma/cmd/plasmacli/cmd"
-	"os/exec"
+	plasmaRoot "github.com/kyokan/plasma/root"
+	"github.com/kyokan/plasma/chain"
 	"io/ioutil"
 	"fmt"
 	"os"
@@ -14,12 +15,27 @@ import (
 	"sync"
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
-        "path"
         "math"
 	"github.com/kyokan/plasma/rpc/pb"
 	"time"
 	"sync/atomic"
+        "errors"
+	"bytes"
+        "sort"
+	"context"
+	"github.com/kyokan/plasma/util"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
+
+type sendCmdOutput struct {
+	Value            string   `json:"value"`
+	To               string   `json:"to"`
+	BlockNumber      uint64   `json:"blockNumber"`
+	TransactionIndex uint32   `json:"transactionIndex"`
+	DepositNonce     string   `json:"depositNonce"`
+	MerkleRoot       string   `json:"merkleRoot"`
+	ConfirmSigs      []string `json:"confirmSigs"`
+}
 
 type StopFunc func()
 
@@ -40,6 +56,7 @@ type benchAccount struct {
 var accounts []*benchAccount
 var plasmaClient pb.RootClient
 var zeroAddr common.Address
+var plasmaDaemonServer *plasmaRoot.Server
 
 func getRepoBase() string {
 	dir, err := os.Getwd()
@@ -58,31 +75,21 @@ func getRepoBase() string {
 	panic("could not determine repo base")
 }
 
-func startPlasma(dbPath string) (*exec.Cmd, error) {
-	plasma := exec.Command(
-                path.Join(getRepoBase(), "target", "plasmad"),
-		"--node-url",
-		"http://localhost:8545",
-		"--contract-addr",
-		"0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
-		"--private-key",
-		"c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
-		"--db",
-		dbPath,
-		"start-root",
-	)
-	if err := harness.LogCmd(plasma, "plasma"); err != nil {
-		return nil, err
-	}
-	if err := plasma.Start(); err != nil {
-		return nil, err
-	}
-
-        // needed this sleep here for the above plasma cmd stdout/stderr to show up in logs,
-        // not sure why...
-        time.Sleep(5 * time.Second)
-
-	return plasma, nil
+func startPlasmaRoot(dbPath string) context.CancelFunc {
+  privateKey, err := crypto.HexToECDSA("c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3")
+  if err != nil {
+    panic(err)
+  }
+  pds, cancel := plasmaRoot.BuildServer(
+    6545,
+    "http://localhost:8545",
+    "0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da",
+    dbPath,
+    privateKey,
+  )
+  plasmaDaemonServer = pds
+  time.Sleep(5 * time.Second)
+  return cancel
 }
 
 func initSendBench(accountCount int) (StopFunc, error) {
@@ -120,10 +127,7 @@ func initSendBench(accountCount int) (StopFunc, error) {
 		})
 	}
 
-	plasma, err := startPlasma(plasmaDbPath)
-	if err != nil {
-		return nil, err
-	}
+        cancel := startPlasmaRoot(plasmaDbPath)
 	pClient, conn, err := plasmacli.CreateRootClient("localhost:6545")
 	if err != nil {
 		return nil, err
@@ -147,10 +151,15 @@ func initSendBench(accountCount int) (StopFunc, error) {
 				receipt, err := plasmacli.Deposit(account.client, val)
 				if err != nil {
 					fmt.Println("failed to deposit", err)
-				}
+				} else {
+                                  fmt.Printf("Completed deposit...")
+                                }
+
 				if err := plasmacli.SpendDeposit(plasmaClient, account.client, account.priv, account.addr, zeroAddr, big.NewInt(1), receipt.DepositNonce); err != nil {
 					fmt.Println("failed to spend deposit", err)
-				}
+				} else {
+                                  fmt.Printf("Completed deposit spend...")
+                                }
 			}(client)
 		}
 		wg.Wait()
@@ -165,9 +174,7 @@ func initSendBench(accountCount int) (StopFunc, error) {
 		if err := ganache.Process.Kill(); err != nil {
 			fmt.Println("failed to stop ganache", err)
 		}
-		if err := plasma.Process.Signal(os.Interrupt); err != nil {
-			fmt.Println("failed to stop plasma", err)
-		}
+                cancel()
 		if err := os.RemoveAll(ganacheDbPath); err != nil {
 			fmt.Println("failed to remove ganache DB")
 		}
@@ -175,6 +182,153 @@ func initSendBench(accountCount int) (StopFunc, error) {
 			fmt.Println("failed to remove plasma db")
 		}
 	}, nil
+}
+
+func selectUTXOs(confirmedTxs []chain.ConfirmedTransaction, addr common.Address, total *big.Int) ([]chain.ConfirmedTransaction, error) {
+	sort.Slice(confirmedTxs, func(i, j int) bool {
+		a := confirmedTxs[i].Transaction.Body.OutputFor(&addr).Amount
+		b := confirmedTxs[j].Transaction.Body.OutputFor(&addr).Amount
+		return a.Cmp(b) > 0
+	})
+
+	first := confirmedTxs[0]
+	firstBody := first.Transaction.Body
+
+	if firstBody.OutputFor(&addr).Amount.Cmp(total) >= 0 {
+		return []chain.ConfirmedTransaction{first}, nil
+	}
+
+	for i := len(confirmedTxs) - 1; i >= 0; i-- {
+		second := confirmedTxs[i]
+		secondBody := second.Transaction.Body
+		sum := big.NewInt(0)
+		sum = sum.Add(sum, firstBody.OutputFor(&addr).Amount)
+		sum = sum.Add(sum, secondBody.OutputFor(&addr).Amount)
+		if sum.Cmp(total) >= 0 {
+			return []chain.ConfirmedTransaction{
+				first,
+				second,
+			}, nil
+		}
+	}
+
+	return nil, errors.New("no suitable UTXOs found")
+}
+
+func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Address, to common.Address, value *big.Int) error {
+	fmt.Println("selecting outputs")
+
+        res, err := plasmaDaemonServer.GetOutputs(nil, &pb.GetOutputsRequest{
+		Address:   from.Bytes(),
+		Spendable: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	var utxos []chain.ConfirmedTransaction
+	for _, utxoProto := range res.ConfirmedTransactions {
+		confirmedTx, err := chain.ConfirmedTransactionFromProto(utxoProto)
+		if err != nil {
+			return err
+		}
+		utxos = append(utxos, *confirmedTx)
+	}
+	if len(utxos) == 0 {
+		return errors.New("no spendable outputs")
+	}
+	selectedUTXOs, err := selectUTXOs(utxos, from, value)
+	if err != nil {
+		return err
+	}
+
+	total := big.NewInt(0)
+	tx := &chain.Transaction{
+		Body: chain.ZeroBody(),
+	}
+	for i, utxo := range selectedUTXOs {
+		txBody := utxo.Transaction.Body
+		var input *chain.Input
+		if i == 0 {
+			input = tx.Body.Input0
+		} else if i == 1 {
+			input = tx.Body.Input1
+		} else {
+			panic("too many inputs!")
+		}
+
+		input.BlockNum = txBody.BlockNumber
+		input.TxIdx = txBody.TransactionIndex
+		input.OutIdx = txBody.OutputIndexFor(&from)
+
+		if i == 0 {
+			tx.Body.Input0ConfirmSig = utxo.ConfirmSigs[0]
+		} else {
+			tx.Body.Input1ConfirmSig = utxo.ConfirmSigs[1]
+		}
+
+		total = total.Add(total, txBody.OutputFor(&from).Amount)
+	}
+
+	tx.Body.Output0.Amount = value
+	tx.Body.Output0.Owner = to
+
+	if total.Cmp(value) > 0 {
+		totalClone := new(big.Int).Set(total)
+		tx.Body.Output1.Amount = totalClone.Sub(totalClone, value)
+		tx.Body.Output1.Owner = from
+	}
+
+	sig, err := eth.Sign(privKey, tx.Body.SignatureHash())
+	if err != nil {
+		return err
+	}
+	tx.Sigs[0] = sig
+	tx.Sigs[1] = sig
+
+	sendRes, err := plasmaDaemonServer.Send(nil, &pb.SendRequest{
+		Transaction: tx.Proto(),
+	})
+	if err != nil {
+		return err
+	}
+
+	tx.Body.BlockNumber = sendRes.Inclusion.BlockNumber
+	tx.Body.TransactionIndex = sendRes.Inclusion.TransactionIndex
+	var buf bytes.Buffer
+	buf.Write(tx.RLPHash(util.Sha256))
+	buf.Write(sendRes.Inclusion.MerkleRoot)
+	sigHash := util.Sha256(buf.Bytes())
+	confirmSig, err := eth.Sign(privKey, sigHash)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("confirming transaction")
+
+	_, err = plasmaDaemonServer.Confirm(nil, &pb.ConfirmRequest{
+		BlockNumber:      sendRes.Inclusion.BlockNumber,
+		TransactionIndex: sendRes.Inclusion.TransactionIndex,
+		ConfirmSig0:      confirmSig[:],
+		ConfirmSig1:      confirmSig[:],
+	})
+	if err != nil {
+		return err
+	}
+
+	out := &sendCmdOutput{
+		Value:            value.Text(10),
+		To:               to.Hex(),
+		BlockNumber:      sendRes.Inclusion.BlockNumber,
+		TransactionIndex: sendRes.Inclusion.TransactionIndex,
+		MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
+		ConfirmSigs: []string{
+			hexutil.Encode(confirmSig[:]),
+			hexutil.Encode(confirmSig[:]),
+		},
+	}
+
+	return plasmacli.PrintJSON(out)
 }
 
 func BenchmarkSend(accountCount int, benchCallMultiper int) (*SendBenchmarkResult, error) {
@@ -197,7 +351,7 @@ func BenchmarkSend(accountCount int, benchCallMultiper int) (*SendBenchmarkResul
 				defer wg.Done()
                                 transRuntime := time.Now()
 
-                                if err := plasmacli.SpendTx(plasmaClient, account.priv, account.addr, zeroAddr, big.NewInt(1)); err != nil {
+                                if err := SpendTx(plasmaClient, account.priv, account.addr, zeroAddr, big.NewInt(1)); err != nil {
 					atomic.AddInt64(&failureCount, 1)
 					fmt.Println("failed to spend deposit", err)
 				} else {
