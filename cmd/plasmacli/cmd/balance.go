@@ -4,8 +4,8 @@ import (
 	"github.com/spf13/cobra"
 			"context"
 	"time"
-	"github.com/kyokan/plasma/rpc/pb"
-	"github.com/kyokan/plasma/rpc"
+	"github.com/kyokan/plasma/pkg/rpc/pb"
+	"github.com/kyokan/plasma/pkg/rpc"
 	"errors"
 )
 

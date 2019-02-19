@@ -9,6 +9,9 @@ import (
 var rootCmd = &cobra.Command{
 	Use: "plasmacli",
 	Short: "Interacts with a running plasmad instance.",
+        // don't display usage if an plasma-error occurs. usage still shown
+        // if a required flag is missing or via --help
+        SilenceUsage: true,
 }
 
 func init() {

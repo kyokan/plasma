@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/kyokan/plasma/config"
+	"github.com/kyokan/plasma/pkg/config"
 	"github.com/spf13/viper"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"

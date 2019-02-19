@@ -1,24 +1,26 @@
-import PlasmaContract from './lib/PlasmaContract';
-import PlasmaClient from './lib/PlasmaClient';
-import {toBig} from './lib/numbers';
+import PlasmaContract from 'kyokan-plasma-client/lib/contract/PlasmaContract';
+import IRootClient from 'kyokan-plasma-client/lib/rpc/IRootClient';
+import SendOperation from 'kyokan-plasma-client/lib/operations/SendOperation';
+import ExitOperation from 'kyokan-plasma-client/lib/operations/ExitOperation';
+import {toBig} from 'kyokan-plasma-client/lib/util/numbers';
 import {Config} from './Config';
 import {withRetryCondition} from './lib/withRetries';
-import SendOperation from './domain/SendOperation';
-import ExitOperation from './domain/ExitOperation';
 import {wait} from './lib/wait';
 import {EventLog} from 'web3/types';
 import {assert} from 'chai';
+import SharedRootClient from './lib/SharedRootClient';
+import SharedContract from './lib/SharedContract';
 import BN = require('bn.js');
 
 describe('Exits', () => {
   let contract: PlasmaContract;
-  let client: PlasmaClient;
+  let client: IRootClient;
   let depositNonce: BN;
 
   before(async function () {
     this.timeout(60000);
-    contract = PlasmaContract.getShared();
-    client = PlasmaClient.getShared();
+    contract = SharedContract.get();
+    client = SharedRootClient.get();
     const depBal = toBig(10000000000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[4]);
     depositNonce = (await contract.depositNonce()).sub(toBig(1));

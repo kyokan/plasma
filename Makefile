@@ -32,13 +32,13 @@ abigen: deps
 	cd plasma-mvp-rootchain && \
 	truffle compile && \
 	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > ../eth/contracts/PlasmaMVP.abi && \
-	abigen --abi ../eth/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out ../eth/contracts/plasma_mvp.go && \
+	abigen --abi ../eth/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out ../pkg/eth/contracts/plasma_mvp.go && \
 	cp ../eth/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
 	rm -rf abi && \
 	rm -rf gen
 
 protogen:
-	protoc -I rpc/proto rpc/proto/root.proto --go_out=plugins=grpc:rpc/pb
+	protoc -I pkg/rpc/proto pkg/rpc/proto/root.proto --go_out=plugins=grpc:pkg/rpc/pb
 
 clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules

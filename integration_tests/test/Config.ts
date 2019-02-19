@@ -1,4 +1,4 @@
-import {parseHex} from './lib/parseHex';
+import {parseHex} from 'kyokan-plasma-client/lib/util/hex';
 
 export const Config = {
   PLASMA_CONTRACT_ADDRESS: '0xF12b5dd4EAD5F743C6BaA640B0216200e89B60Da',
