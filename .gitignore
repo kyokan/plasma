@@ -1,6 +1,7 @@
 .idea
 *.log
 *.iml
+*.pprof
 vendor
 package-lock.json
 .DS_Store

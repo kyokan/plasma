@@ -6,6 +6,8 @@ deps:
 	@echo "--> Installing Go dependencies..."
 	@dep ensure -v
 
+build-all: build-plasmad build-plasmacli build-harness
+
 build-plasmad:
 	go build -o ./target/plasmad ./cmd/plasmad/main.go
 
@@ -31,9 +33,9 @@ install:
 abigen: deps
 	cd plasma-mvp-rootchain && \
 	truffle compile && \
-	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > ../eth/contracts/PlasmaMVP.abi && \
-	abigen --abi ../eth/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out ../pkg/eth/contracts/plasma_mvp.go && \
-	cp ../eth/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
+	cat ./build/contracts/PlasmaMVP.json | jq ".abi" > ../pkg/eth/contracts/PlasmaMVP.abi && \
+	abigen --abi ../pkg/eth/contracts/PlasmaMVP.abi --pkg contracts --type Plasma --out ../pkg/eth/contracts/plasma_mvp.go && \
+	cp ../pkg/eth/contracts/PlasmaMVP.abi ../integration_tests/test/abi/PlasmaMVP.abi.json && \
 	rm -rf abi && \
 	rm -rf gen
 
@@ -44,8 +46,8 @@ clean:
 	rm -rf ./plasma-mvp-rootchain/node_modules
 	rm -rf ./plasma-mvp-rootchain/build
 	rm -rf ./integration_tests/node_modules
-	rm -rf ./eth/contracts/plasma_mvp.go
-	rm -rf ./eth/contracts/PlasmaMVP.abi
+	rm -rf ./pkg/eth/contracts/plasma_mvp.go
+	rm -rf ./pkg/eth/contracts/PlasmaMVP.abi
 	rm -rf ./target
 	rm -rf ~/.plasma
 	rm -rf .vendor-new
