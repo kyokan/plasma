@@ -11,25 +11,29 @@ import (
 	"github.com/kyokan/plasma/pkg/eth"
 	"github.com/kyokan/plasma/pkg/log"
 	"github.com/sirupsen/logrus"
-)
+	)
 
 type Syncer struct {
-	storage    db.Storage
-	rootClient pb.RootClient
-	ethClient  eth.Client
-	quit       chan bool
+	storage         db.Storage
+	rootClient      pb.RootClient
+	ethClient       eth.Client
+	exitStrategizer *ExitStrategizer
+	mainBreaker     CircuitBreaker
+	quit            chan bool
 }
 
 const syncerPollInterval = time.Second
 
 var syncerLogger = log.ForSubsystem("Syncer")
 
-func NewSyncer(storage db.Storage, rootClient pb.RootClient, ethClient eth.Client) *Syncer {
+func NewSyncer(storage db.Storage, rootClient pb.RootClient, ethClient eth.Client, exitStrategizer *ExitStrategizer, mainBreaker CircuitBreaker) *Syncer {
 	return &Syncer{
-		storage:    storage,
-		rootClient: rootClient,
-		ethClient:  ethClient,
-		quit:       make(chan bool),
+		storage:         storage,
+		rootClient:      rootClient,
+		ethClient:       ethClient,
+		exitStrategizer: exitStrategizer,
+		mainBreaker:     mainBreaker,
+		quit:            make(chan bool),
 	}
 }
 
@@ -63,6 +67,10 @@ func (s *Syncer) Stop() error {
 }
 
 func (s *Syncer) doSync() error {
+	if s.mainBreaker.Tripped() {
+		return nil
+	}
+
 	head, err := s.storage.LatestBlock()
 	if err != nil {
 		return err
@@ -81,6 +89,7 @@ func (s *Syncer) doSync() error {
 		Start: start,
 	})
 	if err != nil {
+		s.exitStrategizer.RootUnresponsive()
 		return err
 	}
 
@@ -105,6 +114,7 @@ func (s *Syncer) doSync() error {
 		block := chain.BlockFromProto(res.Block)
 		meta := chain.BlockMetadataFromProto(res.Metadata)
 		if err := validation.ValidateBlock(s.storage, s.ethClient, block, confirmedTxs); err != nil {
+			s.exitStrategizer.BlockCorrupted()
 			return err
 		}
 		if err := s.storage.InsertBlock(block, meta, confirmedTxs); err != nil {
@@ -118,6 +128,8 @@ func (s *Syncer) doSync() error {
 		"start":    start,
 		"end":      end,
 	}).Info("finished sync")
+
+	s.exitStrategizer.RootResponsive()
 
 	return nil
 }

@@ -13,13 +13,15 @@ import (
 	"google.golang.org/grpc"
 	"github.com/kyokan/plasma/pkg/log"
 	"context"
-	)
+)
 
 var valStartLogger = log.ForSubsystem("ValidatorStart")
 
 func Start(config *config.GlobalConfig, rootUrl string, privateKey *ecdsa.PrivateKey) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	mainBreaker := service.NewCircuitBreaker("MainBreaker")
 
 	ethClient, err := eth.NewClient(config.NodeURL, config.ContractAddr, privateKey)
 	if err != nil {
@@ -39,16 +41,20 @@ func Start(config *config.GlobalConfig, rootUrl string, privateKey *ecdsa.Privat
 	defer conn.Close()
 	rootClient := pb.NewRootClient(conn)
 
-	syncer := service.NewSyncer(storage, rootClient, ethClient)
+	exitStrategizer := service.NewExitStrategizer(ethClient, storage, mainBreaker)
+	if err := exitStrategizer.Start(); err != nil {
+		return err
+	}
+	syncer := service.NewSyncer(storage, rootClient, ethClient, exitStrategizer, mainBreaker)
 	if err := syncer.Start(); err != nil {
 		return err
 	}
 
-	server := NewServer(ctx, storage, rootClient)
+	server := NewServer(ctx, storage, rootClient, mainBreaker)
 	go func() {
 		if err := server.Start(config.RPCPort); err != nil {
-		    log.WithError(valStartLogger, err).Error("failed to start server")
-		    os.Exit(1)
+			log.WithError(valStartLogger, err).Error("failed to start server")
+			os.Exit(1)
 		}
 	}()
 

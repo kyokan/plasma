@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+		"github.com/pkg/errors"
 )
 
 var clientLogger = log2.ForSubsystem("EthClient")
@@ -58,6 +59,7 @@ type Client interface {
 	SubmitBlock(util.Hash, uint32, *big.Int, *big.Int) error
 	SubmitBlocks(merkleRoot []util.Hash, txCount []uint32, fees []*big.Int, blkNum *big.Int) error
 	Deposit(amount *big.Int) (*types.Receipt, error)
+	Exit(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, proof []byte) (*types.Receipt, error)
 	Challenge(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, exitingDepositNonce *big.Int, challengingTx *chain.ConfirmedTransaction, proof []byte) (*types.Receipt, error)
 
 	DepositFilter(start uint64, end uint64) ([]contracts.PlasmaDeposit, uint64, error)
@@ -149,6 +151,40 @@ func (c *clientState) Deposit(amount *big.Int) (*types.Receipt, error) {
 		"amount": amount.Text(10),
 		"txHash": receipt.TxHash.Hex(),
 	}).Info("successfully deposited funds")
+
+	return receipt, nil
+}
+
+func (c *clientState) Exit(exitingTx *chain.ConfirmedTransaction, exitingOutput uint8, proof []byte) (*types.Receipt, error) {
+	bond := big.NewInt(500000)
+	opts := CreateKeyedTransactor(c.privateKey)
+	opts.Value = bond
+
+	exitingTxPos := [3]*big.Int{
+		util.Uint642Big(exitingTx.Transaction.Body.BlockNumber),
+		util.Uint322Big(exitingTx.Transaction.Body.TransactionIndex),
+		util.Uint82Big(exitingOutput),
+	}
+
+	var sig []byte
+	if exitingOutput == 0 {
+		sig = exitingTx.ConfirmSigs[0][:]
+	} else if exitingOutput == 1 {
+		sig = exitingTx.ConfirmSigs[1][:]
+	} else {
+		return nil, errors.New("invalid output idx")
+	}
+
+	receipt, err := ContractCall(c.client, func() (*types.Transaction, error) {
+		return c.contract.StartTransactionExit(opts, exitingTxPos, exitingTx.Transaction.RLP(), proof, sig, bond)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	clientLogger.WithFields(logrus.Fields{
+		"txHash": receipt.TxHash.Hex(),
+	}).Info("successfully started exit")
 
 	return receipt, nil
 }

@@ -14,21 +14,24 @@ import (
 	"github.com/kyokan/plasma/pkg/log"
 	"github.com/sirupsen/logrus"
 	"time"
+	"github.com/kyokan/plasma/pkg/service"
 )
 
 type Server struct {
-	storage    db.Storage
-	ctx        context.Context
-	rootClient pb.RootClient
+	storage     db.Storage
+	ctx         context.Context
+	rootClient  pb.RootClient
+	mainBreaker service.CircuitBreaker
 }
 
 var logger = log.ForSubsystem("ValidatorServer")
 
-func NewServer(ctx context.Context, storage db.Storage, rootClient pb.RootClient) (*Server) {
+func NewServer(ctx context.Context, storage db.Storage, rootClient pb.RootClient, mainBreaker service.CircuitBreaker) (*Server) {
 	return &Server{
-		storage:    storage,
-		ctx:        ctx,
-		rootClient: rootClient,
+		storage:     storage,
+		ctx:         ctx,
+		rootClient:  rootClient,
+		mainBreaker: mainBreaker,
 	}
 }
 
@@ -98,16 +101,24 @@ func (r *Server) GetBlock(ctx context.Context, req *pb.GetBlockRequest) (*pb.Get
 }
 
 func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendResponse, error) {
+	if r.mainBreaker.Tripped() {
+		return nil, errors.New("transactions are disable due to circuit breaker")
+	}
+
 	if req == nil {
 		return nil, errors.New("no request provided")
 	}
 
-	childCtx, _ := context.WithTimeout(ctx, 5 * time.Second)
+	childCtx, _ := context.WithTimeout(ctx, 5*time.Second)
 	return r.rootClient.Send(childCtx, req)
 }
 
 func (r *Server) Confirm(ctx context.Context, req *pb.ConfirmRequest) (*pb.ConfirmedTransaction, error) {
-	childCtx, _ := context.WithTimeout(ctx, 5 * time.Second)
+	if r.mainBreaker.Tripped() {
+		return nil, errors.New("confirmations are disable due to circuit breaker")
+	}
+
+	childCtx, _ := context.WithTimeout(ctx, 5*time.Second)
 	return r.rootClient.Confirm(childCtx, req)
 }
 
