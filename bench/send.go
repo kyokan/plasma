@@ -16,6 +16,7 @@ import (
 	"strings"
 	"path"
 	"github.com/kyokan/plasma/pkg/rpc/pb"
+        "math"
 	"time"
 	"sync/atomic"
 )
@@ -24,6 +25,7 @@ type StopFunc func()
 
 type SendBenchmarkResult struct {
 	ElapsedTime           time.Duration
+        AvgRunTime            float64
 	CompletedTransactions int64
 	FailedTransactions    int64
 	TPS                   float64
@@ -179,6 +181,7 @@ func BenchmarkSend100() (*SendBenchmarkResult, error) {
 
 	start := time.Now()
 
+        runtimes := make(chan int64, accountCount)
 	failureCount := int64(0)
 	completionCount := int64(0)
 
@@ -188,10 +191,14 @@ func BenchmarkSend100() (*SendBenchmarkResult, error) {
 		for _, account := range accounts {
 			go func(account *benchAccount) {
 				defer wg.Done()
-				if err := plasmacli.SpendTx(plasmaClient, account.priv, account.addr, zeroAddr, big.NewInt(1)); err != nil {
+                                transRuntime := time.Now()
+
+                                if err := plasmacli.SpendTx(plasmaClient, account.priv, account.addr, zeroAddr, big.NewInt(1)); err != nil {
 					atomic.AddInt64(&failureCount, 1)
 					fmt.Println("failed to spend deposit", err)
 				} else {
+                                        transRuntimeElapsed := time.Since(transRuntime).Nanoseconds()
+                                        runtimes <- transRuntimeElapsed
 					atomic.AddInt64(&completionCount, 1)
 				}
 			}(account)
@@ -202,10 +209,30 @@ func BenchmarkSend100() (*SendBenchmarkResult, error) {
 	elapsed := time.Since(start)
 	stop()
 
+        close(runtimes)
+
+        min := int64(math.MaxInt64)
+        max := int64(math.MinInt64)
+        sumRuntime := int64(0)
+        for rt := range runtimes {
+          if (min > rt) {
+            min = rt
+          }
+          if (max < rt) {
+            max = rt
+          }
+          sumRuntime += rt
+        }
+
+        avgRuntime := (float64(sumRuntime) / float64(completionCount)) / 1000000
 	tps := (float64(completionCount) / float64(elapsed.Nanoseconds())) * 1000000000
+
+        fmt.Println("Min Time:", min / 1000000)
+        fmt.Println("Max Time:", max / 1000000)
 
 	return &SendBenchmarkResult{
 		ElapsedTime:           elapsed,
+                AvgRunTime:            avgRuntime,
 		CompletedTransactions: completionCount,
 		FailedTransactions:    failureCount,
 		TPS:                   tps,
