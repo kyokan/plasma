@@ -19,7 +19,7 @@ import (
 type Server struct {
 	storage   db.Storage
 	ctx       context.Context
-	mPool     *service.Mempool
+	mpool     *service.Mempool
 	confirmer *service.TransactionConfirmer
 }
 
@@ -29,7 +29,7 @@ func NewServer(ctx context.Context, storage db.Storage, mPool *service.Mempool, 
 	return &Server{
 		storage:   storage,
 		ctx:       ctx,
-		mPool:     mPool,
+		mpool:     mPool,
 		confirmer: confirmer,
 	}
 }
@@ -111,7 +111,7 @@ func (r *Server) Send(ctx context.Context, req *pb.SendRequest) (*pb.SendRespons
 		return nil, err
 	}
 
-	inclusion := r.mPool.Append(*tx)
+	inclusion := r.mpool.Append(*tx)
 	if inclusion.Error != nil {
 		return nil, inclusion.Error
 	}
@@ -181,20 +181,11 @@ func (r *Server) Sync(req *pb.SyncRequest, stream pb.Root_SyncServer) error {
 }
 
 func (r *Server) getBlock(height uint64) (*pb.GetBlockResponse, error) {
-	block, err := r.storage.BlockAtHeight(height)
-	if err != nil {
-		log.WithError(logger, err).Error("failed to fetch block at height")
-		return nil, err
-	}
-	txs, err := r.storage.FindTransactionsByBlockNum(block.Header.Number)
-	if err != nil {
-		log.WithError(logger, err).Error("failed to fetch transactions")
-		return nil, err
-	}
-	meta, err := r.storage.BlockMetaAtHeight(height)
+	block, meta, txs, err := r.storage.FullBlockAtHeight(height)
 	if err != nil {
 		return nil, err
 	}
+
 	var confirmedTxs []*pb.ConfirmedTransaction
 	for _, tx := range txs {
 		confirmedTxs = append(confirmedTxs, tx.Proto())

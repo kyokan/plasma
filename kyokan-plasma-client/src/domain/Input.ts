@@ -38,7 +38,7 @@ export default class Input {
    * @param depositNonce
    */
   constructor (blockNum: number, txIdx: number, outIdx: number, depositNonce?: BN) {
-    if (depositNonce && (blockNum !== 0 || txIdx !== 0 || outIdx !== 0)) {
+    if ((depositNonce && depositNonce.gt(toBig(0))) && (blockNum !== 0 || txIdx !== 0 || outIdx !== 0)) {
       throw new Error('cannot set a deposit nonce alongside blockNum, txIdx, or outIdx');
     }
 

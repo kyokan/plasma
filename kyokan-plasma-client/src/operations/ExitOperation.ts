@@ -66,6 +66,10 @@ export default class ExitOperation {
   async exit () {
     assert(this.outpoint, 'an outpoint to exit must be provided');
     assert(this.committedFee, 'a fee must be provided');
+    if (this.outpoint!.amount.lt(this.committedFee!)) {
+      throw new Error('outpoint cannot be smaller than the committed fee');
+    }
+
     const block = await this.client.getBlock(this.outpoint!.blockNum);
     const merkle = new MerkleTree();
     for (const tx of block.transactions) {

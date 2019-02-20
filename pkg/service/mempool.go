@@ -22,10 +22,10 @@ type MempoolTx struct {
 }
 
 type TxInclusionResponse struct {
-	MerkleRoot       util.Hash
-	BlockNumber      uint64
-	TransactionIndex uint32
-	Error            error
+	MerkleRoot       util.Hash `json:"merkleRoot"`
+	BlockNumber      uint64    `json:"blockNumber"`
+	TransactionIndex uint32    `json:"transactionIndex"`
+	Error            error     `json:"-"`
 }
 
 type Mempool struct {
@@ -151,14 +151,14 @@ func (m *Mempool) VerifyDepositTransaction(tx *chain.Transaction) error {
 
 func (m *Mempool) ensureNoPoolSpend(confirmed *chain.Transaction) error {
 	tx := confirmed.Body
-	key0 := fmt.Sprintf("%d:%d:%d:%d", tx.Input0.BlockNum, tx.Input0.TxIdx, tx.Input0.OutIdx, tx.Input0.DepositNonce)
+	key0 := fmt.Sprintf("%d:%d:%d:%d", tx.Input0.BlockNumber, tx.Input0.TransactionIndex, tx.Input0.OutputIndex, tx.Input0.DepositNonce)
 	_, spent := m.poolSpends[key0]
 	if spent {
 		return validation.NewErrDoubleSpent()
 	}
 
 	if !tx.Input1.IsZero() {
-		key1 := fmt.Sprintf("%d:%d:%d:%d", tx.Input1.BlockNum, tx.Input1.TxIdx, tx.Input1.OutIdx, tx.Input1.DepositNonce)
+		key1 := fmt.Sprintf("%d:%d:%d:%d", tx.Input1.BlockNumber, tx.Input1.TransactionIndex, tx.Input1.OutputIndex, tx.Input1.DepositNonce)
 		_, spent = m.poolSpends[key1]
 		if spent {
 			return validation.NewErrDoubleSpent()
@@ -170,10 +170,10 @@ func (m *Mempool) ensureNoPoolSpend(confirmed *chain.Transaction) error {
 
 func (m *Mempool) updatePoolSpends(confirmed *chain.Transaction) {
 	tx := confirmed.Body
-	key0 := fmt.Sprintf("%d:%d:%d:%d", tx.Input0.BlockNum, tx.Input0.TxIdx, tx.Input0.OutIdx, tx.Input0.DepositNonce)
+	key0 := fmt.Sprintf("%d:%d:%d:%d", tx.Input0.BlockNumber, tx.Input0.TransactionIndex, tx.Input0.OutputIndex, tx.Input0.DepositNonce)
 	m.poolSpends[key0] = true
 	if !tx.Input1.IsZero() {
-		key1 := fmt.Sprintf("%d:%d:%d:%d", tx.Input1.BlockNum, tx.Input1.TxIdx, tx.Input1.OutIdx, tx.Input1.DepositNonce)
+		key1 := fmt.Sprintf("%d:%d:%d:%d", tx.Input1.BlockNumber, tx.Input1.TransactionIndex, tx.Input1.OutputIndex, tx.Input1.DepositNonce)
 		m.poolSpends[key1] = true
 	}
 }

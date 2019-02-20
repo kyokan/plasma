@@ -17,10 +17,11 @@ import (
 	"os/user"
 )
 
+const keyPartsSeparator = "::"
 const merkleKeyPrefix = "merkle"
 const blockKeyPrefix = "blk"
 const blockMetaKeyPrefix = "blkmeta"
-const blockFees = "blk_fees"
+const exitPrefix = "exit"
 const latestKey = "LATEST_BLOCK"
 const latestDepositIdxKey = "LATEST_DEPOSIT_IDX"
 const lastTxExitPollKey = "LATEST_TRANSACTION_EXIT_IDX"
@@ -46,7 +47,6 @@ func DefaultLevelLocation() string {
 	return path.Join(usr.HomeDir, ".plasma")
 }
 
-
 func merklePrefixKey(parts ...string) []byte {
 	return prefixKey(merkleKeyPrefix, parts...)
 }
@@ -61,10 +61,6 @@ func blockPrefixKey(parts ...string) []byte {
 
 func blockMetaPrefixKey(number uint64) []byte {
 	return prefixKey(blockMetaKeyPrefix, strconv.FormatUint(number, 10))
-}
-
-func blockFeesKey(number uint64) []byte {
-	return prefixKey(blockFees, strconv.FormatUint(number, 10))
 }
 
 func extractAmount(tx *chain.ConfirmedTransaction, addr common.Address) *big.Int {
@@ -128,7 +124,14 @@ func spendByTxIdxKey(blockNum uint64, txIdx uint32, outIdx uint8) []byte {
 	)
 }
 
-const keyPartsSeparator = "::"
+func exitKey(blockNum uint64, txIdx uint32, outIdx uint8) []byte {
+	return joinKey(
+		exitPrefix,
+		util.Uint642Str(blockNum),
+		util.Uint322Str(txIdx),
+		util.Uint82Str(outIdx),
+	)
+}
 
 func prefixKey(prefix string, parts ...string) []byte {
 	var args []string

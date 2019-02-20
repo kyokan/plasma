@@ -41,7 +41,7 @@ func (ps *LevelStorage) findPreviousTx(tx *chain.Transaction, inputIdx uint8) (*
 		input = tx.Body.Input1
 	}
 
-	return ps.findTransactionByBlockNumTxIdx(input.BlockNum, input.TxIdx)
+	return ps.findTransactionByBlockNumTxIdx(input.BlockNumber, input.TransactionIndex)
 }
 
 func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalTx chain.Transaction, batch *leveldb.Batch) (*chain.ConfirmedTransaction, error) {
@@ -53,7 +53,7 @@ func (ps *LevelStorage) saveTransaction(blockNum uint64, txIdx uint32, originalT
 		Transaction: tx,
 	}
 	if err := ps.batchWriteConfirmedTransaction(confirmed, batch); err != nil {
-	    return nil, err
+		return nil, err
 	}
 
 	return confirmed, nil
@@ -83,8 +83,8 @@ func (ps *LevelStorage) batchWriteConfirmedTransaction(confirmed *chain.Confirme
 		}
 
 		prevTx := prevConfirmed0.Transaction
-		batch.Put(spendByTxIdxKey(prevTx.Body.BlockNumber, prevTx.Body.TransactionIndex, tx.Body.Input0.OutIdx), []byte(hexHash))
-		batch.Delete(utxoKey(prevTx.Body.OutputAt(tx.Body.Input0.OutIdx).Owner, prevConfirmed0.Hash(), tx.Body.Input0.OutIdx))
+		batch.Put(spendByTxIdxKey(prevTx.Body.BlockNumber, prevTx.Body.TransactionIndex, tx.Body.Input0.OutputIndex), []byte(hexHash))
+		batch.Delete(utxoKey(prevTx.Body.OutputAt(tx.Body.Input0.OutputIndex).Owner, prevConfirmed0.Hash(), tx.Body.Input0.OutputIndex))
 		// TODO mark as exited
 	}
 
@@ -95,8 +95,8 @@ func (ps *LevelStorage) batchWriteConfirmedTransaction(confirmed *chain.Confirme
 		}
 
 		prevTx := prevConfirmed1.Transaction
-		batch.Put(spendByTxIdxKey(prevTx.Body.BlockNumber, prevTx.Body.TransactionIndex, tx.Body.Input1.OutIdx), []byte(hexHash))
-		batch.Delete(utxoKey(prevTx.Body.OutputAt(tx.Body.Input0.OutIdx).Owner, prevConfirmed1.Hash(), tx.Body.Input1.OutIdx))
+		batch.Put(spendByTxIdxKey(prevTx.Body.BlockNumber, prevTx.Body.TransactionIndex, tx.Body.Input1.OutputIndex), []byte(hexHash))
+		batch.Delete(utxoKey(prevTx.Body.OutputAt(tx.Body.Input0.OutputIndex).Owner, prevConfirmed1.Hash(), tx.Body.Input1.OutputIndex))
 	}
 
 	// Recording earns
@@ -112,37 +112,27 @@ func (ps *LevelStorage) batchWriteConfirmedTransaction(confirmed *chain.Confirme
 	return nil
 }
 
-func (ps *LevelStorage) MarkExitsAsSpent(inputs []chain.Input) error {
-	//for _, input := range inputs {
-	//	if input.TransactionIndex.Cmp(big.NewInt(FeeTxIdx)) == 0 { // fee exit
-	//		blkNum := input.BlockNumber.Uint64()
-	//		err := ps.db.Put(blockFeesExitKey(blkNum), input.Amount.Bytes(), nil)
-	//		if err != nil {
-	//			log.Printf("Error: Failed to exit fees for block %v", blkNum)
-	//		}
-	//		continue
-	//	}
-	//	confirmed := chain.Body{
-	//		TransactionBody: *chain.ZeroBody(),
-	//	}
-	//	confirmed.TransactionBody.Input0 = &input
-	//	confirmed.TransactionBody.Output0 = chain.ExitOutput()
-	//	var prevTx *chain.Body
-	//	var err error
-	//	if input.IsDeposit() { // this is a deposit exit
-	//		prevTx, _, err = ps.findTransactionByDepositNonce(input.DepositNonce, noopLock{})
-	//	} else {
-	//		prevTx, _, err = ps.findTransactionByBlockNumTxIdx(input.BlockNumber.Uint64(), uint32(input.TransactionIndex.Uint64()), noopLock{})
-	//	}
-	//	if err != nil {
-	//		log.Printf("Failed to find previous transaction(s) for exit: %s", err)
-	//		continue
-	//	}
-	//
-	//	//ps.saveTransaction(confirmed, []*chain.Body{prevTx})
-	//}
+func (ps *LevelStorage) MarkTransactionAsExited(plasmaBlockNum uint64, plasmaTxIdx uint32, outIdx uint8, ethBlockNumber uint64, ethTransactionHash common.Hash) error {
+	tx, err := ps.findTransactionByBlockNumTxIdx(plasmaBlockNum, plasmaTxIdx)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	loc := &ExitLocator{
+		PlasmaBlockNumber: plasmaBlockNum,
+		PlasmaTransactionIndex: plasmaTxIdx,
+		PlasmaOutputIndex:outIdx,
+		EthereumBlockNumber:ethBlockNumber,
+		EthereumTransactionHash:ethTransactionHash[:],
+	}
+	locBytes, err := loc.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	batch := new(leveldb.Batch)
+	batch.Delete(utxoKey(tx.Transaction.Body.OutputAt(outIdx).Owner, tx.Hash(), outIdx))
+	batch.Put(exitKey(tx.Transaction.Body.BlockNumber, tx.Transaction.Body.TransactionIndex, outIdx), locBytes)
+	return ps.db.Write(batch, nil)
 }
 
 func (ps *LevelStorage) IsDoubleSpent(tx *chain.Transaction) (bool, error) {
@@ -159,14 +149,16 @@ func (ps *LevelStorage) IsDoubleSpent(tx *chain.Transaction) (bool, error) {
 	searchKeys := make([][]byte, 0)
 
 	prevTx0Body := prevTx0.Transaction.Body
-	searchKeys = append(searchKeys, spendByTxIdxKey(prevTx0Body.BlockNumber, prevTx0Body.TransactionIndex, body.Input0.OutIdx))
+	searchKeys = append(searchKeys, spendByTxIdxKey(prevTx0Body.BlockNumber, prevTx0Body.TransactionIndex, body.Input0.OutputIndex))
+	searchKeys = append(searchKeys, exitKey(prevTx0Body.BlockNumber, prevTx0Body.TransactionIndex, body.Input0.OutputIndex))
 	if !body.Input1.IsZero() {
 		prevTx1, err := ps.findPreviousTx(tx, 1)
 		if err != nil {
 			return false, err
 		}
 		prevTx1Body := prevTx1.Transaction.Body
-		searchKeys = append(searchKeys, spendByTxIdxKey(prevTx1Body.BlockNumber, prevTx1Body.TransactionIndex, body.Input1.OutIdx))
+		searchKeys = append(searchKeys, spendByTxIdxKey(prevTx1Body.BlockNumber, prevTx1Body.TransactionIndex, body.Input1.OutputIndex))
+		searchKeys = append(searchKeys, exitKey(prevTx1Body.BlockNumber, prevTx1Body.TransactionIndex, body.Input1.OutputIndex))
 	}
 
 	for _, spendKey := range searchKeys {
@@ -261,10 +253,10 @@ func (ps *LevelStorage) doPackageBlock(txs []chain.Transaction) (*chain.BlockRes
 	}
 
 	if err := ps.batchWriteBlock(block, batch); err != nil {
-	    return nil, err
+		return nil, err
 	}
 	if err := ps.batchWriteBlockMeta(block, meta, batch); err != nil {
-	    return nil, err
+		return nil, err
 	}
 
 	err = ps.db.Write(batch, nil)
@@ -318,16 +310,16 @@ func (ps *LevelStorage) InsertBlock(block *chain.Block, meta *chain.BlockMetadat
 		height = latest.Header.Number
 	}
 
-	if block.Header.Number != height + 1 {
+	if block.Header.Number != height+1 {
 		return errors.New("cannot insert a block more than 1 block number ahead")
 	}
 
 	batch := new(leveldb.Batch)
 	if err := ps.batchWriteBlock(block, batch); err != nil {
-	    return err
+		return err
 	}
 	if err := ps.batchWriteBlockMeta(block, meta, batch); err != nil {
-	    return err
+		return err
 	}
 	for _, tx := range txs {
 		if err := ps.batchWriteConfirmedTransaction(&tx, batch); err != nil {
@@ -532,6 +524,23 @@ func (ps *LevelStorage) BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, err
 	}
 
 	return &meta, nil
+}
+
+func (ps *LevelStorage) FullBlockAtHeight(num uint64) (*chain.Block, *chain.BlockMetadata, []chain.ConfirmedTransaction, error) {
+	block, err := ps.BlockAtHeight(num)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	meta, err := ps.BlockMetaAtHeight(num)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	txs, err := ps.FindTransactionsByBlockNum(block.Header.Number)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return block, meta, txs, nil
 }
 
 func (ps *LevelStorage) LatestBlock() (*chain.Block, error) {

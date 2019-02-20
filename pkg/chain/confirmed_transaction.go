@@ -7,8 +7,8 @@ import (
 )
 
 type ConfirmedTransaction struct {
-	Transaction *Transaction
-	ConfirmSigs [2]Signature
+	Transaction *Transaction `json:"transaction"`
+	ConfirmSigs [2]Signature `json:"confirmSigs"`
 }
 
 var zeroSig Signature

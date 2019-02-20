@@ -203,9 +203,9 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 			panic("too many inputs!")
 		}
 
-		input.BlockNum = txBody.BlockNumber
-		input.TxIdx = txBody.TransactionIndex
-		input.OutIdx = txBody.OutputIndexFor(&from)
+		input.BlockNumber = txBody.BlockNumber
+		input.TransactionIndex = txBody.TransactionIndex
+		input.OutputIndex = txBody.OutputIndexFor(&from)
 
 		if i == 0 {
 			tx.Body.Input0ConfirmSig = utxo.ConfirmSigs[0]

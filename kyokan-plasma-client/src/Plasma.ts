@@ -11,6 +11,7 @@ import * as ejs from 'ethereumjs-util';
 import {toBig} from './util/numbers';
 import {OnChainDeposit} from './domain/OnChainDeposit';
 import IRootClient from './rpc/IRootClient';
+import {RESTRootClient} from './rpc/RESTRootClient';
 
 /**
  * Options used to construct a new Plasma client instance.
@@ -30,13 +31,10 @@ export interface PlasmaOptions {
   contractAddress: string
 
   /**
-   * NOTE: Currently unsupported.
-   *
-   * Whether to use the `grpc-web` Client rather than the default
-   * `grpc` client. Set this to `true` if you're connecting to Plasma
-   * from a web browser.
+   * Whether or not to use the REST API over the gRPC API.
+   * You should set this to true if you are using a web browser.
    */
-  useGRPCWeb: boolean
+  useREST: boolean
 
   /**
    * URL to the root node. The URL should not include a protocol.
@@ -84,8 +82,8 @@ export default class Plasma {
   constructor (opts: PlasmaOptions) {
     this.web3 = opts.web3;
 
-    if (opts.useGRPCWeb) {
-      throw new Error('gRPC Web support coming soon.');
+    if (opts.useREST) {
+      this._rootClient = new RESTRootClient(opts.rootURL);
     } else {
       this._rootClient = new GRPCRootClient(opts.rootURL, opts.rootCredentials || grpc.credentials.createInsecure());
     }

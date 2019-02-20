@@ -9,6 +9,7 @@ import (
 	"github.com/kyokan/plasma/util"
 	"github.com/kyokan/plasma/pkg/rpc/pb"
 	"github.com/kyokan/plasma/pkg/rpc"
+	"encoding/json"
 )
 
 type TransactionBody struct {
@@ -41,6 +42,18 @@ type rlpTransactionBody struct {
 	Fee              *UInt256
 }
 
+type transactionBodyJSON struct {
+	Input0           *Input    `json:"input0"`
+	Input0ConfirmSig Signature `json:"input0ConfirmSig"`
+	Input1           *Input    `json:"input1"`
+	Input1ConfirmSig Signature `json:"input1ConfirmSig"`
+	Output0          *Output   `json:"output0"`
+	Output1          *Output   `json:"output1"`
+	Fee              string    `json:"fee"`
+	BlockNumber      uint64    `json:"blockNumber"`
+	TransactionIndex uint32    `json:"transactionIndex"`
+}
+
 func ZeroBody() *TransactionBody {
 	return &TransactionBody{
 		Input0:  ZeroInput(),
@@ -49,6 +62,43 @@ func ZeroBody() *TransactionBody {
 		Output1: ZeroOutput(),
 		Fee:     Zero(),
 	}
+}
+
+func (b *TransactionBody) MarshalJSON() ([]byte, error) {
+	jsonRep := &transactionBodyJSON{
+		Input0:           b.Input0,
+		Input0ConfirmSig: b.Input0ConfirmSig,
+		Input1:           b.Input1,
+		Input1ConfirmSig: b.Input1ConfirmSig,
+		Output0:          b.Output0,
+		Output1:          b.Output1,
+		Fee:              util.Big2Str(b.Fee),
+		BlockNumber:      b.BlockNumber,
+		TransactionIndex: b.TransactionIndex,
+	}
+	return json.Marshal(jsonRep)
+}
+
+func (b *TransactionBody) UnmarshalJSON(in []byte) error {
+	jsonRep := &transactionBodyJSON{}
+	err := json.Unmarshal(in, &jsonRep)
+	if err != nil {
+		return err
+	}
+	fee, err := util.Str2Big(jsonRep.Fee)
+	if err != nil {
+		return err
+	}
+	b.Input0 = jsonRep.Input0
+	b.Input0ConfirmSig = jsonRep.Input0ConfirmSig
+	b.Input1 = jsonRep.Input1
+	b.Input1ConfirmSig = jsonRep.Input1ConfirmSig
+	b.Output0 = jsonRep.Output0
+	b.Output1 = jsonRep.Output1
+	b.Fee = fee
+	b.BlockNumber = jsonRep.BlockNumber
+	b.TransactionIndex = jsonRep.TransactionIndex
+	return nil
 }
 
 func (b *TransactionBody) IsDeposit() bool {
@@ -113,14 +163,14 @@ func (b *TransactionBody) OutputIndexFor(addr *common.Address) uint8 {
 
 func (b *TransactionBody) rlpRepresentation() rlpTransactionBody {
 	return rlpTransactionBody{
-		BlkNum0:          NewUint256(util.Uint642Big(b.Input0.BlockNum)),
-		TxIdx0:           NewUint256(util.Uint322Big(b.Input0.TxIdx)),
-		OutIdx0:          NewUint256(util.Uint82Big(b.Input0.OutIdx)),
+		BlkNum0:          NewUint256(util.Uint642Big(b.Input0.BlockNumber)),
+		TxIdx0:           NewUint256(util.Uint322Big(b.Input0.TransactionIndex)),
+		OutIdx0:          NewUint256(util.Uint82Big(b.Input0.OutputIndex)),
 		DepositNonce0:    NewUint256(b.Input0.DepositNonce),
 		Input0ConfirmSig: b.Input0ConfirmSig,
-		BlkNum1:          NewUint256(util.Uint642Big(b.Input1.BlockNum)),
-		TxIdx1:           NewUint256(util.Uint322Big(b.Input1.TxIdx)),
-		OutIdx1:          NewUint256(util.Uint82Big(b.Input1.OutIdx)),
+		BlkNum1:          NewUint256(util.Uint642Big(b.Input1.BlockNumber)),
+		TxIdx1:           NewUint256(util.Uint322Big(b.Input1.TransactionIndex)),
+		OutIdx1:          NewUint256(util.Uint82Big(b.Input1.OutputIndex)),
 		DepositNonce1:    NewUint256(b.Input1.DepositNonce),
 		Input1ConfirmSig: b.Input1ConfirmSig,
 		Owner0:           b.Output0.Owner,

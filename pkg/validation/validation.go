@@ -11,16 +11,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"errors"
 	"github.com/kyokan/plasma/pkg/merkle"
-		)
+)
 
 func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error) {
 	if tx.Body.Output0.Amount.Cmp(big.NewInt(0)) == -1 {
 		return NewErrNegativeOutput(0)
 	}
 
-	prevTx0Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input0.BlockNum, tx.Body.Input0.TxIdx)
+	prevTx0Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input0.BlockNumber, tx.Body.Input0.TransactionIndex)
 	if err == leveldb.ErrNotFound {
-		return NewErrTxNotFound(0, tx.Body.Input0.BlockNum, tx.Body.Input0.TxIdx)
+		return NewErrTxNotFound(0, tx.Body.Input0.BlockNumber, tx.Body.Input0.TransactionIndex)
 	}
 	if err != nil {
 		return err
@@ -30,7 +30,7 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		return NewErrConfirmSigMismatch(0)
 	}
 	sigHash0 := tx.Body.SignatureHash()
-	prevTx0Output := prevTx0.Body.OutputAt(tx.Body.Input0.OutIdx)
+	prevTx0Output := prevTx0.Body.OutputAt(tx.Body.Input0.OutputIndex)
 	err = eth.ValidateSignature(sigHash0, tx.Sigs[0][:], prevTx0Output.Owner)
 	if err != nil {
 		return NewErrInvalidSignature(0)
@@ -44,16 +44,16 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 			return NewErrNegativeOutput(1)
 		}
 
-		prevTx1Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input1.BlockNum, tx.Body.Input1.TxIdx)
+		prevTx1Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input1.BlockNumber, tx.Body.Input1.TransactionIndex)
 		if err == leveldb.ErrNotFound {
-			return NewErrTxNotFound(1, tx.Body.Input1.BlockNum, tx.Body.Input1.TxIdx)
+			return NewErrTxNotFound(1, tx.Body.Input1.BlockNumber, tx.Body.Input1.TransactionIndex)
 		}
 		if err != nil {
 			return err
 		}
 
 		prevTx1 := prevTx1Conf.Transaction
-		prevTx1Output := prevTx1.Body.OutputAt(tx.Body.Input1.OutIdx)
+		prevTx1Output := prevTx1.Body.OutputAt(tx.Body.Input1.OutputIndex)
 		sigHash1 := tx.Body.SignatureHash()
 		err = eth.ValidateSignature(sigHash1, tx.Sigs[1][:], prevTx1Output.Owner)
 		if err != nil {
@@ -163,11 +163,11 @@ func ValidateConfirmSigs(storage db.Storage, client eth.Client, blk *chain.Block
 				return err
 			}
 		} else {
-			prevTx, err := storage.FindTransactionByBlockNumTxIdx(input.BlockNum, input.TxIdx)
+			prevTx, err := storage.FindTransactionByBlockNumTxIdx(input.BlockNumber, input.TransactionIndex)
 			if err != nil {
 				return err
 			}
-			owner = prevTx.Transaction.Body.OutputAt(input.OutIdx).Owner
+			owner = prevTx.Transaction.Body.OutputAt(input.OutputIndex).Owner
 		}
 
 		if err := eth.ValidateSignature(sigHash, sig[:], owner); err != nil {

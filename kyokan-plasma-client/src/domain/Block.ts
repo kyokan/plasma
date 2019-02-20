@@ -5,8 +5,6 @@ import ConfirmedTransaction from './ConfirmedTransaction';
  */
 export interface BlockHeader {
   merkleRoot: Buffer
-  rlpMerkleRoot: Buffer
-  prevHash: Buffer
   number: number
 }
 
@@ -16,13 +14,10 @@ export interface BlockHeader {
 export default class Block {
   public header: BlockHeader;
 
-  public hash: Buffer;
-
   public transactions: ConfirmedTransaction[];
 
-  constructor (header: BlockHeader, hash: Buffer, transactions: ConfirmedTransaction[]) {
+  constructor (header: BlockHeader, transactions: ConfirmedTransaction[]) {
     this.header = header;
-    this.hash = hash;
     this.transactions = transactions;
   }
 }

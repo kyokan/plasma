@@ -17,6 +17,7 @@ type Storage interface {
 
 	BlockAtHeight(num uint64) (*chain.Block, error)
 	BlockMetaAtHeight(num uint64) (*chain.BlockMetadata, error)
+	FullBlockAtHeight(num uint64) (*chain.Block, *chain.BlockMetadata, []chain.ConfirmedTransaction, error)
 	LatestBlock() (*chain.Block, error)
 	PackageBlock(txs []chain.Transaction) (result *chain.BlockResult, err error)
 	ConfirmTransaction(blockNumber uint64, transactionIndex uint32, sigs [2]chain.Signature) (*chain.ConfirmedTransaction, error)
@@ -32,7 +33,7 @@ type Storage interface {
 	LastDepositExitPoll() (uint64, error)
 	SaveDepositExitPoll(idx uint64) error
 
-	MarkExitsAsSpent([]chain.Input) error
+	MarkTransactionAsExited(plasmaBlockNum uint64, plasmaTxIdx uint32, outIdx uint8, ethBlockNumber uint64, ethTransactionHash common.Hash) error
 
 	IsDoubleSpent(tx *chain.Transaction) (bool, error)
 

@@ -1,3 +1,4 @@
+require('isomorphic-fetch');
 import {GanacheBuilder} from './lib/GanacheBuilder';
 import * as path from 'path';
 import * as os from 'os';

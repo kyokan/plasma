@@ -8,10 +8,10 @@ import (
 
 func RandomInput() *Input {
 	return &Input{
-		DepositNonce: big.NewInt(rand.Int63()),
-		BlockNum:     rand.Uint64(),
-		TxIdx:        rand.Uint32(),
-		OutIdx:       1,
+		DepositNonce:     big.NewInt(rand.Int63()),
+		BlockNumber:      rand.Uint64(),
+		TransactionIndex: rand.Uint32(),
+		OutputIndex:      1,
 	}
 }
 
