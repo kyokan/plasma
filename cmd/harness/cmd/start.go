@@ -162,13 +162,13 @@ func StartGanache(port int, blockTime int, accountCount int, dbPath string) (*ex
 
 	var started bool
 	for i := 0; i < 10; i++ {
-		conn, _ := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), time.Second)
+		conn, _ := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), 20 * time.Second)
 		if conn != nil {
 			conn.Close()
 			started = true
 			break
 		}
-		time.Sleep(time.Second)
+		time.Sleep(20 * time.Second)
 	}
 
 	if !started {

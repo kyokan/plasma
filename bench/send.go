@@ -3,8 +3,8 @@ package bench
 import (
 	harness "github.com/kyokan/plasma/cmd/harness/cmd"
 	plasmacli "github.com/kyokan/plasma/cmd/plasmacli/cmd"
-	plasmaRoot "github.com/kyokan/plasma/root"
-	"github.com/kyokan/plasma/chain"
+	plasmaRoot "github.com/kyokan/plasma/internal/root"
+	"github.com/kyokan/plasma/pkg/chain"
 	"io/ioutil"
 	"fmt"
 	"os"
@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"strings"
         "math"
-	"path"
 	"github.com/kyokan/plasma/pkg/rpc/pb"
 	"time"
 	"sync/atomic"

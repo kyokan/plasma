@@ -15,8 +15,20 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = abi.U256
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+)
+
 // PlasmaABI is the input ABI used to generate the binding from.
-const PlasmaABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"lastCommittedBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"plasmaChain\",\"outputs\":[{\"name\":\"header\",\"type\":\"bytes32\"},{\"name\":\"numTxns\",\"type\":\"uint256\"},{\"name\":\"feeAmount\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"operator\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositExitQueue\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"txExits\",\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"state\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"txExitQueue\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"deposits\",\"outputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"ethBlockNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalWithdrawBalance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositExits\",\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"state\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"minExitBond\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"depositNonce\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"oldOperator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"ChangedOperator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AddedToBalances\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"header\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"numTxns\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"feeAmount\",\"type\":\"uint256\"}],\"name\":\"BlockSubmitted\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"depositor\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"depositNonce\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"ethBlockNum\",\"type\":\"uint256\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[3]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"confirmSignatures\",\"type\":\"bytes\"},{\"indexed\":false,\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"StartedTransactionExit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"StartedDepositExit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[4]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ChallengedExit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[4]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FinalizedExit\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"changeOperator\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"headers\",\"type\":\"bytes32[]\"},{\"name\":\"txnsPerBlock\",\"type\":\"uint256[]\"},{\"name\":\"feePerBlock\",\"type\":\"uint256[]\"},{\"name\":\"blockNum\",\"type\":\"uint256\"}],\"name\":\"submitBlock\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startDepositExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"txPos\",\"type\":\"uint256[3]\"},{\"name\":\"txBytes\",\"type\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\"},{\"name\":\"confirmSignatures\",\"type\":\"bytes\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startTransactionExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startFeeExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"name\":\"exitingTxPos\",\"type\":\"uint256[4]\"},{\"name\":\"challengingTxPos\",\"type\":\"uint256[2]\"},{\"name\":\"txBytes\",\"type\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\"},{\"name\":\"confirmSignature\",\"type\":\"bytes\"}],\"name\":\"challengeExit\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"finalizeDepositExits\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"finalizeTransactionExits\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"plasmaChainBalance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const PlasmaABI = "[{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"address\"}],\"name\":\"balances\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x27e235e3\"},{\"constant\":true,\"inputs\":[],\"name\":\"lastCommittedBlock\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x3acb097a\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"plasmaChain\",\"outputs\":[{\"name\":\"header\",\"type\":\"bytes32\"},{\"name\":\"numTxns\",\"type\":\"uint256\"},{\"name\":\"feeAmount\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x3cdac42c\"},{\"constant\":true,\"inputs\":[],\"name\":\"operator\",\"outputs\":[{\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x570ca735\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositExitQueue\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x5b3081d7\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"txExits\",\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"state\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x6d3d8b1a\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"txExitQueue\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x875b8ea0\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"deposits\",\"outputs\":[{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"ethBlockNum\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0xb02c43d0\"},{\"constant\":true,\"inputs\":[],\"name\":\"totalWithdrawBalance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0xc430c438\"},{\"constant\":true,\"inputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"depositExits\",\"outputs\":[{\"name\":\"amount\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"},{\"name\":\"createdAt\",\"type\":\"uint256\"},{\"name\":\"owner\",\"type\":\"address\"},{\"name\":\"state\",\"type\":\"uint8\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0xce84f906\"},{\"constant\":true,\"inputs\":[],\"name\":\"minExitBond\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0xd68545a3\"},{\"constant\":true,\"inputs\":[],\"name\":\"depositNonce\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0xde35f5cb\"},{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\",\"signature\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"oldOperator\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"ChangedOperator\",\"type\":\"event\",\"signature\":\"0x3aff32e6289f2f2a2463481071051456b2768bb391c64ae3c91f9033e208cda1\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"AddedToBalances\",\"type\":\"event\",\"signature\":\"0xf8552a24c7d58fd05114f6fc9db7b3a354db64d5fc758184af1696ccd8f158f3\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"header\",\"type\":\"bytes32\"},{\"indexed\":false,\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"numTxns\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"feeAmount\",\"type\":\"uint256\"}],\"name\":\"BlockSubmitted\",\"type\":\"event\",\"signature\":\"0x044ff3798f9b3ad55d1155cea9a40508c71b4c64335f5dae87e8e11551515a06\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"depositor\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"depositNonce\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"ethBlockNum\",\"type\":\"uint256\"}],\"name\":\"Deposit\",\"type\":\"event\",\"signature\":\"0x36af321ec8d3c75236829c5317affd40ddb308863a1236d2d277a4025cccee1e\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[3]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"confirmSignatures\",\"type\":\"bytes\"},{\"indexed\":false,\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"StartedTransactionExit\",\"type\":\"event\",\"signature\":\"0x20d695720ae96d3511520c6f51d6ab23aa19a3796da77024ad027b344bb72530\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"StartedDepositExit\",\"type\":\"event\",\"signature\":\"0xe90dc7204eb622c87d2c8d67d8e27afdfd34042584591e7b3d35014873cf9cfd\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[4]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ChallengedExit\",\"type\":\"event\",\"signature\":\"0xe1289dafb1083e540206bcd7d95a9705ba2590d6a9229c35a1c4c4c5efbda901\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"name\":\"position\",\"type\":\"uint256[4]\"},{\"indexed\":false,\"name\":\"owner\",\"type\":\"address\"},{\"indexed\":false,\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FinalizedExit\",\"type\":\"event\",\"signature\":\"0xb5083a27a38f8a9aa999efb3306b7be96dc3f42010a968dd86627880ba7fdbe2\"},{\"constant\":false,\"inputs\":[{\"name\":\"newOperator\",\"type\":\"address\"}],\"name\":\"changeOperator\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0x06394c9b\"},{\"constant\":false,\"inputs\":[{\"name\":\"headers\",\"type\":\"bytes32[]\"},{\"name\":\"txnsPerBlock\",\"type\":\"uint256[]\"},{\"name\":\"feePerBlock\",\"type\":\"uint256[]\"},{\"name\":\"blockNum\",\"type\":\"uint256\"}],\"name\":\"submitBlock\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0xd84ba62f\"},{\"constant\":false,\"inputs\":[{\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"deposit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\",\"signature\":\"0xf340fa01\"},{\"constant\":false,\"inputs\":[{\"name\":\"nonce\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startDepositExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\",\"signature\":\"0x70e4abf6\"},{\"constant\":false,\"inputs\":[{\"name\":\"txPos\",\"type\":\"uint256[3]\"},{\"name\":\"txBytes\",\"type\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\"},{\"name\":\"confirmSignatures\",\"type\":\"bytes\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startTransactionExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\",\"signature\":\"0xcf024ea6\"},{\"constant\":false,\"inputs\":[{\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"name\":\"committedFee\",\"type\":\"uint256\"}],\"name\":\"startFeeExit\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\",\"signature\":\"0xed1695df\"},{\"constant\":false,\"inputs\":[{\"name\":\"exitingTxPos\",\"type\":\"uint256[4]\"},{\"name\":\"challengingTxPos\",\"type\":\"uint256[2]\"},{\"name\":\"txBytes\",\"type\":\"bytes\"},{\"name\":\"proof\",\"type\":\"bytes\"},{\"name\":\"confirmSignature\",\"type\":\"bytes\"}],\"name\":\"challengeExit\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0xd344e8e4\"},{\"constant\":false,\"inputs\":[],\"name\":\"finalizeDepositExits\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0xfcf5f9eb\"},{\"constant\":false,\"inputs\":[],\"name\":\"finalizeTransactionExits\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0x884fc7d6\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\",\"signature\":\"0x3ccfd60b\"},{\"constant\":true,\"inputs\":[],\"name\":\"plasmaChainBalance\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x45cbefa2\"},{\"constant\":true,\"inputs\":[{\"name\":\"_address\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\",\"signature\":\"0x70a08231\"}]"
 
 // Plasma is an auto generated Go binding around an Ethereum contract.
 type Plasma struct {
@@ -162,7 +174,7 @@ func (_Plasma *PlasmaTransactorRaw) Transact(opts *bind.TransactOpts, method str
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(_address address) constant returns(uint256)
+// Solidity: function balanceOf(address _address) constant returns(uint256)
 func (_Plasma *PlasmaCaller) BalanceOf(opts *bind.CallOpts, _address common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -174,21 +186,21 @@ func (_Plasma *PlasmaCaller) BalanceOf(opts *bind.CallOpts, _address common.Addr
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(_address address) constant returns(uint256)
+// Solidity: function balanceOf(address _address) constant returns(uint256)
 func (_Plasma *PlasmaSession) BalanceOf(_address common.Address) (*big.Int, error) {
 	return _Plasma.Contract.BalanceOf(&_Plasma.CallOpts, _address)
 }
 
 // BalanceOf is a free data retrieval call binding the contract method 0x70a08231.
 //
-// Solidity: function balanceOf(_address address) constant returns(uint256)
+// Solidity: function balanceOf(address _address) constant returns(uint256)
 func (_Plasma *PlasmaCallerSession) BalanceOf(_address common.Address) (*big.Int, error) {
 	return _Plasma.Contract.BalanceOf(&_Plasma.CallOpts, _address)
 }
 
 // Balances is a free data retrieval call binding the contract method 0x27e235e3.
 //
-// Solidity: function balances( address) constant returns(uint256)
+// Solidity: function balances(address ) constant returns(uint256)
 func (_Plasma *PlasmaCaller) Balances(opts *bind.CallOpts, arg0 common.Address) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -200,21 +212,21 @@ func (_Plasma *PlasmaCaller) Balances(opts *bind.CallOpts, arg0 common.Address) 
 
 // Balances is a free data retrieval call binding the contract method 0x27e235e3.
 //
-// Solidity: function balances( address) constant returns(uint256)
+// Solidity: function balances(address ) constant returns(uint256)
 func (_Plasma *PlasmaSession) Balances(arg0 common.Address) (*big.Int, error) {
 	return _Plasma.Contract.Balances(&_Plasma.CallOpts, arg0)
 }
 
 // Balances is a free data retrieval call binding the contract method 0x27e235e3.
 //
-// Solidity: function balances( address) constant returns(uint256)
+// Solidity: function balances(address ) constant returns(uint256)
 func (_Plasma *PlasmaCallerSession) Balances(arg0 common.Address) (*big.Int, error) {
 	return _Plasma.Contract.Balances(&_Plasma.CallOpts, arg0)
 }
 
 // DepositExitQueue is a free data retrieval call binding the contract method 0x5b3081d7.
 //
-// Solidity: function depositExitQueue( uint256) constant returns(uint256)
+// Solidity: function depositExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaCaller) DepositExitQueue(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -226,21 +238,21 @@ func (_Plasma *PlasmaCaller) DepositExitQueue(opts *bind.CallOpts, arg0 *big.Int
 
 // DepositExitQueue is a free data retrieval call binding the contract method 0x5b3081d7.
 //
-// Solidity: function depositExitQueue( uint256) constant returns(uint256)
+// Solidity: function depositExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaSession) DepositExitQueue(arg0 *big.Int) (*big.Int, error) {
 	return _Plasma.Contract.DepositExitQueue(&_Plasma.CallOpts, arg0)
 }
 
 // DepositExitQueue is a free data retrieval call binding the contract method 0x5b3081d7.
 //
-// Solidity: function depositExitQueue( uint256) constant returns(uint256)
+// Solidity: function depositExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaCallerSession) DepositExitQueue(arg0 *big.Int) (*big.Int, error) {
 	return _Plasma.Contract.DepositExitQueue(&_Plasma.CallOpts, arg0)
 }
 
 // DepositExits is a free data retrieval call binding the contract method 0xce84f906.
 //
-// Solidity: function depositExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function depositExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaCaller) DepositExits(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -262,7 +274,7 @@ func (_Plasma *PlasmaCaller) DepositExits(opts *bind.CallOpts, arg0 *big.Int) (s
 
 // DepositExits is a free data retrieval call binding the contract method 0xce84f906.
 //
-// Solidity: function depositExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function depositExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaSession) DepositExits(arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -275,7 +287,7 @@ func (_Plasma *PlasmaSession) DepositExits(arg0 *big.Int) (struct {
 
 // DepositExits is a free data retrieval call binding the contract method 0xce84f906.
 //
-// Solidity: function depositExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function depositExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaCallerSession) DepositExits(arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -314,7 +326,7 @@ func (_Plasma *PlasmaCallerSession) DepositNonce() (*big.Int, error) {
 
 // Deposits is a free data retrieval call binding the contract method 0xb02c43d0.
 //
-// Solidity: function deposits( uint256) constant returns(owner address, amount uint256, createdAt uint256, ethBlockNum uint256)
+// Solidity: function deposits(uint256 ) constant returns(address owner, uint256 amount, uint256 createdAt, uint256 ethBlockNum)
 func (_Plasma *PlasmaCaller) Deposits(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Owner       common.Address
 	Amount      *big.Int
@@ -334,7 +346,7 @@ func (_Plasma *PlasmaCaller) Deposits(opts *bind.CallOpts, arg0 *big.Int) (struc
 
 // Deposits is a free data retrieval call binding the contract method 0xb02c43d0.
 //
-// Solidity: function deposits( uint256) constant returns(owner address, amount uint256, createdAt uint256, ethBlockNum uint256)
+// Solidity: function deposits(uint256 ) constant returns(address owner, uint256 amount, uint256 createdAt, uint256 ethBlockNum)
 func (_Plasma *PlasmaSession) Deposits(arg0 *big.Int) (struct {
 	Owner       common.Address
 	Amount      *big.Int
@@ -346,7 +358,7 @@ func (_Plasma *PlasmaSession) Deposits(arg0 *big.Int) (struct {
 
 // Deposits is a free data retrieval call binding the contract method 0xb02c43d0.
 //
-// Solidity: function deposits( uint256) constant returns(owner address, amount uint256, createdAt uint256, ethBlockNum uint256)
+// Solidity: function deposits(uint256 ) constant returns(address owner, uint256 amount, uint256 createdAt, uint256 ethBlockNum)
 func (_Plasma *PlasmaCallerSession) Deposits(arg0 *big.Int) (struct {
 	Owner       common.Address
 	Amount      *big.Int
@@ -436,7 +448,7 @@ func (_Plasma *PlasmaCallerSession) Operator() (common.Address, error) {
 
 // PlasmaChain is a free data retrieval call binding the contract method 0x3cdac42c.
 //
-// Solidity: function plasmaChain( uint256) constant returns(header bytes32, numTxns uint256, feeAmount uint256, createdAt uint256)
+// Solidity: function plasmaChain(uint256 ) constant returns(bytes32 header, uint256 numTxns, uint256 feeAmount, uint256 createdAt)
 func (_Plasma *PlasmaCaller) PlasmaChain(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Header    [32]byte
 	NumTxns   *big.Int
@@ -456,7 +468,7 @@ func (_Plasma *PlasmaCaller) PlasmaChain(opts *bind.CallOpts, arg0 *big.Int) (st
 
 // PlasmaChain is a free data retrieval call binding the contract method 0x3cdac42c.
 //
-// Solidity: function plasmaChain( uint256) constant returns(header bytes32, numTxns uint256, feeAmount uint256, createdAt uint256)
+// Solidity: function plasmaChain(uint256 ) constant returns(bytes32 header, uint256 numTxns, uint256 feeAmount, uint256 createdAt)
 func (_Plasma *PlasmaSession) PlasmaChain(arg0 *big.Int) (struct {
 	Header    [32]byte
 	NumTxns   *big.Int
@@ -468,7 +480,7 @@ func (_Plasma *PlasmaSession) PlasmaChain(arg0 *big.Int) (struct {
 
 // PlasmaChain is a free data retrieval call binding the contract method 0x3cdac42c.
 //
-// Solidity: function plasmaChain( uint256) constant returns(header bytes32, numTxns uint256, feeAmount uint256, createdAt uint256)
+// Solidity: function plasmaChain(uint256 ) constant returns(bytes32 header, uint256 numTxns, uint256 feeAmount, uint256 createdAt)
 func (_Plasma *PlasmaCallerSession) PlasmaChain(arg0 *big.Int) (struct {
 	Header    [32]byte
 	NumTxns   *big.Int
@@ -532,7 +544,7 @@ func (_Plasma *PlasmaCallerSession) TotalWithdrawBalance() (*big.Int, error) {
 
 // TxExitQueue is a free data retrieval call binding the contract method 0x875b8ea0.
 //
-// Solidity: function txExitQueue( uint256) constant returns(uint256)
+// Solidity: function txExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaCaller) TxExitQueue(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
 	var (
 		ret0 = new(*big.Int)
@@ -544,21 +556,21 @@ func (_Plasma *PlasmaCaller) TxExitQueue(opts *bind.CallOpts, arg0 *big.Int) (*b
 
 // TxExitQueue is a free data retrieval call binding the contract method 0x875b8ea0.
 //
-// Solidity: function txExitQueue( uint256) constant returns(uint256)
+// Solidity: function txExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaSession) TxExitQueue(arg0 *big.Int) (*big.Int, error) {
 	return _Plasma.Contract.TxExitQueue(&_Plasma.CallOpts, arg0)
 }
 
 // TxExitQueue is a free data retrieval call binding the contract method 0x875b8ea0.
 //
-// Solidity: function txExitQueue( uint256) constant returns(uint256)
+// Solidity: function txExitQueue(uint256 ) constant returns(uint256)
 func (_Plasma *PlasmaCallerSession) TxExitQueue(arg0 *big.Int) (*big.Int, error) {
 	return _Plasma.Contract.TxExitQueue(&_Plasma.CallOpts, arg0)
 }
 
 // TxExits is a free data retrieval call binding the contract method 0x6d3d8b1a.
 //
-// Solidity: function txExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function txExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaCaller) TxExits(opts *bind.CallOpts, arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -580,7 +592,7 @@ func (_Plasma *PlasmaCaller) TxExits(opts *bind.CallOpts, arg0 *big.Int) (struct
 
 // TxExits is a free data retrieval call binding the contract method 0x6d3d8b1a.
 //
-// Solidity: function txExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function txExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaSession) TxExits(arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -593,7 +605,7 @@ func (_Plasma *PlasmaSession) TxExits(arg0 *big.Int) (struct {
 
 // TxExits is a free data retrieval call binding the contract method 0x6d3d8b1a.
 //
-// Solidity: function txExits( uint256) constant returns(amount uint256, committedFee uint256, createdAt uint256, owner address, state uint8)
+// Solidity: function txExits(uint256 ) constant returns(uint256 amount, uint256 committedFee, uint256 createdAt, address owner, uint8 state)
 func (_Plasma *PlasmaCallerSession) TxExits(arg0 *big.Int) (struct {
 	Amount       *big.Int
 	CommittedFee *big.Int
@@ -606,63 +618,63 @@ func (_Plasma *PlasmaCallerSession) TxExits(arg0 *big.Int) (struct {
 
 // ChallengeExit is a paid mutator transaction binding the contract method 0xd344e8e4.
 //
-// Solidity: function challengeExit(exitingTxPos uint256[4], challengingTxPos uint256[2], txBytes bytes, proof bytes, confirmSignature bytes) returns()
+// Solidity: function challengeExit(uint256[4] exitingTxPos, uint256[2] challengingTxPos, bytes txBytes, bytes proof, bytes confirmSignature) returns()
 func (_Plasma *PlasmaTransactor) ChallengeExit(opts *bind.TransactOpts, exitingTxPos [4]*big.Int, challengingTxPos [2]*big.Int, txBytes []byte, proof []byte, confirmSignature []byte) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "challengeExit", exitingTxPos, challengingTxPos, txBytes, proof, confirmSignature)
 }
 
 // ChallengeExit is a paid mutator transaction binding the contract method 0xd344e8e4.
 //
-// Solidity: function challengeExit(exitingTxPos uint256[4], challengingTxPos uint256[2], txBytes bytes, proof bytes, confirmSignature bytes) returns()
+// Solidity: function challengeExit(uint256[4] exitingTxPos, uint256[2] challengingTxPos, bytes txBytes, bytes proof, bytes confirmSignature) returns()
 func (_Plasma *PlasmaSession) ChallengeExit(exitingTxPos [4]*big.Int, challengingTxPos [2]*big.Int, txBytes []byte, proof []byte, confirmSignature []byte) (*types.Transaction, error) {
 	return _Plasma.Contract.ChallengeExit(&_Plasma.TransactOpts, exitingTxPos, challengingTxPos, txBytes, proof, confirmSignature)
 }
 
 // ChallengeExit is a paid mutator transaction binding the contract method 0xd344e8e4.
 //
-// Solidity: function challengeExit(exitingTxPos uint256[4], challengingTxPos uint256[2], txBytes bytes, proof bytes, confirmSignature bytes) returns()
+// Solidity: function challengeExit(uint256[4] exitingTxPos, uint256[2] challengingTxPos, bytes txBytes, bytes proof, bytes confirmSignature) returns()
 func (_Plasma *PlasmaTransactorSession) ChallengeExit(exitingTxPos [4]*big.Int, challengingTxPos [2]*big.Int, txBytes []byte, proof []byte, confirmSignature []byte) (*types.Transaction, error) {
 	return _Plasma.Contract.ChallengeExit(&_Plasma.TransactOpts, exitingTxPos, challengingTxPos, txBytes, proof, confirmSignature)
 }
 
 // ChangeOperator is a paid mutator transaction binding the contract method 0x06394c9b.
 //
-// Solidity: function changeOperator(newOperator address) returns()
+// Solidity: function changeOperator(address newOperator) returns()
 func (_Plasma *PlasmaTransactor) ChangeOperator(opts *bind.TransactOpts, newOperator common.Address) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "changeOperator", newOperator)
 }
 
 // ChangeOperator is a paid mutator transaction binding the contract method 0x06394c9b.
 //
-// Solidity: function changeOperator(newOperator address) returns()
+// Solidity: function changeOperator(address newOperator) returns()
 func (_Plasma *PlasmaSession) ChangeOperator(newOperator common.Address) (*types.Transaction, error) {
 	return _Plasma.Contract.ChangeOperator(&_Plasma.TransactOpts, newOperator)
 }
 
 // ChangeOperator is a paid mutator transaction binding the contract method 0x06394c9b.
 //
-// Solidity: function changeOperator(newOperator address) returns()
+// Solidity: function changeOperator(address newOperator) returns()
 func (_Plasma *PlasmaTransactorSession) ChangeOperator(newOperator common.Address) (*types.Transaction, error) {
 	return _Plasma.Contract.ChangeOperator(&_Plasma.TransactOpts, newOperator)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0xf340fa01.
 //
-// Solidity: function deposit(owner address) returns()
+// Solidity: function deposit(address owner) returns()
 func (_Plasma *PlasmaTransactor) Deposit(opts *bind.TransactOpts, owner common.Address) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "deposit", owner)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0xf340fa01.
 //
-// Solidity: function deposit(owner address) returns()
+// Solidity: function deposit(address owner) returns()
 func (_Plasma *PlasmaSession) Deposit(owner common.Address) (*types.Transaction, error) {
 	return _Plasma.Contract.Deposit(&_Plasma.TransactOpts, owner)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0xf340fa01.
 //
-// Solidity: function deposit(owner address) returns()
+// Solidity: function deposit(address owner) returns()
 func (_Plasma *PlasmaTransactorSession) Deposit(owner common.Address) (*types.Transaction, error) {
 	return _Plasma.Contract.Deposit(&_Plasma.TransactOpts, owner)
 }
@@ -711,84 +723,84 @@ func (_Plasma *PlasmaTransactorSession) FinalizeTransactionExits() (*types.Trans
 
 // StartDepositExit is a paid mutator transaction binding the contract method 0x70e4abf6.
 //
-// Solidity: function startDepositExit(nonce uint256, committedFee uint256) returns()
+// Solidity: function startDepositExit(uint256 nonce, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactor) StartDepositExit(opts *bind.TransactOpts, nonce *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "startDepositExit", nonce, committedFee)
 }
 
 // StartDepositExit is a paid mutator transaction binding the contract method 0x70e4abf6.
 //
-// Solidity: function startDepositExit(nonce uint256, committedFee uint256) returns()
+// Solidity: function startDepositExit(uint256 nonce, uint256 committedFee) returns()
 func (_Plasma *PlasmaSession) StartDepositExit(nonce *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartDepositExit(&_Plasma.TransactOpts, nonce, committedFee)
 }
 
 // StartDepositExit is a paid mutator transaction binding the contract method 0x70e4abf6.
 //
-// Solidity: function startDepositExit(nonce uint256, committedFee uint256) returns()
+// Solidity: function startDepositExit(uint256 nonce, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactorSession) StartDepositExit(nonce *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartDepositExit(&_Plasma.TransactOpts, nonce, committedFee)
 }
 
 // StartFeeExit is a paid mutator transaction binding the contract method 0xed1695df.
 //
-// Solidity: function startFeeExit(blockNumber uint256, committedFee uint256) returns()
+// Solidity: function startFeeExit(uint256 blockNumber, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactor) StartFeeExit(opts *bind.TransactOpts, blockNumber *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "startFeeExit", blockNumber, committedFee)
 }
 
 // StartFeeExit is a paid mutator transaction binding the contract method 0xed1695df.
 //
-// Solidity: function startFeeExit(blockNumber uint256, committedFee uint256) returns()
+// Solidity: function startFeeExit(uint256 blockNumber, uint256 committedFee) returns()
 func (_Plasma *PlasmaSession) StartFeeExit(blockNumber *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartFeeExit(&_Plasma.TransactOpts, blockNumber, committedFee)
 }
 
 // StartFeeExit is a paid mutator transaction binding the contract method 0xed1695df.
 //
-// Solidity: function startFeeExit(blockNumber uint256, committedFee uint256) returns()
+// Solidity: function startFeeExit(uint256 blockNumber, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactorSession) StartFeeExit(blockNumber *big.Int, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartFeeExit(&_Plasma.TransactOpts, blockNumber, committedFee)
 }
 
 // StartTransactionExit is a paid mutator transaction binding the contract method 0xcf024ea6.
 //
-// Solidity: function startTransactionExit(txPos uint256[3], txBytes bytes, proof bytes, confirmSignatures bytes, committedFee uint256) returns()
+// Solidity: function startTransactionExit(uint256[3] txPos, bytes txBytes, bytes proof, bytes confirmSignatures, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactor) StartTransactionExit(opts *bind.TransactOpts, txPos [3]*big.Int, txBytes []byte, proof []byte, confirmSignatures []byte, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "startTransactionExit", txPos, txBytes, proof, confirmSignatures, committedFee)
 }
 
 // StartTransactionExit is a paid mutator transaction binding the contract method 0xcf024ea6.
 //
-// Solidity: function startTransactionExit(txPos uint256[3], txBytes bytes, proof bytes, confirmSignatures bytes, committedFee uint256) returns()
+// Solidity: function startTransactionExit(uint256[3] txPos, bytes txBytes, bytes proof, bytes confirmSignatures, uint256 committedFee) returns()
 func (_Plasma *PlasmaSession) StartTransactionExit(txPos [3]*big.Int, txBytes []byte, proof []byte, confirmSignatures []byte, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartTransactionExit(&_Plasma.TransactOpts, txPos, txBytes, proof, confirmSignatures, committedFee)
 }
 
 // StartTransactionExit is a paid mutator transaction binding the contract method 0xcf024ea6.
 //
-// Solidity: function startTransactionExit(txPos uint256[3], txBytes bytes, proof bytes, confirmSignatures bytes, committedFee uint256) returns()
+// Solidity: function startTransactionExit(uint256[3] txPos, bytes txBytes, bytes proof, bytes confirmSignatures, uint256 committedFee) returns()
 func (_Plasma *PlasmaTransactorSession) StartTransactionExit(txPos [3]*big.Int, txBytes []byte, proof []byte, confirmSignatures []byte, committedFee *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.StartTransactionExit(&_Plasma.TransactOpts, txPos, txBytes, proof, confirmSignatures, committedFee)
 }
 
 // SubmitBlock is a paid mutator transaction binding the contract method 0xd84ba62f.
 //
-// Solidity: function submitBlock(headers bytes32[], txnsPerBlock uint256[], feePerBlock uint256[], blockNum uint256) returns()
+// Solidity: function submitBlock(bytes32[] headers, uint256[] txnsPerBlock, uint256[] feePerBlock, uint256 blockNum) returns()
 func (_Plasma *PlasmaTransactor) SubmitBlock(opts *bind.TransactOpts, headers [][32]byte, txnsPerBlock []*big.Int, feePerBlock []*big.Int, blockNum *big.Int) (*types.Transaction, error) {
 	return _Plasma.contract.Transact(opts, "submitBlock", headers, txnsPerBlock, feePerBlock, blockNum)
 }
 
 // SubmitBlock is a paid mutator transaction binding the contract method 0xd84ba62f.
 //
-// Solidity: function submitBlock(headers bytes32[], txnsPerBlock uint256[], feePerBlock uint256[], blockNum uint256) returns()
+// Solidity: function submitBlock(bytes32[] headers, uint256[] txnsPerBlock, uint256[] feePerBlock, uint256 blockNum) returns()
 func (_Plasma *PlasmaSession) SubmitBlock(headers [][32]byte, txnsPerBlock []*big.Int, feePerBlock []*big.Int, blockNum *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.SubmitBlock(&_Plasma.TransactOpts, headers, txnsPerBlock, feePerBlock, blockNum)
 }
 
 // SubmitBlock is a paid mutator transaction binding the contract method 0xd84ba62f.
 //
-// Solidity: function submitBlock(headers bytes32[], txnsPerBlock uint256[], feePerBlock uint256[], blockNum uint256) returns()
+// Solidity: function submitBlock(bytes32[] headers, uint256[] txnsPerBlock, uint256[] feePerBlock, uint256 blockNum) returns()
 func (_Plasma *PlasmaTransactorSession) SubmitBlock(headers [][32]byte, txnsPerBlock []*big.Int, feePerBlock []*big.Int, blockNum *big.Int) (*types.Transaction, error) {
 	return _Plasma.Contract.SubmitBlock(&_Plasma.TransactOpts, headers, txnsPerBlock, feePerBlock, blockNum)
 }
@@ -890,7 +902,7 @@ type PlasmaAddedToBalances struct {
 
 // FilterAddedToBalances is a free log retrieval operation binding the contract event 0xf8552a24c7d58fd05114f6fc9db7b3a354db64d5fc758184af1696ccd8f158f3.
 //
-// Solidity: e AddedToBalances(owner address, amount uint256)
+// Solidity: event AddedToBalances(address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) FilterAddedToBalances(opts *bind.FilterOpts) (*PlasmaAddedToBalancesIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "AddedToBalances")
@@ -902,7 +914,7 @@ func (_Plasma *PlasmaFilterer) FilterAddedToBalances(opts *bind.FilterOpts) (*Pl
 
 // WatchAddedToBalances is a free log subscription operation binding the contract event 0xf8552a24c7d58fd05114f6fc9db7b3a354db64d5fc758184af1696ccd8f158f3.
 //
-// Solidity: e AddedToBalances(owner address, amount uint256)
+// Solidity: event AddedToBalances(address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) WatchAddedToBalances(opts *bind.WatchOpts, sink chan<- *PlasmaAddedToBalances) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "AddedToBalances")
@@ -1015,7 +1027,7 @@ type PlasmaBlockSubmitted struct {
 
 // FilterBlockSubmitted is a free log retrieval operation binding the contract event 0x044ff3798f9b3ad55d1155cea9a40508c71b4c64335f5dae87e8e11551515a06.
 //
-// Solidity: e BlockSubmitted(header bytes32, blockNumber uint256, numTxns uint256, feeAmount uint256)
+// Solidity: event BlockSubmitted(bytes32 header, uint256 blockNumber, uint256 numTxns, uint256 feeAmount)
 func (_Plasma *PlasmaFilterer) FilterBlockSubmitted(opts *bind.FilterOpts) (*PlasmaBlockSubmittedIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "BlockSubmitted")
@@ -1027,7 +1039,7 @@ func (_Plasma *PlasmaFilterer) FilterBlockSubmitted(opts *bind.FilterOpts) (*Pla
 
 // WatchBlockSubmitted is a free log subscription operation binding the contract event 0x044ff3798f9b3ad55d1155cea9a40508c71b4c64335f5dae87e8e11551515a06.
 //
-// Solidity: e BlockSubmitted(header bytes32, blockNumber uint256, numTxns uint256, feeAmount uint256)
+// Solidity: event BlockSubmitted(bytes32 header, uint256 blockNumber, uint256 numTxns, uint256 feeAmount)
 func (_Plasma *PlasmaFilterer) WatchBlockSubmitted(opts *bind.WatchOpts, sink chan<- *PlasmaBlockSubmitted) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "BlockSubmitted")
@@ -1139,7 +1151,7 @@ type PlasmaChallengedExit struct {
 
 // FilterChallengedExit is a free log retrieval operation binding the contract event 0xe1289dafb1083e540206bcd7d95a9705ba2590d6a9229c35a1c4c4c5efbda901.
 //
-// Solidity: e ChallengedExit(position uint256[4], owner address, amount uint256)
+// Solidity: event ChallengedExit(uint256[4] position, address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) FilterChallengedExit(opts *bind.FilterOpts) (*PlasmaChallengedExitIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "ChallengedExit")
@@ -1151,7 +1163,7 @@ func (_Plasma *PlasmaFilterer) FilterChallengedExit(opts *bind.FilterOpts) (*Pla
 
 // WatchChallengedExit is a free log subscription operation binding the contract event 0xe1289dafb1083e540206bcd7d95a9705ba2590d6a9229c35a1c4c4c5efbda901.
 //
-// Solidity: e ChallengedExit(position uint256[4], owner address, amount uint256)
+// Solidity: event ChallengedExit(uint256[4] position, address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) WatchChallengedExit(opts *bind.WatchOpts, sink chan<- *PlasmaChallengedExit) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "ChallengedExit")
@@ -1262,7 +1274,7 @@ type PlasmaChangedOperator struct {
 
 // FilterChangedOperator is a free log retrieval operation binding the contract event 0x3aff32e6289f2f2a2463481071051456b2768bb391c64ae3c91f9033e208cda1.
 //
-// Solidity: e ChangedOperator(oldOperator address, newOperator address)
+// Solidity: event ChangedOperator(address oldOperator, address newOperator)
 func (_Plasma *PlasmaFilterer) FilterChangedOperator(opts *bind.FilterOpts) (*PlasmaChangedOperatorIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "ChangedOperator")
@@ -1274,7 +1286,7 @@ func (_Plasma *PlasmaFilterer) FilterChangedOperator(opts *bind.FilterOpts) (*Pl
 
 // WatchChangedOperator is a free log subscription operation binding the contract event 0x3aff32e6289f2f2a2463481071051456b2768bb391c64ae3c91f9033e208cda1.
 //
-// Solidity: e ChangedOperator(oldOperator address, newOperator address)
+// Solidity: event ChangedOperator(address oldOperator, address newOperator)
 func (_Plasma *PlasmaFilterer) WatchChangedOperator(opts *bind.WatchOpts, sink chan<- *PlasmaChangedOperator) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "ChangedOperator")
@@ -1387,7 +1399,7 @@ type PlasmaDeposit struct {
 
 // FilterDeposit is a free log retrieval operation binding the contract event 0x36af321ec8d3c75236829c5317affd40ddb308863a1236d2d277a4025cccee1e.
 //
-// Solidity: e Deposit(depositor address, amount uint256, depositNonce uint256, ethBlockNum uint256)
+// Solidity: event Deposit(address depositor, uint256 amount, uint256 depositNonce, uint256 ethBlockNum)
 func (_Plasma *PlasmaFilterer) FilterDeposit(opts *bind.FilterOpts) (*PlasmaDepositIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "Deposit")
@@ -1399,7 +1411,7 @@ func (_Plasma *PlasmaFilterer) FilterDeposit(opts *bind.FilterOpts) (*PlasmaDepo
 
 // WatchDeposit is a free log subscription operation binding the contract event 0x36af321ec8d3c75236829c5317affd40ddb308863a1236d2d277a4025cccee1e.
 //
-// Solidity: e Deposit(depositor address, amount uint256, depositNonce uint256, ethBlockNum uint256)
+// Solidity: event Deposit(address depositor, uint256 amount, uint256 depositNonce, uint256 ethBlockNum)
 func (_Plasma *PlasmaFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *PlasmaDeposit) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "Deposit")
@@ -1511,7 +1523,7 @@ type PlasmaFinalizedExit struct {
 
 // FilterFinalizedExit is a free log retrieval operation binding the contract event 0xb5083a27a38f8a9aa999efb3306b7be96dc3f42010a968dd86627880ba7fdbe2.
 //
-// Solidity: e FinalizedExit(position uint256[4], owner address, amount uint256)
+// Solidity: event FinalizedExit(uint256[4] position, address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) FilterFinalizedExit(opts *bind.FilterOpts) (*PlasmaFinalizedExitIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "FinalizedExit")
@@ -1523,7 +1535,7 @@ func (_Plasma *PlasmaFilterer) FilterFinalizedExit(opts *bind.FilterOpts) (*Plas
 
 // WatchFinalizedExit is a free log subscription operation binding the contract event 0xb5083a27a38f8a9aa999efb3306b7be96dc3f42010a968dd86627880ba7fdbe2.
 //
-// Solidity: e FinalizedExit(position uint256[4], owner address, amount uint256)
+// Solidity: event FinalizedExit(uint256[4] position, address owner, uint256 amount)
 func (_Plasma *PlasmaFilterer) WatchFinalizedExit(opts *bind.WatchOpts, sink chan<- *PlasmaFinalizedExit) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "FinalizedExit")
@@ -1636,7 +1648,7 @@ type PlasmaStartedDepositExit struct {
 
 // FilterStartedDepositExit is a free log retrieval operation binding the contract event 0xe90dc7204eb622c87d2c8d67d8e27afdfd34042584591e7b3d35014873cf9cfd.
 //
-// Solidity: e StartedDepositExit(nonce uint256, owner address, amount uint256, committedFee uint256)
+// Solidity: event StartedDepositExit(uint256 nonce, address owner, uint256 amount, uint256 committedFee)
 func (_Plasma *PlasmaFilterer) FilterStartedDepositExit(opts *bind.FilterOpts) (*PlasmaStartedDepositExitIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "StartedDepositExit")
@@ -1648,7 +1660,7 @@ func (_Plasma *PlasmaFilterer) FilterStartedDepositExit(opts *bind.FilterOpts) (
 
 // WatchStartedDepositExit is a free log subscription operation binding the contract event 0xe90dc7204eb622c87d2c8d67d8e27afdfd34042584591e7b3d35014873cf9cfd.
 //
-// Solidity: e StartedDepositExit(nonce uint256, owner address, amount uint256, committedFee uint256)
+// Solidity: event StartedDepositExit(uint256 nonce, address owner, uint256 amount, uint256 committedFee)
 func (_Plasma *PlasmaFilterer) WatchStartedDepositExit(opts *bind.WatchOpts, sink chan<- *PlasmaStartedDepositExit) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "StartedDepositExit")
@@ -1762,7 +1774,7 @@ type PlasmaStartedTransactionExit struct {
 
 // FilterStartedTransactionExit is a free log retrieval operation binding the contract event 0x20d695720ae96d3511520c6f51d6ab23aa19a3796da77024ad027b344bb72530.
 //
-// Solidity: e StartedTransactionExit(position uint256[3], owner address, amount uint256, confirmSignatures bytes, committedFee uint256)
+// Solidity: event StartedTransactionExit(uint256[3] position, address owner, uint256 amount, bytes confirmSignatures, uint256 committedFee)
 func (_Plasma *PlasmaFilterer) FilterStartedTransactionExit(opts *bind.FilterOpts) (*PlasmaStartedTransactionExitIterator, error) {
 
 	logs, sub, err := _Plasma.contract.FilterLogs(opts, "StartedTransactionExit")
@@ -1774,7 +1786,7 @@ func (_Plasma *PlasmaFilterer) FilterStartedTransactionExit(opts *bind.FilterOpt
 
 // WatchStartedTransactionExit is a free log subscription operation binding the contract event 0x20d695720ae96d3511520c6f51d6ab23aa19a3796da77024ad027b344bb72530.
 //
-// Solidity: e StartedTransactionExit(position uint256[3], owner address, amount uint256, confirmSignatures bytes, committedFee uint256)
+// Solidity: event StartedTransactionExit(uint256[3] position, address owner, uint256 amount, bytes confirmSignatures, uint256 committedFee)
 func (_Plasma *PlasmaFilterer) WatchStartedTransactionExit(opts *bind.WatchOpts, sink chan<- *PlasmaStartedTransactionExit) (event.Subscription, error) {
 
 	logs, sub, err := _Plasma.contract.WatchLogs(opts, "StartedTransactionExit")
