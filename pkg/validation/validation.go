@@ -17,6 +17,9 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 	if tx.Body.Output0.Amount.Cmp(big.NewInt(0)) == -1 {
 		return NewErrNegativeOutput(0)
 	}
+	if tx.Body.Output1.Amount.Cmp(big.NewInt(0)) == -1 {
+		return NewErrNegativeOutput(1)
+	}
 
 	prevTx0Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input0.BlockNumber, tx.Body.Input0.TransactionIndex)
 	if err == leveldb.ErrNotFound {
@@ -40,8 +43,8 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 	totalInput = totalInput.Add(totalInput, prevTx0Output.Amount)
 
 	if !tx.Body.Input1.IsZero() {
-		if tx.Body.Output1.Amount.Cmp(big.NewInt(0)) == -1 {
-			return NewErrNegativeOutput(1)
+		if tx.Body.Input1.BlockNumber == tx.Body.Input0.BlockNumber && tx.Body.Input1.TransactionIndex == tx.Body.Input0.TransactionIndex && tx.Body.Input1.OutputIndex == tx.Body.Input0.OutputIndex {
+			return NewErrIdenticalInputs()
 		}
 
 		prevTx1Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input1.BlockNumber, tx.Body.Input1.TransactionIndex)
@@ -51,8 +54,10 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		if err != nil {
 			return err
 		}
-
 		prevTx1 := prevTx1Conf.Transaction
+		if prevTx1Conf.ConfirmSigs[1] != tx.Body.Input1ConfirmSig {
+			return NewErrConfirmSigMismatch(1)
+		}
 		prevTx1Output := prevTx1.Body.OutputAt(tx.Body.Input1.OutputIndex)
 		sigHash1 := tx.Body.SignatureHash()
 		err = eth.ValidateSignature(sigHash1, tx.Sigs[1][:], prevTx1Output.Owner)

@@ -251,10 +251,7 @@
 [[projects]]
   digest = "1:8ee30ce90cdb86c549810a4c6a67356f6bf93c76b0b4d3f33caa0c2f85c5b5e0"
   name = "github.com/rs/cors"
-  packages = [
-    ".",
-    "wrapper/gin",
-  ]
+  packages = ["."]
   pruneopts = "T"
   revision = "ca016a06a5753f8ba03029c0aa5e54afb1bf713f"
   version = "v1.4.0"
@@ -319,11 +316,21 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:8d58d88a7b2a7440509bee60f3e865773e8f79e622817ddb63ba3cda9efba25a"
+  name = "github.com/stretchr/objx"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "477a77ecc69700c7cdeb1fa9e129548e1c1c393c"
+  version = "v0.1.1"
+
+[[projects]]
   digest = "1:e95496462101745805bd4e041a5b841e108c7cf761264d53648246308de2761e"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
+    "mock",
     "require",
+    "suite",
   ]
   pruneopts = "T"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -537,11 +544,12 @@
     "github.com/golang/protobuf/proto",
     "github.com/mitchellh/go-homedir",
     "github.com/pkg/errors",
-    "github.com/rs/cors/wrapper/gin",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/viper",
+    "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
+    "github.com/stretchr/testify/suite",
     "github.com/syndtr/goleveldb/leveldb",
     "github.com/syndtr/goleveldb/leveldb/util",
     "golang.org/x/crypto/sha3",

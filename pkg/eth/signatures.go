@@ -7,7 +7,7 @@ import (
 	"errors"
 	"github.com/kyokan/plasma/pkg/chain"
 	"github.com/kyokan/plasma/util"
-)
+	)
 
 func Sign(privKey *ecdsa.PrivateKey, hash util.Hash) (chain.Signature, error) {
 	ethHash := util.GethHash(hash)
