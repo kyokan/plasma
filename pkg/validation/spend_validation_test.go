@@ -84,7 +84,7 @@ func (v *spendValidationSuite) TestTxNotFound_Input0() {
 func (v *spendValidationSuite) TestTxNotFound_Input1() {
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	tx.Body.Input1.BlockNumber = 10
-	err := resign(tx, v.key, 0)
+	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
 	requireNotFound(v.T(), v.storage, tx, 1)
 }
@@ -106,7 +106,7 @@ func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input1() {
 	tx.Body.Input1.BlockNumber = 1
 	tx.Body.Input1.TransactionIndex = 0
 	tx.Body.Input1ConfirmSig = sig
-	err := resign(tx, v.key, 0)
+	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
 	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 1)
 }
@@ -126,7 +126,7 @@ func (v *spendValidationSuite) TestInvalidSigs_Input1() {
 	tx.Body.Input1.BlockNumber = 1
 	tx.Body.Input1.TransactionIndex = 0
 	tx.Body.Input1ConfirmSig = tx.Body.Input0ConfirmSig
-	err := resign(tx, v.key, 0)
+	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
 	requireInvalidSignature(v.T(), v.storage, tx, 1)
 }
@@ -134,9 +134,9 @@ func (v *spendValidationSuite) TestInvalidSigs_Input1() {
 func (v *spendValidationSuite) TestInputOutputValueMismatch() {
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	tx.Body.Output0.Amount = tx.Body.Output0.Amount.Mul(tx.Body.Output0.Amount, big.NewInt(10))
-	err := resign(tx, v.key, 0)
+	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
-	err = resign(tx, v.key, 1)
+	err = reSign(tx, v.key, 1)
 	require.NoError(v.T(), err)
 	err = ValidateSpendTransaction(v.storage, tx)
 	require.Error(v.T(), err)
@@ -153,9 +153,9 @@ func (v *spendValidationSuite) TestDoubleSpend() {
 func (v *spendValidationSuite) TestIdenticalInputs() {
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	tx.Body.Input1 = tx.Body.Input0
-	err := resign(tx, v.key, 0)
+	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
-	err = resign(tx, v.key, 1)
+	err = reSign(tx, v.key, 1)
 	require.NoError(v.T(), err)
 	err = ValidateSpendTransaction(v.storage, tx)
 	require.Error(v.T(), err)
@@ -232,7 +232,7 @@ func unmarshalBlockWithMeta(fixture []byte) (*chain.BlockWithMeta, error) {
 	return &bwm, nil
 }
 
-func resign(tx *chain.Transaction, key *ecdsa.PrivateKey, index int) error {
+func reSign(tx *chain.Transaction, key *ecdsa.PrivateKey, index int) error {
 	hash := tx.Body.SignatureHash()
 	sig, err := eth.Sign(key, hash)
 	if err != nil {
