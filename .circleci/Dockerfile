@@ -6,7 +6,7 @@ RUN apt-get update && \
     echo "deb https://deb.nodesource.com/node_11.x bionic main" | tee /etc/apt/sources.list.d/nodesource.list && \
     echo "deb-src https://deb.nodesource.com/node_11.x bionic main" | tee -a /etc/apt/sources.list.d/nodesource.list && \
     apt-get update && \
-    apt-get install -y build-essential git ca-certificates gzip nodejs unzip && \
+    apt-get install -y build-essential git ca-certificates gzip nodejs unzip jq && \
     mkdir -p /root/.npm && \
     chmod -R 777 /root/.npm && \
     npm i -g truffle && \
