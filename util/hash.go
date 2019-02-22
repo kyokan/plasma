@@ -59,6 +59,10 @@ func Sha256(b []byte) Hash {
 }
 
 func GethHash(b []byte) Hash {
+	if len(b) != 32 {
+		panic("hash must be 32 bytes")
+	}
+
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write([]byte("\x19Ethereum Signed Message:\n32"))
 	hasher.Write(b)

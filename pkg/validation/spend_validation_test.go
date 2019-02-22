@@ -11,10 +11,10 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"fmt"
 	"github.com/stretchr/testify/require"
-	"crypto/rand"
-	"crypto/ecdsa"
+		"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/pkg/eth"
+	"crypto/rand"
 )
 
 type spendValidationSuite struct {
@@ -90,33 +90,33 @@ func (v *spendValidationSuite) TestTxNotFound_Input1() {
 }
 
 func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input0() {
-	var sig chain.Signature
-	fillRand(sig[:])
+	sig, err := randSig()
+	require.NoError(v.T(), err)
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	tx.Body.Input0ConfirmSig = sig
 	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 0)
 }
 
 func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input1() {
-	var sig chain.Signature
-	fillRand(sig[:])
+	sig, err := randSig()
+	require.NoError(v.T(), err)
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	// need to re-sign here to get past the signature checker
 	// on input 0
 	tx.Body.Input1.BlockNumber = 1
 	tx.Body.Input1.TransactionIndex = 0
 	tx.Body.Input1ConfirmSig = sig
-	err := reSign(tx, v.key, 0)
+	err = reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
 	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 1)
 }
 
 func (v *spendValidationSuite) TestInvalidSigs_Input0() {
-	var sig chain.Signature
-	fillRand(sig[:])
+	sig, err := randSig()
+	require.NoError(v.T(), err)
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
 	tx.Sigs[0] = sig
-	requireInvalidSignature(v.T(), v.storage, tx, 0)
+	requireInvalidSpendSignature(v.T(), v.storage, tx, 0)
 }
 
 func (v *spendValidationSuite) TestInvalidSigs_Input1() {
@@ -128,7 +128,7 @@ func (v *spendValidationSuite) TestInvalidSigs_Input1() {
 	tx.Body.Input1ConfirmSig = tx.Body.Input0ConfirmSig
 	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
-	requireInvalidSignature(v.T(), v.storage, tx, 1)
+	requireInvalidSpendSignature(v.T(), v.storage, tx, 1)
 }
 
 func (v *spendValidationSuite) TestInputOutputValueMismatch() {
@@ -189,7 +189,7 @@ func requireMismatchedConfirmSigs(t *testing.T, storage db.Storage, tx *chain.Tr
 	require.Equal(t, inputIndex, err.(*ErrConfirmSigMismatch).InputIndex)
 }
 
-func requireInvalidSignature(t *testing.T, storage db.Storage, tx *chain.Transaction, inputIndex uint8) {
+func requireInvalidSpendSignature(t *testing.T, storage db.Storage, tx *chain.Transaction, inputIndex uint8) {
 	err := ValidateSpendTransaction(storage, tx)
 	require.Error(t, err)
 	require.IsType(t, &ErrInvalidSignature{}, err)
@@ -216,13 +216,6 @@ func inflateFixture(fixtureName string) (*chain.BlockWithMeta, error) {
 	return unmarshalBlockWithMeta(fixture)
 }
 
-func fillRand(buf []byte) {
-	_, err := rand.Read(buf)
-	if err != nil {
-		panic(err)
-	}
-}
-
 func unmarshalBlockWithMeta(fixture []byte) (*chain.BlockWithMeta, error) {
 	var bwm chain.BlockWithMeta
 	err := json.Unmarshal(fixture, &bwm)
@@ -240,4 +233,10 @@ func reSign(tx *chain.Transaction, key *ecdsa.PrivateKey, index int) error {
 	}
 	tx.Sigs[index] = sig
 	return nil
+}
+
+func randSig() (chain.Signature, error) {
+	var sig chain.Signature
+	_, err := rand.Read(sig[:])
+	return sig, err
 }

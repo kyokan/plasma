@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"errors"
 	"github.com/kyokan/plasma/pkg/merkle"
-)
+		)
 
 func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error) {
 	if tx.Body.Output0.Amount.Cmp(big.NewInt(0)) == -1 {
@@ -97,11 +97,12 @@ func ValidateDepositTransaction(storage db.Storage, client eth.Client, tx *chain
 	if tx.Body.Output1.Amount.Cmp(big.NewInt(0)) == -1 {
 		return NewErrNegativeOutput(1)
 	}
-	if !tx.Body.Input1.IsZero() {
+
+	var emptySig chain.Signature
+	if !tx.Body.Input1.IsZero() || tx.Body.Input1ConfirmSig != emptySig {
 		return NewErrDepositDefinedInput1()
 	}
 
-	var emptySig chain.Signature
 	if tx.Body.Input0ConfirmSig != emptySig {
 		return NewErrDepositNonEmptyConfirmSig()
 	}

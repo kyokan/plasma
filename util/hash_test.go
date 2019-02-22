@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"testing"
+	"bytes"
 )
 
 type testHashStruct struct {
@@ -54,4 +55,29 @@ func (h *hashSuite) TestHash_MarshallingInStruct() {
 
 func TestHashSuite(t *testing.T) {
 	suite.Run(t, new(hashSuite))
+}
+
+func TestKeccak256(t *testing.T) {
+	expected, err := hexutil.Decode("0x1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8")
+	require.NoError(t, err)
+	data := []byte("hello")
+	hash := Keccak256(data)
+	require.True(t, bytes.Equal(expected, hash))
+}
+
+func TestSha256(t *testing.T) {
+	expected, err := hexutil.Decode("0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+	require.NoError(t, err)
+	data := []byte("hello")
+	hash := Sha256(data)
+	require.True(t, bytes.Equal(expected, hash))
+}
+
+func TestGethHash(t *testing.T) {
+	expected, err := hexutil.Decode("0x31073a1d3eacb5cb2c0c310537454b962d0acf53a96256646667988d1d57d09d")
+	require.NoError(t, err)
+	input, err := hexutil.Decode("0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824")
+	require.NoError(t, err)
+	hash := GethHash(input)
+	require.True(t, bytes.Equal(expected, hash))
 }

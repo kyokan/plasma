@@ -35,7 +35,7 @@ func ValidateSignature(hash, signature []byte, address common.Address) error {
 	}
 
 	signatureAddress := crypto.PubkeyToAddress(*pubKey)
-	if !util.AddressesEqual(&address, &signatureAddress) {
+	if address != signatureAddress {
 		return errors.New("invalid signature")
 	}
 	return nil

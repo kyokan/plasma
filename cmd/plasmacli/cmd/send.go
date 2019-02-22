@@ -16,8 +16,7 @@ import (
 	"bytes"
 	"github.com/kyokan/plasma/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"fmt"
-	"sort"
+		"sort"
 )
 
 type sendCmdOutput struct {
@@ -97,7 +96,6 @@ func SpendDeposit(client pb.RootClient, contract eth.Client, privKey *ecdsa.Priv
 		body.Output1.Owner = from
 	}
 
-	fmt.Println("sighash", hexutil.Encode(body.SignatureHash()))
 	sig, err := eth.Sign(privKey, body.SignatureHash())
 	if err != nil {
 		return err

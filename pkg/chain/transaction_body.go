@@ -138,13 +138,13 @@ func (b *TransactionBody) OutputAt(idx uint8) *Output {
 func (b *TransactionBody) lookupOutput(addr *common.Address) (*Output, uint8) {
 	output := b.OutputAt(0)
 
-	if util.AddressesEqual(&output.Owner, addr) {
+	if output.Owner == *addr {
 		return output, 0
 	}
 
 	output = b.OutputAt(1)
 
-	if util.AddressesEqual(&output.Owner, addr) {
+	if output.Owner == *addr {
 		return output, 1
 	}
 
