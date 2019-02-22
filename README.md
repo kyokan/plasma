@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/kyokan/plasma/tree/master.svg?style=svg)](https://circleci.com/gh/kyokan/plasma/tree/master)
+
 # Plasma
 
 This project is a golang implementation and extension of the [Minimum Viable Plasma](https://ethresear.ch/t/minimal-viable-plasma/426) specification. We aim to build a Plasma implementation that can withstand the rigors of production deployment while retaining as much trustlessness as possible.
