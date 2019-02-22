@@ -31,6 +31,8 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH" && \
     curl https://raw.githubusercontent.com/golang/dep/master/install.sh -o install.sh && \
     echo "9507d8826574a5b25cf069ab9311793e5d5fc88bba3bdfd02131fae8f50ed1bc  install.sh" | sha256sum -c && \
     sh install.sh && \
-    echo "export PATH=$PATH" > /etc/environment
+    echo "export PATH=$PATH" > /etc/environment && \
+    go get -u github.com/golang/protobuf/protoc-gen-go && \
+    go install github.com/golang/protobuf/protoc-gen-go
 
 WORKDIR $GOPATH
