@@ -28,3 +28,4 @@ jobs:
     - run: make build-plasmad
     - run: make build-plasmacli
     - run: make build-harness
+    - run: make test-unit
