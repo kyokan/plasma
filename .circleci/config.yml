@@ -24,6 +24,7 @@ jobs:
     - run: go get github.com/ethereum/go-ethereum
     - run: cd /go/src/github.com/ethereum/go-ethereum && go install ./cmd/abigen
     - run: make abigen
+    - run: make protogen
     - run: make build-plasmad
     - run: make build-plasmacli
     - run: make build-harness
