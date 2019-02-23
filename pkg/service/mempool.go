@@ -30,6 +30,7 @@ type TxInclusionResponse struct {
 
 type Mempool struct {
 	txReqs     chan *txRequest
+	validatedTxReqs     chan *txRequest
 	quit       chan bool
 	flushReq   chan flushSpendReq
 	txPool     []MempoolTx
@@ -50,14 +51,39 @@ type flushSpendReq struct {
 
 func NewMempool(storage db.Storage, client eth.Client) *Mempool {
 	return &Mempool{
-		txReqs:     make(chan *txRequest),
-		quit:       make(chan bool),
-		flushReq:   make(chan flushSpendReq),
-		txPool:     make([]MempoolTx, 0),
-		poolSpends: make(map[string]bool),
-		storage:    storage,
-		client:     client,
+		txReqs:           make(chan *txRequest),
+                validatedTxReqs:  make(chan *txRequest),
+		quit:             make(chan bool),
+		flushReq:         make(chan flushSpendReq),
+		txPool:           make([]MempoolTx, 0),
+		poolSpends:       make(map[string]bool),
+		storage:          storage,
+		client:           client,
 	}
+}
+
+func (m *Mempool) validateTransactionRequest(req *txRequest) {
+        tx := req.tx
+        var err error
+        if tx.Body.IsDeposit() {
+                err = m.VerifyDepositTransaction(&tx)
+        } else {
+                // 300-500us
+                err = m.VerifySpendTransaction(&tx)
+        }
+        if err != nil {
+                mPoolLogger.WithFields(logrus.Fields{
+                        "hash":   tx.Body.SignatureHash().Hex(),
+                        "reason": err,
+                }).Warn("transaction rejected from mempool")
+
+                req.res <- TxInclusionResponse{
+                        Error: err,
+                }
+                return
+        }
+
+        m.validatedTxReqs <- req
 }
 
 func (m *Mempool) Start() error {
@@ -65,21 +91,18 @@ func (m *Mempool) Start() error {
 		for {
 			select {
 			case req := <-m.txReqs:
-				if len(m.txPool) == MaxMempoolSize {
-					req.res <- TxInclusionResponse{
-						Error: errors.New("mempool is full"),
-					}
-					continue
-				}
+                                go m.validateTransactionRequest(req)
+                        case req := <-m.validatedTxReqs:
+                                if len(m.txPool) == MaxMempoolSize {
+                                  req.res <- TxInclusionResponse{
+                                    Error: errors.New("mempool is full"),
+                                  }
+                                  continue
+                                }
 
-				tx := req.tx
-				var err error
-				if tx.Body.IsDeposit() {
-					err = m.VerifyDepositTransaction(&tx)
-				} else {
-					err = m.VerifySpendTransaction(&tx)
-				}
-				if err != nil {
+                                tx := req.tx
+
+                                if err := m.ensureNoPoolSpend(&tx); err != nil {
 					mPoolLogger.WithFields(logrus.Fields{
 						"hash":   tx.Body.SignatureHash().Hex(),
 						"reason": err,
@@ -90,10 +113,13 @@ func (m *Mempool) Start() error {
 					}
 					continue
 				}
+
 				m.txPool = append(m.txPool, MempoolTx{
 					Tx:       tx,
 					Response: req.res,
 				})
+
+                                // 3us
 				m.updatePoolSpends(&tx)
 			case req := <-m.flushReq:
 				res := m.txPool
@@ -134,18 +160,10 @@ func (m *Mempool) Append(tx chain.Transaction) TxInclusionResponse {
 }
 
 func (m *Mempool) VerifySpendTransaction(tx *chain.Transaction) (error) {
-	if err := m.ensureNoPoolSpend(tx); err != nil {
-		return err
-	}
-
 	return validation.ValidateSpendTransaction(m.storage, tx)
 }
 
 func (m *Mempool) VerifyDepositTransaction(tx *chain.Transaction) error {
-	if err := m.ensureNoPoolSpend(tx); err != nil {
-		return err
-	}
-
 	return validation.ValidateDepositTransaction(m.storage, m.client, tx)
 }
 
