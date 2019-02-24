@@ -1,0 +1,57 @@
+{
+  "block": {
+    "header": {
+      "merkleRoot": "0xc654460b35679a3c1e02263ad4a0ba7d7cc5e7b8c19fc40050b87e6821b95993",
+      "rlpMerkleRoot": "0x",
+      "prevHash": "0xc6ea27f941bb68008771b95b23c88a86e89e9f8214bba8abcbab2b2b093e6665",
+      "number": 3
+    },
+    "blockHash": "0xb1da6c8a2ac70a0a5b141ad66a3d4ddfdbb5ed35dc3fd331eeda63bebef5b06d"
+  },
+  "confirmedTransactions": [
+    {
+      "transaction": {
+        "body": {
+          "input0": {
+            "blockNumber": 2,
+            "transactionIndex": 0,
+            "outputIndex": 1,
+            "depositNonce": "0"
+          },
+          "input0ConfirmSig": "0xc085f14b0690050472c337a713d5837a8fad134fc025d6d05b5d0b3c00a334e51049659916be0d09f92ed93613207a9b17abea03f0e7eea9c53ebbb7745d72af01",
+          "input1": {
+            "blockNumber": 0,
+            "transactionIndex": 0,
+            "outputIndex": 0,
+            "depositNonce": "0"
+          },
+          "input1ConfirmSig": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "output0": {
+            "owner": "0xC5fdf4076b8F3A5357c5E395ab970B5B54098Fef",
+            "amount": "1000"
+          },
+          "output1": {
+            "owner": "0x627306090abaB3A6e1400e9345bC60c78a8BEf57",
+            "amount": "99999899998000"
+          },
+          "fee": "0",
+          "blockNumber": 3,
+          "transactionIndex": 0
+        },
+        "sigs": [
+          "0x4178f47eb393b75ef92abf5d9a3f90229e2e861901462f2ba73c811d32a29e185a15e8a910f35d5346ee4944bc0b24a42c2819717904032672163d51c0239ebc00",
+          "0x4178f47eb393b75ef92abf5d9a3f90229e2e861901462f2ba73c811d32a29e185a15e8a910f35d5346ee4944bc0b24a42c2819717904032672163d51c0239ebc00"
+        ]
+      },
+      "confirmSigs": [
+        "0xb35b6489c33d766e2abc0941aa908985be201290ee816ccc9e0e35004c0bf4a53b08060c61ac5ef5ee593a1e8d3462edae59c786fb3385bc6c8f02a78db86bed01",
+        "0xb35b6489c33d766e2abc0941aa908985be201290ee816ccc9e0e35004c0bf4a53b08060c61ac5ef5ee593a1e8d3462edae59c786fb3385bc6c8f02a78db86bed01"
+      ]
+    }
+  ],
+  "metadata": {
+    "createdAt": 1550720734,
+    "transactionCount": 1,
+    "fees": 0
+  }
+}

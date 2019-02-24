@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc --project . && npm run copy-protofile",
     "clean": "rm -rf ./dist",
-    "copy-protofile": "mkdir -p ./lib/rpc/pb && cp ../rpc/proto/root.proto ./lib/rpc/pb",
+    "copy-protofile": "mkdir -p ./lib/rpc/pb && cp ../pkg/rpc/proto/root.proto ./lib/rpc/pb",
     "protogen-web": "protoc -I=../rpc/proto root.proto --grpc-web_out=import_style=commonjs+dts,mode=grpcwebtext:./lib/rpc/pb",
     "build-docs": "typedoc --excludeNotExported --excludePrivate --mode file --out ./docs src/"
   },

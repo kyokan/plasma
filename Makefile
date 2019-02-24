@@ -55,6 +55,9 @@ clean:
 test-integration:
 	npm --prefix ./integration_tests test
 
+test-unit:
+	go test -v ./...
+
 package:
 	fpm -f -p target -s dir -t deb -n plasma -a amd64 -m "Kyokan, LLC <mslipper@kyokan.io>" \
     	--url "https://plasma.kyokan.io" \

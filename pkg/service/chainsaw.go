@@ -141,6 +141,10 @@ func (c *Chainsaw) processTxExits(wg *sync.WaitGroup, head uint64) {
 			return
 		}
 		if challengingTx == nil {
+			if err := c.storage.MarkTransactionAsExited(blkNum, txIdx, outIdx, event.Raw.BlockNumber, event.Raw.TxHash); err != nil {
+			    log.WithError(logFields, err).Error("failed to persist transaction exit status!")
+			    return
+			}
 			logFields.WithFields(evFields).Info("transaction is not double spent")
 			continue
 		}

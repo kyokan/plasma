@@ -8,8 +8,8 @@ import (
 )
 
 type Transaction struct {
-	Body *TransactionBody
-	Sigs [2]Signature
+	Body *TransactionBody `json:"body"`
+	Sigs [2]Signature `json:"sigs"`
 }
 
 type rlpConfirmedTransaction struct {

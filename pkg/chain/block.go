@@ -12,21 +12,21 @@ import (
 )
 
 type BlockHeader struct {
-	MerkleRoot    util.Hash
-	RLPMerkleRoot util.Hash
-	PrevHash      util.Hash
-	Number        uint64
+	MerkleRoot    util.Hash `json:"merkleRoot"`
+	RLPMerkleRoot util.Hash `json:"rlpMerkleRoot"`
+	PrevHash      util.Hash `json:"prevHash"`
+	Number        uint64    `json:"number"`
 }
 
 type Block struct {
-	Header    *BlockHeader
-	BlockHash util.Hash
+	Header    *BlockHeader `json:"header"`
+	BlockHash util.Hash    `json:"blockHash"`
 }
 
 type BlockMetadata struct {
-	CreatedAt        uint64
-	TransactionCount uint32
-	Fees             *big.Int
+	CreatedAt        uint64   `json:"createdAt"`
+	TransactionCount uint32   `json:"transactionCount"`
+	Fees             *big.Int `json:"fees"`
 }
 
 type rlpBlockMetadata struct {

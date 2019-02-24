@@ -61,6 +61,17 @@ func NewErrInvalidSignature(inputIndex uint8) error {
 	}
 }
 
+type ErrIdenticalInputs struct {
+}
+
+func NewErrIdenticalInputs() error {
+	return &ErrIdenticalInputs{}
+}
+
+func (e *ErrIdenticalInputs) Error() string {
+	return "input0 and input1 spend identical outputs"
+}
+
 func (e *ErrInvalidSignature) Error() string {
 	return fmt.Sprintf("invalid signature for input %d", e.InputIndex)
 }

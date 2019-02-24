@@ -29,10 +29,6 @@
   version = "1.8.10"
 
 [[constraint]]
-  name = "github.com/olekukonko/tablewriter"
-  branch = "master"
-
-[[constraint]]
   name = "github.com/syndtr/goleveldb"
   branch = "master"
 

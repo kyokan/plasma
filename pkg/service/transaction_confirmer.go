@@ -67,11 +67,11 @@ func (t *TransactionConfirmer) Confirm(blockNumber uint64, transactionIndex uint
 				return nil, err
 			}
 		} else {
-			prevTx, err := t.storage.FindTransactionByBlockNumTxIdx(input.BlockNum, input.TxIdx)
+			prevTx, err := t.storage.FindTransactionByBlockNumTxIdx(input.BlockNumber, input.TransactionIndex)
 			if err != nil {
 				return nil, err
 			}
-			owner = prevTx.Transaction.Body.OutputAt(input.OutIdx).Owner
+			owner = prevTx.Transaction.Body.OutputAt(input.OutputIndex).Owner
 		}
 
 		if err := eth.ValidateSignature(sigHash, sig[:], owner); err != nil {

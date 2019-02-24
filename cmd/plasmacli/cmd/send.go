@@ -16,8 +16,7 @@ import (
 	"bytes"
 	"github.com/kyokan/plasma/util"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"fmt"
-	"sort"
+		"sort"
 )
 
 type sendCmdOutput struct {
@@ -97,7 +96,6 @@ func SpendDeposit(client pb.RootClient, contract eth.Client, privKey *ecdsa.Priv
 		body.Output1.Owner = from
 	}
 
-	fmt.Println("sighash", hexutil.Encode(body.SignatureHash()))
 	sig, err := eth.Sign(privKey, body.SignatureHash())
 	if err != nil {
 		return err
@@ -203,9 +201,9 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 			panic("too many inputs!")
 		}
 
-		input.BlockNum = txBody.BlockNumber
-		input.TxIdx = txBody.TransactionIndex
-		input.OutIdx = txBody.OutputIndexFor(&from)
+		input.BlockNumber = txBody.BlockNumber
+		input.TransactionIndex = txBody.TransactionIndex
+		input.OutputIndex = txBody.OutputIndexFor(&from)
 
 		if i == 0 {
 			tx.Body.Input0ConfirmSig = utxo.ConfirmSigs[0]

@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"math"
 	"strconv"
+	"github.com/pkg/errors"
 )
 
 var MaxUint64 = Uint642Big(math.MaxUint64)
@@ -56,6 +57,14 @@ func Uint322Str(n uint32) string {
 
 func Uint82Str(n uint8) string {
 	return Uint642Str(uint64(n))
+}
+
+func Str2Big(n string) (*big.Int, error) {
+	out, ok := new(big.Int).SetString(n, 10)
+	if !ok {
+		return nil, errors.New("invalid number")
+	}
+	return out, nil
 }
 
 func Str2Uint64(s string) (uint64, bool) {

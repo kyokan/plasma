@@ -15,7 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-		"github.com/pkg/errors"
+	"github.com/pkg/errors"
+	"fmt"
 )
 
 var clientLogger = log2.ForSubsystem("EthClient")
@@ -52,6 +53,20 @@ type StartExitOpts struct {
 type ChallengeExitOpts struct {
 	StartExitOpts
 	ExistingInput chain.Input
+}
+
+type ErrDepositNotFound struct {
+	depositNonce *big.Int
+}
+
+func NewErrDepositNotFound(depositNonce *big.Int) error {
+	return &ErrDepositNotFound{
+		depositNonce: depositNonce,
+	}
+}
+
+func (e *ErrDepositNotFound) Error() string {
+	return fmt.Sprintf("deposit with nonce %s not found", e.depositNonce)
 }
 
 type Client interface {
@@ -235,6 +250,9 @@ func (c *clientState) LookupDeposit(depositNonce *big.Int) (*big.Int, common.Add
 	}, depositNonce)
 	if err != nil {
 		return nil, addr, err
+	}
+	if res.Amount.Cmp(chain.Zero()) == 0 {
+		return nil, addr, NewErrDepositNotFound(depositNonce)
 	}
 	return res.Amount, res.Owner, nil
 }

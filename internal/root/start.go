@@ -50,6 +50,9 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	server := NewServer(ctx, storage, mpool, confirmer)
 	go server.Start(config.RPCPort)
 
+	rest := NewRESTServer(storage, mpool, confirmer, 6546)
+	go rest.Start()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c

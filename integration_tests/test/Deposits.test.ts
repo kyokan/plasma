@@ -5,17 +5,15 @@ import {toBig} from 'kyokan-plasma-client/lib/util/numbers';
 import {assert} from 'chai';
 import {Config} from './Config';
 import {withRetryCondition} from './lib/withRetries';
-import SharedRootClient from './lib/SharedRootClient';
 import SharedContract from './lib/SharedContract';
+import bothClients from './lib/bothClients';
 import BN = require('bn.js');
 
-describe('Deposits', () => {
+bothClients((client: IRootClient) => describe('Deposits', () => {
   let contract: PlasmaContract;
-  let client: IRootClient;
 
   before(() => {
     contract = SharedContract.get();
-    client = SharedRootClient.get();
   });
 
   it('should allow spends via the deposit nonce', async function () {
@@ -23,14 +21,16 @@ describe('Deposits', () => {
     const depBal = toBig(1000);
     await contract.deposit(depBal, Config.USER_ADDRESSES[1]);
     const nonce = (await contract.depositNonce()).sub(new BN(1));
+    const startBal1 = await client.getBalance(Config.USER_ADDRESSES[1]);
+    const startBal2 = await client.getBalance(Config.USER_ADDRESSES[2]);
     const sendOp = new SendOperation(client, contract, Config.USER_ADDRESSES[1])
       .forValue(toBig(100))
       .toAddress(Config.USER_ADDRESSES[2])
       .withFee(toBig(1))
       .withDepositNonce(nonce);
     await sendOp.send(Config.PRIVATE_KEYS[1]);
-    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.eq(toBig(899)), 30);
-    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[2]), (r) => r.eq(toBig(100)), 30);
+    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.eq(startBal1.add(toBig(899))), 30);
+    await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[2]), (r) => r.eq(startBal2.add(toBig(100))), 30);
   });
 
   it('should disallow subsequent spends from used deposit nonces', async function () {
@@ -44,4 +44,4 @@ describe('Deposits', () => {
       .withDepositNonce(nonce);
     await assert.isRejected(sendOp.send(Config.PRIVATE_KEYS[1]));
   });
-});
+}));

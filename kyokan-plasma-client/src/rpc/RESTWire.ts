@@ -1,46 +1,23 @@
-import BN = require('bn.js');
-import {toBig} from '../util/numbers';
 import Block from '../domain/Block';
-import ConfirmedTransaction from '../domain/ConfirmedTransaction';
 import Input from '../domain/Input';
 import Output from '../domain/Output';
 import {parseHex, toHex} from '../util/hex';
 import TransactionBody from '../domain/TransactionBody';
 import Transaction from '../domain/Transaction';
-import {SendResponse} from '../domain/SendResponse';
+import ConfirmedTransaction from '../domain/ConfirmedTransaction';
 import Outpoint from '../domain/Outpoint';
-
-export interface BNWire {
-  hex: string
-}
-
-export function toBNWire (num: BN | number): BNWire {
-  if (!(num instanceof BN)) {
-    num = new BN(num);
-  }
-
-  return {
-    hex: num.toString('hex'),
-  };
-}
-
-export function fromBNWire (num: BNWire): BN {
-  return toBig(num.hex);
-}
-
-export interface GetBalanceResponse {
-  balance: BNWire
-}
+import BN = require('bn.js');
+import {addressesEqual} from '../util/addresses';
 
 export interface BlockWire {
   block: {
     header: {
-      merkleRoot: Buffer
-      rlpMerkleRoot: Buffer
-      prevHash: Buffer
-      number: string
+      merkleRoot: string
+      rlpMerkleRoot: string
+      prevHash: string
+      number: number
     },
-    hash: Buffer
+    hash: string
   },
   confirmedTransactions: ConfirmedTransactionWire[]
 }
@@ -48,7 +25,7 @@ export interface BlockWire {
 export function blockFromWire (blockWire: BlockWire): Block {
   return new Block(
     {
-      merkleRoot: blockWire.block.header.merkleRoot,
+      merkleRoot: parseHex(blockWire.block.header.merkleRoot),
       number: Number(blockWire.block.header.number),
     },
     blockWire.confirmedTransactions.map((ct) => confirmedTransactionFromWire(ct)),
@@ -56,59 +33,59 @@ export function blockFromWire (blockWire: BlockWire): Block {
 }
 
 export interface InputWire {
-  depositNonce: BNWire
-  blockNum: string
-  txIdx: number
-  outIdx: number
+  depositNonce: string
+  blockNumber: number
+  transactionIndex: number
+  outputIndex: number
 }
 
 export function inputFromWire (input: InputWire): Input {
   return new Input(
-    Number(input.blockNum),
-    input.txIdx,
-    input.outIdx,
-    fromBNWire(input.depositNonce),
+    input.blockNumber,
+    input.transactionIndex,
+    input.outputIndex,
+    input.depositNonce !== '0' ? new BN(input.depositNonce) : undefined,
   );
 }
 
 export function inputToWire (input: Input): InputWire {
   return {
-    blockNum: input.blockNum.toString(),
-    txIdx: input.txIdx,
-    outIdx: input.outIdx,
-    depositNonce: toBNWire(input.depositNonce),
+    blockNumber: input.blockNum,
+    transactionIndex: input.txIdx,
+    outputIndex: input.outIdx,
+    depositNonce: input.depositNonce.toString(10),
   };
 }
 
 export interface OutputWire {
-  owner: Buffer
-  amount: BNWire
+  owner: string
+  amount: string
 }
 
 export function outputFromWire (output: OutputWire): Output {
   return new Output(
-    toHex(output.owner),
-    fromBNWire(output.amount),
+    output.owner,
+    new BN(output.amount),
   );
 }
 
 export function outputToWire (output: Output): OutputWire {
   return {
-    owner: parseHex(output.owner),
-    amount: toBNWire(output.amount),
+    owner: output.owner,
+    amount: output.amount.toString(10),
   };
 }
 
 export interface TransactionBodyWire {
   input0: InputWire
-  input0ConfirmSig: Buffer
+  input0ConfirmSig: string
   input1: InputWire
-  input1ConfirmSig: Buffer
+  input1ConfirmSig: string
   output0: OutputWire
   output1: OutputWire
-  fee: BNWire
-  blockNum: string
-  txIdx: number
+  fee: string
+  blockNumber: number
+  transactionIndex: number
 }
 
 export function transactionBodyFromWire (tx: TransactionBodyWire): TransactionBody {
@@ -117,21 +94,21 @@ export function transactionBodyFromWire (tx: TransactionBodyWire): TransactionBo
     inputFromWire(tx.input1),
     outputFromWire(tx.output0),
     outputFromWire(tx.output1),
-    Number(tx.blockNum),
-    tx.txIdx,
-    tx.input0ConfirmSig,
-    tx.input1ConfirmSig,
-    fromBNWire(tx.fee),
+    tx.blockNumber,
+    tx.transactionIndex,
+    parseHex(tx.input0ConfirmSig),
+    parseHex(tx.input1ConfirmSig),
+    new BN(tx.fee),
   );
 }
 
 export function transactionBodyToWire (tx: TransactionBody): TransactionBodyWire {
   return {
-    blockNum: tx.blockNum.toString(),
-    txIdx: tx.txIdx,
-    input0ConfirmSig: tx.input0ConfirmSig,
-    input1ConfirmSig: tx.input1ConfirmSig,
-    fee: toBNWire(tx.fee),
+    blockNumber: tx.blockNum,
+    transactionIndex: tx.txIdx,
+    input0ConfirmSig: toHex(tx.input0ConfirmSig),
+    input1ConfirmSig: toHex(tx.input1ConfirmSig),
+    fee: tx.fee.toString(10),
     input0: inputToWire(tx.input0),
     input1: inputToWire(tx.input1),
     output0: outputToWire(tx.output0),
@@ -141,43 +118,43 @@ export function transactionBodyToWire (tx: TransactionBody): TransactionBodyWire
 
 export interface TransactionWire {
   body: TransactionBodyWire
-  sig0: Buffer
-  sig1: Buffer
+  sigs: string[]
 }
 
 export function transactionFromWire (tx: TransactionWire): Transaction {
   return new Transaction(
     transactionBodyFromWire(tx.body),
-    tx.sig0,
-    tx.sig1,
+    parseHex(tx.sigs[0]),
+    parseHex(tx.sigs[1]),
   );
 }
 
 export function transactionToWire (tx: Transaction): TransactionWire {
   return {
     body: transactionBodyToWire(tx.body),
-    sig0: tx.signature0!,
-    sig1: tx.signature1!,
+    sigs: [
+      toHex(tx.signature0!),
+      toHex(tx.signature0!),
+    ],
   };
 }
 
 export interface ConfirmedTransactionWire {
-  confirmSig0: Buffer
-  confirmSig1: Buffer
+  confirmSigs: string[]
   transaction: TransactionWire
 }
 
 export function confirmedTransactionFromWire (wireTx: ConfirmedTransactionWire): ConfirmedTransaction {
   return new ConfirmedTransaction(
     transactionFromWire(wireTx.transaction),
-    [wireTx.confirmSig0, wireTx.confirmSig1],
+    [parseHex(wireTx.confirmSigs[0]), parseHex(wireTx.confirmSigs[1])],
   );
 }
 
 export function outpointFromConfirmedTxWire (txWire: ConfirmedTransactionWire, owner: string): Outpoint {
   const tx = confirmedTransactionFromWire(txWire);
   const body = tx.transaction.body;
-  const outIdx = owner === body.output0.owner ? 0 : 1;
+  const outIdx = addressesEqual(owner, body.output0.owner) ? 0 : 1;
 
   if (!tx.confirmSignatures) {
     throw new Error('cannot create outpoint from unconfirmed transaction');
@@ -193,34 +170,11 @@ export function outpointFromConfirmedTxWire (txWire: ConfirmedTransactionWire, o
   );
 }
 
-export interface GetOutputsResponse {
-  confirmedTransactions: ConfirmedTransactionWire[]
-}
-
 export interface SendResponseWire {
-  transaction: TransactionWire
+  transaction: TransactionWire,
   inclusion: {
-    merkleRoot: Buffer
-    blockNumber: number
-    transactionIndex: number
+    merkleRoot: string,
+    blockNumber: number,
+    transactionIndex: number,
   }
-}
-
-export function sendResponseFromWire (res: SendResponseWire): SendResponse {
-  return {
-    transaction: transactionFromWire(res.transaction),
-    inclusion: res.inclusion,
-  };
-}
-
-export interface GetConfirmationsResponse {
-  authSig0: Buffer
-  authSig1: Buffer
-}
-
-export interface ConfirmRequest {
-  blockNumber: number
-  transactionIndex: number
-  confirmSig0: Buffer
-  confirmSig1: Buffer
 }
