@@ -163,7 +163,8 @@ func initSendBench(accountCount int) (StopFunc, error) {
 		if err := ganache.Process.Kill(); err != nil {
 			fmt.Println("failed to stop ganache", err)
 		}
-		if err := plasma.Process.Kill(); err != nil {
+		// send interupt because we want the daemon to save the trace
+		if err := plasma.Process.Signal(os.Interrupt); err != nil {
 			fmt.Println("failed to stop plasma", err)
 		}
 		if err := os.RemoveAll(ganacheDbPath); err != nil {

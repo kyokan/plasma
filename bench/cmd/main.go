@@ -21,7 +21,7 @@ func main() {
 	defer trace.Stop()
 
 	fmt.Println("Running benchmarker. This will take a while.")
-	res, err := bench.BenchmarkSend(10, 1)
+	res, err := bench.BenchmarkSend(1000, 1)
 	if err != nil {
 		fmt.Println("benchmarking failed", err)
 		os.Exit(1)
