@@ -1,6 +1,7 @@
 import TransactionBody from './TransactionBody';
 import {ethSign} from '../crypto/sign';
 import ejs = require('ethereumjs-util');
+import {Signer} from '../crypto/Signer';
 
 /**
  * A Plasma transaction.
@@ -50,11 +51,11 @@ export default class Transaction {
   /**
    * Generates the authorization signatures for both inputs.
    *
-   * @param privateKey
+   * @param signer
    */
-  sign (privateKey: Buffer) {
+  async sign (signer: Signer) {
     const hash = this.body.sigHash();
-    const sig = ethSign(hash, privateKey);
+    const sig = await signer.ethSign(hash);
     this.signature0 = sig;
     this.signature1 = sig;
   }

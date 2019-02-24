@@ -1,6 +1,7 @@
 import Transaction from './Transaction';
 import {sha256} from '../crypto/hash';
 import {ethSign} from '../crypto/sign';
+import {Signer} from '../crypto/Signer';
 
 /**
  * Wrapper class for a Plasma transaction and its associated `confirmSignatures`.
@@ -60,12 +61,12 @@ export default class ConfirmedTransaction {
    * a `blockNum` set. A transaction without a `blockNum` set has not been
    * included in a block, and so cannot be confirmed.
    *
-   * @param privateKey The private key to create the `confirmSignatures` with.
+   * @param signer A signer to generate the `confirmSignatures` with.
    * @param merkleRoot The `merkleRoot` of the block that includes this transaction.
    */
-  confirmSign (privateKey: Buffer, merkleRoot: Buffer) {
+  async confirmSign (signer: Signer, merkleRoot: Buffer) {
     const confirmSigHash = this.confirmHash(merkleRoot);
-    const confirmSig = ethSign(confirmSigHash, privateKey);
+    const confirmSig = await signer.ethSign(confirmSigHash);
     this.confirmSignatures = [
       confirmSig, confirmSig,
     ];

@@ -7,6 +7,7 @@ import {Config} from './Config';
 import {withRetryCondition} from './lib/withRetries';
 import SharedContract from './lib/SharedContract';
 import bothClients from './lib/bothClients';
+import {signerFromStr} from './util/signer';
 import BN = require('bn.js');
 
 bothClients((client: IRootClient) => describe('Deposits', () => {
@@ -28,7 +29,7 @@ bothClients((client: IRootClient) => describe('Deposits', () => {
       .toAddress(Config.USER_ADDRESSES[2])
       .withFee(toBig(1))
       .withDepositNonce(nonce);
-    await sendOp.send(Config.PRIVATE_KEYS[1]);
+    await sendOp.send(signerFromStr(Config.PRIVATE_KEYS[1]));
     await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[1]), (r) => r.eq(startBal1.add(toBig(899))), 30);
     await withRetryCondition<BN>(() => client.getBalance(Config.USER_ADDRESSES[2]), (r) => r.eq(startBal2.add(toBig(100))), 30);
   });
@@ -42,6 +43,6 @@ bothClients((client: IRootClient) => describe('Deposits', () => {
       .toAddress(Config.USER_ADDRESSES[2])
       .withFee(toBig(1))
       .withDepositNonce(nonce);
-    await assert.isRejected(sendOp.send(Config.PRIVATE_KEYS[1]));
+    await assert.isRejected(sendOp.send(signerFromStr(Config.PRIVATE_KEYS[1])));
   });
 }));

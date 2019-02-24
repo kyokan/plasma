@@ -1,10 +1,11 @@
 import TransactionBuilder from '../domain/TransactionBuilder';
-import {assert} from 'chai';
+import {assert} from '../util/assert';
 import ConfirmedTransaction from '../domain/ConfirmedTransaction';
 import PlasmaContract from '../contract/PlasmaContract';
 import {addressesEqual} from '../util/addresses';
 import IRootClient from '../rpc/IRootClient';
 import BN = require('bn.js');
+import {Signer} from '../crypto/Signer';
 
 /**
  * Executes a send on the sidechain.
@@ -90,9 +91,9 @@ export default class SendOperation {
    * 5. Consuming the returned inclusion receipt, generating confirm signatures,
    * and forwarding them to the root node.
    *
-   * @param privateKey
+   * @param signer
    */
-  public async send (privateKey: Buffer): Promise<ConfirmedTransaction> {
+  public async send (signer: Signer): Promise<ConfirmedTransaction> {
     assert(this.to, 'a to address must be set');
     assert(this.value, 'a value must be set');
     assert(this.fee, 'a fee must be set');
@@ -118,11 +119,11 @@ export default class SendOperation {
     }
 
     const tx = builder.build();
-    tx.sign(privateKey);
+    await tx.sign(signer);
     const confirmData = await this.client.send(tx);
     const inclusion = confirmData.inclusion;
     const confirmedTx = new ConfirmedTransaction(confirmData.transaction, null);
-    confirmedTx.confirmSign(privateKey, inclusion.merkleRoot);
+    await confirmedTx.confirmSign(signer, inclusion.merkleRoot);
     await this.client.confirm(confirmedTx);
     return confirmedTx;
   }

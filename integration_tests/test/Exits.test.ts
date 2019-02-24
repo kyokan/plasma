@@ -13,6 +13,7 @@ import bothClients from './lib/bothClients';
 import Outpoint from 'kyokan-plasma-client/lib/domain/Outpoint';
 import {selectUTXOs} from 'kyokan-plasma-client/lib/domain/selectUTXOs';
 import BN = require('bn.js');
+import {signerFromStr} from './util/signer';
 
 bothClients((client: IRootClient) => describe('Exits', () => {
   let contract: PlasmaContract;
@@ -31,7 +32,7 @@ bothClients((client: IRootClient) => describe('Exits', () => {
       .toAddress(Config.USER_ADDRESSES[5])
       .withFee(toBig(1))
       .withDepositNonce(depositNonce);
-    await sendOp.send(Config.PRIVATE_KEYS[4]);
+    await sendOp.send(signerFromStr(Config.PRIVATE_KEYS[4]));
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[5]), (r) => r.eq(startBal5.add(sendBal)), 30);
   });
 
@@ -58,7 +59,7 @@ bothClients((client: IRootClient) => describe('Exits', () => {
       .forValue(sendBal)
       .toAddress(Config.USER_ADDRESSES[6])
       .withFee(toBig(1));
-    await sendOp.send(Config.PRIVATE_KEYS[4]);
+    await sendOp.send(signerFromStr(Config.PRIVATE_KEYS[4]));
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[6]), (r) => r.eq(startBal.add(sendBal)), 30);
     // record outpoints after A receives
 
@@ -72,7 +73,7 @@ bothClients((client: IRootClient) => describe('Exits', () => {
       .forValue(sendOtherBal)
       .toAddress(Config.USER_ADDRESSES[7])
       .withFee(fee);
-    await sendOpOther.send(Config.PRIVATE_KEYS[6]);
+    await sendOpOther.send(signerFromStr(Config.PRIVATE_KEYS[6]));
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[7]), (r) => r.eq(startSendOtherBal.add(sendOtherBal)), 30);
     // wait for block submission
     await wait(20000);

@@ -66,3 +66,7 @@
 [[constraint]]
   name = "github.com/mitchellh/go-homedir"
   version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/gin-contrib/cors"
+  version = "1.2.0"

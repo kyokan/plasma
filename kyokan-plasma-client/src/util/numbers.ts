@@ -16,7 +16,7 @@ export function toBig (num: NumberLike): BN {
 
 export function toBuffer (num: NumberLike, bufLen: number = 32): Buffer {
   if (num instanceof BN) {
-    return num.toBuffer('be', bufLen);
+    return num.toArrayLike(Buffer, 'be', bufLen);
   }
 
   if (typeof (num as any).hex !== 'undefined') {

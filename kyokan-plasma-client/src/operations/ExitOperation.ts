@@ -1,4 +1,4 @@
-import {assert} from 'chai';
+import {assert} from '../util/assert';
 import Outpoint from '../domain/Outpoint';
 import PlasmaContract from '../contract/PlasmaContract';
 import MerkleTree from '../MerkleTree';

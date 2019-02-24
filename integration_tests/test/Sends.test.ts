@@ -8,6 +8,7 @@ import {withRetryCondition} from './lib/withRetries';
 import {assertBigEqual} from './lib/assertBigEqual';
 import {wait} from './lib/wait';
 import bothClients from './lib/bothClients';
+import {signerFromStr} from './util/signer';
 
 bothClients((client: IRootClient) => describe('Sends', () => {
   let contract: PlasmaContract;
@@ -25,7 +26,7 @@ bothClients((client: IRootClient) => describe('Sends', () => {
       .toAddress(Config.USER_ADDRESSES[3])
       .withFee(toBig(1))
       .withDepositNonce(nonce);
-    await sendOp.send(Config.PRIVATE_KEYS[2]);
+    await sendOp.send(signerFromStr(Config.PRIVATE_KEYS[2]));
     await withRetryCondition(() => client.getBalance(Config.USER_ADDRESSES[3]), (r) => r.eq(startBal3.add(sendAmount)), 30);
   });
 
@@ -37,7 +38,7 @@ bothClients((client: IRootClient) => describe('Sends', () => {
       .forValue(sendAmount)
       .toAddress(Config.USER_ADDRESSES[4])
       .withFee(toBig(1));
-    await sendOp.send(Config.PRIVATE_KEYS[3]);
+    await sendOp.send(signerFromStr(Config.PRIVATE_KEYS[3]));
     await wait(1000);
     assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[3]), startBal3.sub(sendAmount).sub(toBig(1)));
     assertBigEqual(await client.getBalance(Config.USER_ADDRESSES[4]), startBal4.add(sendAmount));
