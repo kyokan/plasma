@@ -3,6 +3,7 @@ package root
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/kyokan/plasma/pkg/config"
 	"github.com/kyokan/plasma/pkg/db"
 	"github.com/kyokan/plasma/pkg/eth"
@@ -10,6 +11,8 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime/trace"
+	"time"
 )
 
 func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
