@@ -16,6 +16,7 @@ import (
 	"github.com/kyokan/plasma/pkg/service"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/gin-contrib/cors"
 )
 
 var restLogger = log.ForSubsystem("RESTServer")
@@ -50,6 +51,7 @@ func NewRESTServer(storage db.Storage, mpool *service.Mempool, confirmer *servic
 
 func (r *RESTServer) Start() error {
 	r.engine = gin.Default()
+	r.engine.Use(cors.Default())
 	r.engine.GET("/balances/:address", r.wrapHandler(r.GetBalance))
 	r.engine.GET("/utxos/:address", r.wrapHandler(r.GetUTXOs))
 	r.engine.GET("/blocks/:height", r.wrapHandler(r.GetBlock))

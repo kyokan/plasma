@@ -1,8 +1,5 @@
 import Web3 = require('web3');
-import GRPCRootClient from './rpc/GRPCRootClient';
 import PlasmaContract from './contract/PlasmaContract';
-import * as grpc from 'grpc';
-import {ChannelCredentials} from 'grpc';
 import {parseHex, toHex} from './util/hex';
 import {NumberLike} from './domain/Numbers';
 import ConfirmedTransaction from './domain/ConfirmedTransaction';
@@ -11,16 +8,16 @@ import * as ejs from 'ethereumjs-util';
 import {toBig} from './util/numbers';
 import {OnChainDeposit} from './domain/OnChainDeposit';
 import IRootClient from './rpc/IRootClient';
-import {RESTRootClient} from './rpc/RESTRootClient';
 import Outpoint from './domain/Outpoint';
 import ExitOperation from './operations/ExitOperation';
+import {LocalSigner, PersonalSigner, Signer} from './crypto/Signer';
 
 /**
  * Options used to construct a new Plasma client instance.
  */
 export interface PlasmaOptions {
   /**
-   * An instance of Web3. To transact, your Web3 instance
+   * An instance of Web3. To transact, your Webpa3 instance
    * must support signing using the same `privateKey` provided
    * to the Plasma client.
    */
@@ -33,23 +30,20 @@ export interface PlasmaOptions {
   contractAddress: string
 
   /**
-   * Whether or not to use the REST API over the gRPC API.
-   * You should set this to true if you are using a web browser.
-   */
-  useREST: boolean
-
-  /**
-   * URL to the root node. The URL should not include a protocol.
+   * The client to connect to the root node with. Two clients are included
+   * in this package:
    *
-   * @example localhost:6545
+   * - GRPCRootClient: A client that uses gRPC to connect to the root client. You
+   * should use this if you're running a server-side application.
+   * - RESTRootClient: A client that uses a REST api to connect to the root client.
+   * You should use this if you're running a browser application.
    */
-  rootURL: string
+  rootClient: IRootClient
 
   /**
-   * gRPC credentials to use to connect to the root node. Will default
-   * to HTTP transport.
+   * Address to sign with and deposit from.
    */
-  rootCredentials?: ChannelCredentials
+  fromAddress: string
 
   /**
    * Your private key, either hex-encoded or as a Buffer.
@@ -68,7 +62,7 @@ export default class Plasma {
 
   private readonly _contract: PlasmaContract;
 
-  private readonly privateKey: Buffer | null = null;
+  private readonly signer: Signer;
 
   private readonly fromAddress: string | null = null;
 
@@ -83,23 +77,23 @@ export default class Plasma {
    */
   constructor (opts: PlasmaOptions) {
     this.web3 = opts.web3;
-
-    if (opts.useREST) {
-      this._rootClient = new RESTRootClient(opts.rootURL);
-    } else {
-      this._rootClient = new GRPCRootClient(opts.rootURL, opts.rootCredentials || grpc.credentials.createInsecure());
-    }
+    this._rootClient = opts.rootClient;
 
     this._contract = new PlasmaContract(this.web3, opts.contractAddress);
 
     if (opts.privateKey) {
+      let priv: Buffer;
       if (typeof opts.privateKey === 'string') {
-        this.privateKey = parseHex(opts.privateKey);
+        priv = parseHex(opts.privateKey);
       } else {
-        this.privateKey = opts.privateKey;
+        priv = opts.privateKey;
       }
 
-      this.fromAddress = toHex(ejs.privateToAddress(this.privateKey) as Buffer);
+      this.signer = new LocalSigner(priv);
+      this.fromAddress = toHex(ejs.privateToAddress(priv) as Buffer);
+    } else {
+      this.fromAddress = opts.fromAddress;
+      this.signer = new PersonalSigner(this.web3, this.fromAddress);
     }
   }
 
@@ -143,7 +137,7 @@ export default class Plasma {
       sendOp.withDepositNonce(toBig(depositNonce));
     }
 
-    return sendOp.send(this.privateKey!);
+    return sendOp.send(this.signer!);
   }
 
   /**
@@ -173,9 +167,9 @@ export default class Plasma {
    * @param valueOrOutpoint The or outpoint to exit.
    * @param bond The bond to post guaranteeing this exit.
    */
-  public async startExit(valueOrOutpoint: NumberLike|Outpoint, bond: NumberLike): Promise<void> {
+  public async startExit (valueOrOutpoint: NumberLike | Outpoint, bond: NumberLike): Promise<void> {
     this.ensureKey();
-    let outpoint: Outpoint|null = null;
+    let outpoint: Outpoint | null = null;
 
     if (valueOrOutpoint instanceof Outpoint) {
       outpoint = valueOrOutpoint;
@@ -193,7 +187,7 @@ export default class Plasma {
     }
 
     if (!outpoint) {
-      throw new Error('no suitable UTXOs')
+      throw new Error('no suitable UTXOs');
     }
 
     const exitOp = new ExitOperation(this._contract, this._rootClient, this.fromAddress!)
@@ -204,8 +198,8 @@ export default class Plasma {
   }
 
   private ensureKey () {
-    if (!this.privateKey || !this.fromAddress) {
-      throw new Error('must set a private key or from address to perform this operation');
+    if (!this.signer || !this.fromAddress) {
+      throw new Error('must set a signer to perform this operation');
     }
   }
 }

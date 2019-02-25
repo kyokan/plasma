@@ -67,6 +67,14 @@
   version = "v1.4.7"
 
 [[projects]]
+  digest = "1:27ae17a75b17237a08129c9dcca244fa55c6855502ea2838a7a00c362ad76b91"
+  name = "github.com/gin-contrib/cors"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "cf4846e6a636a76237a28d9286f163c132e841bc"
+  version = "v1.2"
+
+[[projects]]
   branch = "master"
   digest = "1:38f00d85208f9f51e51063b0b90687d72f3ad61a7b6135d3ab6cb21e7b68dff2"
   name = "github.com/gin-contrib/sse"
@@ -540,6 +548,7 @@
     "github.com/ethereum/go-ethereum/event",
     "github.com/ethereum/go-ethereum/rlp",
     "github.com/ethereum/go-ethereum/rpc",
+    "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/golang/protobuf/proto",
     "github.com/mitchellh/go-homedir",

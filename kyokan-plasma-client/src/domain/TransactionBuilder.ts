@@ -1,4 +1,4 @@
-import {assert} from 'chai';
+import {assert} from '../util/assert';
 import Outpoint from './Outpoint';
 import Transaction from './Transaction';
 import {selectUTXOs} from './selectUTXOs';

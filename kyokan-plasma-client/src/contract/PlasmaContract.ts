@@ -1,4 +1,4 @@
-import Web3 from 'web3';
+import Web3 = require('web3');
 import abi from '../abi/PlasmaMVP.abi.json';
 import {EventLog, TransactionReceipt} from 'web3/types';
 import {Tx} from 'web3/eth/types';
@@ -11,8 +11,8 @@ import {toBig} from '../util/numbers';
 import BN = require('bn.js');
 
 interface DepositEvent {
-  nonce: string
-  owner: string;
+  depositNonce: string
+  depositor: string;
   amount: string;
   createdAt: string;
   ethBlockNum: string;
@@ -38,8 +38,8 @@ export default class PlasmaContract {
     const ev = receipt.events!.Deposit.returnValues as DepositEvent;
 
     return {
-      nonce: toBig(ev.nonce),
-      owner: ev.owner,
+      nonce: toBig(ev.depositNonce),
+      owner: ev.depositor,
       amount: toBig(ev.amount),
       createdAt: ev.createdAt,
       ethBlockNum: ev.ethBlockNum,
