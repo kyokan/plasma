@@ -1,29 +1,31 @@
 package bench
 
 import (
+	"crypto/ecdsa"
+	"fmt"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	harness "github.com/kyokan/plasma/cmd/harness/cmd"
 	plasmacli "github.com/kyokan/plasma/cmd/plasmacli/cmd"
-	"os/exec"
-	"io/ioutil"
-	"fmt"
-	"os"
-	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/pkg/eth"
-	"math/big"
-	"sync"
-	"github.com/ethereum/go-ethereum/common"
-	"strings"
-	"path"
 	"github.com/kyokan/plasma/pkg/rpc/pb"
-	"time"
+	"io/ioutil"
+	"math"
+	"math/big"
+	"os"
+	"os/exec"
+	"path"
+	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type StopFunc func()
 
 type SendBenchmarkResult struct {
 	ElapsedTime           time.Duration
+	AvgRunTime            float64
 	CompletedTransactions int64
 	FailedTransactions    int64
 	TPS                   float64
@@ -79,7 +81,7 @@ func startPlasma(dbPath string) (*exec.Cmd, error) {
 	return plasma, nil
 }
 
-func initSendBench() (StopFunc, error) {
+func initSendBench(accountCount int) (StopFunc, error) {
 	ganacheDbPath, err := ioutil.TempDir("", "ganache")
 	if err != nil {
 		return nil, err
@@ -88,14 +90,14 @@ func initSendBench() (StopFunc, error) {
 	if err != nil {
 		return nil, err
 	}
-	ganache, err := harness.StartGanache(8545, 1, 100, ganacheDbPath)
+	ganache, err := harness.StartGanache(8545, 1, accountCount, ganacheDbPath)
 	if err != nil {
 		return nil, err
 	}
 	harness.MigrateGanache(getRepoBase())
 
 	var ethClients []eth.Client
-	for _, privStr := range benchPrivateKeys {
+	for _, privStr := range benchPrivateKeys[0:accountCount] {
 		priv, err := crypto.HexToECDSA(privStr)
 		if err != nil {
 			return nil, err
@@ -118,6 +120,7 @@ func initSendBench() (StopFunc, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	pClient, conn, err := plasmacli.CreateRootClient("localhost:6545")
 	if err != nil {
 		return nil, err
@@ -142,6 +145,7 @@ func initSendBench() (StopFunc, error) {
 				if err != nil {
 					fmt.Println("failed to deposit", err)
 				}
+
 				if err := plasmacli.SpendDeposit(plasmaClient, account.client, account.priv, account.addr, zeroAddr, big.NewInt(1), receipt.DepositNonce); err != nil {
 					fmt.Println("failed to spend deposit", err)
 				}
@@ -159,7 +163,8 @@ func initSendBench() (StopFunc, error) {
 		if err := ganache.Process.Kill(); err != nil {
 			fmt.Println("failed to stop ganache", err)
 		}
-		if err := plasma.Process.Kill(); err != nil {
+		// send interupt because we want the daemon to save the trace
+		if err := plasma.Process.Signal(os.Interrupt); err != nil {
 			fmt.Println("failed to stop plasma", err)
 		}
 		if err := os.RemoveAll(ganacheDbPath); err != nil {
@@ -171,27 +176,32 @@ func initSendBench() (StopFunc, error) {
 	}, nil
 }
 
-func BenchmarkSend100() (*SendBenchmarkResult, error) {
-	stop, err := initSendBench()
+func BenchmarkSend(accountCount int, benchCallMultiper int) (*SendBenchmarkResult, error) {
+	stop, err := initSendBench(accountCount)
 	if err != nil {
 		return nil, err
 	}
 
 	start := time.Now()
 
+	runtimes := make(chan int64, accountCount)
 	failureCount := int64(0)
 	completionCount := int64(0)
 
-	for i := 0; i < 10; i++ {
+	for i := 0; i < benchCallMultiper; i++ {
 		var wg sync.WaitGroup
 		wg.Add(len(accounts))
 		for _, account := range accounts {
 			go func(account *benchAccount) {
 				defer wg.Done()
+				transRuntime := time.Now()
+
 				if err := plasmacli.SpendTx(plasmaClient, account.priv, account.addr, zeroAddr, big.NewInt(1)); err != nil {
 					atomic.AddInt64(&failureCount, 1)
 					fmt.Println("failed to spend deposit", err)
 				} else {
+					transRuntimeElapsed := time.Since(transRuntime).Nanoseconds()
+					runtimes <- transRuntimeElapsed
 					atomic.AddInt64(&completionCount, 1)
 				}
 			}(account)
@@ -202,10 +212,30 @@ func BenchmarkSend100() (*SendBenchmarkResult, error) {
 	elapsed := time.Since(start)
 	stop()
 
+	close(runtimes)
+
+	min := int64(math.MaxInt64)
+	max := int64(math.MinInt64)
+	sumRuntime := int64(0)
+	for rt := range runtimes {
+		if min > rt {
+			min = rt
+		}
+		if max < rt {
+			max = rt
+		}
+		sumRuntime += rt
+	}
+
+	avgRuntime := (float64(sumRuntime) / float64(completionCount)) / 1000000
 	tps := (float64(completionCount) / float64(elapsed.Nanoseconds())) * 1000000000
+
+	fmt.Println("Min Time:", min/1000000)
+	fmt.Println("Max Time:", max/1000000)
 
 	return &SendBenchmarkResult{
 		ElapsedTime:           elapsed,
+		AvgRunTime:            avgRuntime,
 		CompletedTransactions: completionCount,
 		FailedTransactions:    failureCount,
 		TPS:                   tps,

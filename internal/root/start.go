@@ -1,18 +1,32 @@
 package root
 
 import (
-	"github.com/kyokan/plasma/pkg/eth"
-	"github.com/kyokan/plasma/pkg/db"
-	"github.com/kyokan/plasma/pkg/config"
-	"crypto/ecdsa"
-	"github.com/kyokan/plasma/pkg/service"
 	"context"
+	"crypto/ecdsa"
+	"fmt"
+	"github.com/kyokan/plasma/pkg/config"
+	"github.com/kyokan/plasma/pkg/db"
+	"github.com/kyokan/plasma/pkg/eth"
+	"github.com/kyokan/plasma/pkg/service"
 	"os"
 	"os/signal"
 	"path"
+	"runtime/trace"
+	"time"
 )
 
 func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
+	f, err := os.Create(time.Now().Format("daemon-trace-2006-01-02T150405.pprof"))
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	if err := trace.Start(f); err != nil {
+		panic(err)
+	}
+	defer trace.Stop()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -56,5 +70,6 @@ func Start(config *config.GlobalConfig, privateKey *ecdsa.PrivateKey) error {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
+	fmt.Println("Received an interrupt, stopping services...")
 	return nil
 }
