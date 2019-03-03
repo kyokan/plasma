@@ -39,11 +39,13 @@ func (e *ErrTxNotFound) Error() string {
 
 type ErrConfirmSigMismatch struct {
 	InputIndex uint8
+	ConfirmSigIndex uint8
 }
 
-func NewErrConfirmSigMismatch(inputIndex uint8) error {
+func NewErrConfirmSigMismatch(inputIndex uint8, confirmSigIndex uint8) error {
 	return &ErrConfirmSigMismatch{
 		InputIndex: inputIndex,
+		ConfirmSigIndex: confirmSigIndex,
 	}
 }
 

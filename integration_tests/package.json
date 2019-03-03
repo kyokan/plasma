@@ -32,7 +32,7 @@
     "grpc": "1.18.0",
     "int64-buffer": "0.99.1007",
     "isomorphic-fetch": "2.2.1",
-    "kyokan-plasma-client": "0.0.10",
+    "kyokan-plasma-client": "0.0.12",
     "mocha": "^5.2.0",
     "rimraf": "2.6.3",
     "truffle": "5.0.2",

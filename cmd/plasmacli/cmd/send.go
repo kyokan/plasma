@@ -1,22 +1,22 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/ethereum/go-ethereum/crypto"
+	"bytes"
+	"context"
+	"crypto/ecdsa"
 	"errors"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
-	"github.com/kyokan/plasma/pkg/log"
-	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/kyokan/plasma/pkg/chain"
 	"github.com/kyokan/plasma/pkg/eth"
-	"time"
+	"github.com/kyokan/plasma/pkg/log"
 	"github.com/kyokan/plasma/pkg/rpc/pb"
-	"context"
-	"bytes"
 	"github.com/kyokan/plasma/util"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-		"sort"
+	"github.com/spf13/cobra"
+	"math/big"
+	"sort"
+	"time"
 )
 
 type sendCmdOutput struct {
@@ -132,12 +132,13 @@ func SpendDeposit(client pb.RootClient, contract eth.Client, privKey *ecdsa.Priv
 		return err
 	}
 
+	var emptySig chain.Signature
 	ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
 	_, err = client.Confirm(ctx, &pb.ConfirmRequest{
 		BlockNumber:      sendRes.Inclusion.BlockNumber,
 		TransactionIndex: sendRes.Inclusion.TransactionIndex,
 		ConfirmSig0:      confirmSig[:],
-		ConfirmSig1:      confirmSig[:],
+		ConfirmSig1:      emptySig[:],
 	})
 	if err != nil {
 		return err
@@ -151,7 +152,7 @@ func SpendDeposit(client pb.RootClient, contract eth.Client, privKey *ecdsa.Priv
 		MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
 		ConfirmSigs: []string{
 			hexutil.Encode(confirmSig[:]),
-			hexutil.Encode(confirmSig[:]),
+			hexutil.Encode(emptySig[:]),
 		},
 	}
 
@@ -206,9 +207,15 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 		input.OutputIndex = txBody.OutputIndexFor(&from)
 
 		if i == 0 {
-			tx.Body.Input0ConfirmSig = utxo.ConfirmSigs[0]
+			tx.Body.Input0ConfirmSigs = [2]chain.Signature{
+				utxo.ConfirmSigs[0],
+				utxo.ConfirmSigs[1],
+			}
 		} else {
-			tx.Body.Input1ConfirmSig = utxo.ConfirmSigs[1]
+			tx.Body.Input1ConfirmSigs = [2]chain.Signature{
+				utxo.ConfirmSigs[0],
+				utxo.ConfirmSigs[1],
+			}
 		}
 
 		total = total.Add(total, txBody.OutputFor(&from).Amount)
@@ -244,10 +251,16 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 	buf.Write(tx.RLPHash(util.Sha256))
 	buf.Write(sendRes.Inclusion.MerkleRoot)
 	sigHash := util.Sha256(buf.Bytes())
-	confirmSig, err := eth.Sign(privKey, sigHash)
+	confirmSig0, err := eth.Sign(privKey, sigHash)
 	if err != nil {
 		return err
 	}
+
+	var confirmSig1 chain.Signature
+	if !tx.Body.Input1.IsZero() {
+		confirmSig1 = confirmSig0
+	}
+
 
 	sendCmdLog.Info("confirming transaction")
 
@@ -255,8 +268,8 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 	_, err = client.Confirm(ctx, &pb.ConfirmRequest{
 		BlockNumber:      sendRes.Inclusion.BlockNumber,
 		TransactionIndex: sendRes.Inclusion.TransactionIndex,
-		ConfirmSig0:      confirmSig[:],
-		ConfirmSig1:      confirmSig[:],
+		ConfirmSig0:      confirmSig0[:],
+		ConfirmSig1:      confirmSig1[:],
 	})
 	if err != nil {
 		return err
@@ -269,8 +282,8 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 		TransactionIndex: sendRes.Inclusion.TransactionIndex,
 		MerkleRoot:       hexutil.Encode(sendRes.Inclusion.MerkleRoot),
 		ConfirmSigs: []string{
-			hexutil.Encode(confirmSig[:]),
-			hexutil.Encode(confirmSig[:]),
+			hexutil.Encode(confirmSig0[:]),
+			hexutil.Encode(confirmSig1[:]),
 		},
 	}
 

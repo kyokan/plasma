@@ -76,10 +76,7 @@ export default class ExitOperation {
       merkle.addItem(sha256(tx.transaction.toRLP()));
     }
     const {proof} = merkle.generateProofAndRoot(this.outpoint!.txIdx);
-    const confirmSigs: [Buffer, Buffer] = [
-      this.outpoint!.confirmSig,
-      Buffer.from(''),
-    ];
+    const confirmSigs = this.outpoint!.confirmSigs;
     await this.contract.startExit(this.outpoint!, proof, confirmSigs, this.committedFee!, this.from);
   }
 }

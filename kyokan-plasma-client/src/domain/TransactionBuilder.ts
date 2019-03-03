@@ -66,7 +66,7 @@ export default class TransactionBuilder {
         0,
         0,
         this.depositAmount!,
-        Buffer.alloc(65),
+        [Buffer.alloc(65), Buffer.alloc(65)],
         null,
       )];
     } else if (this.utxos) {
@@ -112,8 +112,8 @@ export default class TransactionBuilder {
       outputs[1] ? outputs[1] : Output.zero(),
       0,
       0,
-      outpoints[0].confirmSig,
-      outpoints[1] ? outpoints[1].confirmSig : Buffer.alloc(65),
+      outpoints[0].confirmSigs,
+      outpoints[1] ? outpoints[1].confirmSigs : [Buffer.alloc(65), Buffer.alloc(65)],
       this.fee!,
     );
 

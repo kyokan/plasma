@@ -1,6 +1,5 @@
 import Transaction from './Transaction';
 import {sha256} from '../crypto/hash';
-import {ethSign} from '../crypto/sign';
 import {Signer} from '../crypto/Signer';
 
 /**
@@ -68,7 +67,7 @@ export default class ConfirmedTransaction {
     const confirmSigHash = this.confirmHash(merkleRoot);
     const confirmSig = await signer.ethSign(confirmSigHash);
     this.confirmSignatures = [
-      confirmSig, confirmSig,
+      confirmSig, this.transaction.body.input1.isZero() ? Buffer.alloc(65) : confirmSig,
     ];
   }
 }

@@ -6,8 +6,8 @@ import TransactionBody from '../domain/TransactionBody';
 import Transaction from '../domain/Transaction';
 import ConfirmedTransaction from '../domain/ConfirmedTransaction';
 import Outpoint from '../domain/Outpoint';
-import BN = require('bn.js');
 import {addressesEqual} from '../util/addresses';
+import BN = require('bn.js');
 
 export interface BlockWire {
   block: {
@@ -78,9 +78,9 @@ export function outputToWire (output: Output): OutputWire {
 
 export interface TransactionBodyWire {
   input0: InputWire
-  input0ConfirmSig: string
+  input0ConfirmSigs: [string, string]
   input1: InputWire
-  input1ConfirmSig: string
+  input1ConfirmSigs: [string, string]
   output0: OutputWire
   output1: OutputWire
   fee: string
@@ -96,8 +96,8 @@ export function transactionBodyFromWire (tx: TransactionBodyWire): TransactionBo
     outputFromWire(tx.output1),
     tx.blockNumber,
     tx.transactionIndex,
-    parseHex(tx.input0ConfirmSig),
-    parseHex(tx.input1ConfirmSig),
+    [parseHex(tx.input0ConfirmSigs[0]), parseHex(tx.input0ConfirmSigs[1])],
+    [parseHex(tx.input1ConfirmSigs[0]), parseHex(tx.input1ConfirmSigs[1])],
     new BN(tx.fee),
   );
 }
@@ -106,8 +106,8 @@ export function transactionBodyToWire (tx: TransactionBody): TransactionBodyWire
   return {
     blockNumber: tx.blockNum,
     transactionIndex: tx.txIdx,
-    input0ConfirmSig: toHex(tx.input0ConfirmSig),
-    input1ConfirmSig: toHex(tx.input1ConfirmSig),
+    input0ConfirmSigs: [toHex(tx.input0ConfirmSigs[0]), toHex(tx.input0ConfirmSigs[1])],
+    input1ConfirmSigs: [toHex(tx.input1ConfirmSigs[0]), toHex(tx.input1ConfirmSigs[1])],
     fee: tx.fee.toString(10),
     input0: inputToWire(tx.input0),
     input1: inputToWire(tx.input1),
@@ -165,7 +165,7 @@ export function outpointFromConfirmedTxWire (txWire: ConfirmedTransactionWire, o
     body.txIdx,
     outIdx,
     outIdx === 0 ? body.output0.amount : body.output1.amount,
-    tx.confirmSignatures[outIdx],
+    tx.confirmSignatures,
     tx,
   );
 }

@@ -101,9 +101,11 @@ export function outputToWire (output: Output): OutputWire {
 
 export interface TransactionBodyWire {
   input0: InputWire
-  input0ConfirmSig: Buffer
+  input0ConfirmSig0: Buffer
+  input0ConfirmSig1: Buffer
   input1: InputWire
-  input1ConfirmSig: Buffer
+  input1ConfirmSig0: Buffer
+  input1ConfirmSig1: Buffer
   output0: OutputWire
   output1: OutputWire
   fee: BNWire
@@ -119,8 +121,8 @@ export function transactionBodyFromWire (tx: TransactionBodyWire): TransactionBo
     outputFromWire(tx.output1),
     Number(tx.blockNum),
     tx.txIdx,
-    tx.input0ConfirmSig,
-    tx.input1ConfirmSig,
+    [tx.input0ConfirmSig0, tx.input0ConfirmSig1],
+    [tx.input1ConfirmSig0, tx.input1ConfirmSig1],
     fromBNWire(tx.fee),
   );
 }
@@ -129,8 +131,10 @@ export function transactionBodyToWire (tx: TransactionBody): TransactionBodyWire
   return {
     blockNum: tx.blockNum.toString(),
     txIdx: tx.txIdx,
-    input0ConfirmSig: tx.input0ConfirmSig,
-    input1ConfirmSig: tx.input1ConfirmSig,
+    input0ConfirmSig0: tx.input0ConfirmSigs[0],
+    input0ConfirmSig1: tx.input0ConfirmSigs[1],
+    input1ConfirmSig0: tx.input1ConfirmSigs[0],
+    input1ConfirmSig1: tx.input1ConfirmSigs[1],
     fee: toBNWire(tx.fee),
     input0: inputToWire(tx.input0),
     input1: inputToWire(tx.input1),
@@ -188,7 +192,7 @@ export function outpointFromConfirmedTxWire (txWire: ConfirmedTransactionWire, o
     body.txIdx,
     outIdx,
     outIdx === 0 ? body.output0.amount : body.output1.amount,
-    tx.confirmSignatures[outIdx],
+    tx.confirmSignatures,
     tx,
   );
 }
