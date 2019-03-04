@@ -29,3 +29,6 @@ jobs:
     - run: make build-plasmacli
     - run: make build-harness
     - run: make test-unit
+
+    - store_artifacts:
+        path: /go/src/github.com/kyokan/plasma/target
