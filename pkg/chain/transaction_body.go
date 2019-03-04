@@ -136,28 +136,35 @@ func (b *TransactionBody) OutputAt(idx uint8) *Output {
 	return b.Output1
 }
 
-func (b *TransactionBody) lookupOutput(addr *common.Address) (*Output, uint8) {
+func (b *TransactionBody) lookupOutput(addr *common.Address) ([]*Output, []uint8) {
+	var outputs []*Output
+	var indices []uint8
 	output := b.OutputAt(0)
 
 	if output.Owner == *addr {
-		return output, 0
+		outputs = append(outputs, output)
+		indices = append(indices, 0)
 	}
 
 	output = b.OutputAt(1)
-
 	if output.Owner == *addr {
-		return output, 1
+		outputs = append(outputs, output)
+		indices = append(indices, 1)
 	}
 
-	panic(fmt.Sprint("No output found for address: ", addr.Hex()))
+	if len(outputs) == 0 {
+		panic(fmt.Sprint("No output found for address: ", addr.Hex()))
+	}
+
+	return outputs, indices
 }
 
-func (b *TransactionBody) OutputFor(addr *common.Address) *Output {
-	out, _ := b.lookupOutput(addr)
-	return out
+func (b *TransactionBody) OutputsFor(addr *common.Address) []*Output {
+	outputs, _ := b.lookupOutput(addr)
+	return outputs
 }
 
-func (b *TransactionBody) OutputIndexFor(addr *common.Address) uint8 {
+func (b *TransactionBody) OutputIndicesFor(addr *common.Address) []uint8 {
 	_, idx := b.lookupOutput(addr)
 	return idx
 }

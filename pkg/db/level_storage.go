@@ -434,9 +434,16 @@ func (ps *LevelStorage) SpendableTxs(addr common.Address) ([]chain.ConfirmedTran
 	utxoIter := ps.db.NewIterator(levelutil.BytesPrefix(utxoAddrIterKey(addr)), nil)
 	defer utxoIter.Release()
 
-	ret := make([]chain.ConfirmedTransaction, 0)
+	seenTxs := make(map[string]bool)
+	var ret []chain.ConfirmedTransaction
 	for utxoIter.Next() {
 		txHash, _ := utxoKeyParts(string(utxoIter.Key()))
+		hexHash := hexutil.Encode(txHash)
+		if _, seen := seenTxs[hexHash]; seen {
+			continue
+		}
+		seenTxs[hexHash] = true
+
 		spendableTx, err := ps.findTransactionByHash(txHash)
 		if err != nil {
 			return nil, err
@@ -451,9 +458,16 @@ func (ps *LevelStorage) UTXOs(addr common.Address) ([]chain.ConfirmedTransaction
 	utxoIter := ps.db.NewIterator(levelutil.BytesPrefix(utxoAddrIterKey(addr)), nil)
 	defer utxoIter.Release()
 
+	seenTxs := make(map[string]bool)
 	var ret []chain.ConfirmedTransaction
 	for utxoIter.Next() {
 		txHash, _ := utxoKeyParts(string(utxoIter.Key()))
+		hexHash := hexutil.Encode(txHash)
+		if _, seen := seenTxs[hexHash]; seen {
+			continue
+		}
+		seenTxs[hexHash] = true
+
 		tx, err := ps.findTransactionByHash(txHash)
 		if err != nil {
 			return nil, err

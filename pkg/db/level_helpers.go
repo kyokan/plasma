@@ -1,20 +1,20 @@
 package db
 
 import (
-	"math/big"
-	"strconv"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/kyokan/plasma/pkg/chain"
-	"github.com/kyokan/plasma/util"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"strings"
 	"bytes"
 	"fmt"
-	"log"
-	"sort"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/kyokan/plasma/pkg/chain"
+	"github.com/kyokan/plasma/util"
 	"github.com/syndtr/goleveldb/leveldb"
-	"path"
+	"log"
+	"math/big"
 	"os/user"
+	"path"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 const keyPartsSeparator = "::"
@@ -64,7 +64,12 @@ func blockMetaPrefixKey(number uint64) []byte {
 }
 
 func extractAmount(tx *chain.ConfirmedTransaction, addr common.Address) *big.Int {
-	return tx.Transaction.Body.OutputFor(&addr).Amount
+	outputs := tx.Transaction.Body.OutputsFor(&addr)
+	ret := big.NewInt(0)
+	for _, output := range outputs {
+		ret = ret.Add(ret, output.Amount)
+	}
+	return ret
 }
 
 const (
