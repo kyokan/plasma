@@ -29,8 +29,11 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		return err
 	}
 	prevTx0 := prevTx0Conf.Transaction
-	if prevTx0Conf.ConfirmSigs[0] != tx.Body.Input0ConfirmSig {
-		return NewErrConfirmSigMismatch(0)
+	if prevTx0Conf.ConfirmSigs[0] != tx.Body.Input0ConfirmSigs[0] {
+		return NewErrConfirmSigMismatch(0, 0)
+	}
+	if prevTx0Conf.ConfirmSigs[1] != tx.Body.Input0ConfirmSigs[1] {
+		return NewErrConfirmSigMismatch(0, 1)
 	}
 	sigHash0 := tx.Body.SignatureHash()
 	prevTx0Output := prevTx0.Body.OutputAt(tx.Body.Input0.OutputIndex)
@@ -55,8 +58,11 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 			return err
 		}
 		prevTx1 := prevTx1Conf.Transaction
-		if prevTx1Conf.ConfirmSigs[1] != tx.Body.Input1ConfirmSig {
-			return NewErrConfirmSigMismatch(1)
+		if prevTx1Conf.ConfirmSigs[0] != tx.Body.Input1ConfirmSigs[0] {
+			return NewErrConfirmSigMismatch(1, 0)
+		}
+		if prevTx1Conf.ConfirmSigs[1] != tx.Body.Input1ConfirmSigs[1] {
+			return NewErrConfirmSigMismatch(1, 1)
 		}
 		prevTx1Output := prevTx1.Body.OutputAt(tx.Body.Input1.OutputIndex)
 		sigHash1 := tx.Body.SignatureHash()
@@ -99,11 +105,11 @@ func ValidateDepositTransaction(storage db.Storage, client eth.Client, tx *chain
 	}
 
 	var emptySig chain.Signature
-	if !tx.Body.Input1.IsZero() || tx.Body.Input1ConfirmSig != emptySig {
+	if !tx.Body.Input1.IsZero() || tx.Body.Input1ConfirmSigs[0] != emptySig || tx.Body.Input1ConfirmSigs[1] != emptySig {
 		return NewErrDepositDefinedInput1()
 	}
 
-	if tx.Body.Input0ConfirmSig != emptySig {
+	if tx.Body.Input0ConfirmSigs[0] != emptySig || tx.Body.Input0ConfirmSigs[1] != emptySig {
 		return NewErrDepositNonEmptyConfirmSig()
 	}
 
@@ -152,12 +158,12 @@ func ValidateConfirmSigs(storage db.Storage, client eth.Client, blk *chain.Block
 	sigBuf.Write(merkleRoot[:])
 	sigHash := util.Sha256(sigBuf.Bytes())
 	for i, sig := range confirmed.ConfirmSigs {
-		if sig == emptySig {
-			return errors.New("confirmation signature is empty")
-		}
-
 		input := tx.Body.InputAt(uint8(i))
 		if i > 0 && input.IsZero() {
+			if sig != emptySig {
+				return errors.New("confirmation signature must be zero for zero inputs")
+			}
+
 			continue
 		}
 

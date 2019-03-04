@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/kyokan/plasma/pkg/db"
 	"github.com/kyokan/plasma/pkg/chain"
 	"github.com/pkg/errors"
@@ -50,13 +52,18 @@ func (t *TransactionConfirmer) Confirm(blockNumber uint64, transactionIndex uint
 	sigBuf.Write(merkleRoot[:])
 	sigHash := util.Sha256(sigBuf.Bytes())
 	for i, sig := range signatures {
-		if sig == emptySig {
-			return nil, errors.New("confirmation signature is empty")
-		}
-
 		input := tx.Body.InputAt(uint8(i))
 		if i > 0 && input.IsZero() {
+			fmt.Println(i, hexutil.Encode(sig[:]))
+			if sig != emptySig {
+				return nil, errors.New("confirmation signature must be empty")
+			}
+
 			continue
+		}
+
+		if sig == emptySig {
+			return nil, errors.New("confirmation signature is empty")
 		}
 
 		var owner common.Address

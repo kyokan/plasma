@@ -80,6 +80,16 @@ export default class Input {
   }
 
   /**
+   * Returns true if the input is all zeroes.
+   */
+  public isZero (): boolean {
+    return this.blockNum === 0 &&
+      this.txIdx === 0 &&
+      this.outIdx === 0 &&
+      this.depositNonce.eq(new BN(0));
+  }
+
+  /**
    * Returns a 'zero' input - that is, an input whose fields are
    * all zero. Used in [[TransactionBody]] objects to represent
    * null inputs.

@@ -93,8 +93,8 @@ func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input0() {
 	sig, err := randSig()
 	require.NoError(v.T(), err)
 	tx := v.bwm1.ConfirmedTransactions[0].Transaction
-	tx.Body.Input0ConfirmSig = sig
-	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 0)
+	tx.Body.Input0ConfirmSigs[0] = sig
+	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 0, 0)
 }
 
 func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input1() {
@@ -105,10 +105,10 @@ func (v *spendValidationSuite) TestMismatchedConfirmSigs_Input1() {
 	// on input 0
 	tx.Body.Input1.BlockNumber = 1
 	tx.Body.Input1.TransactionIndex = 0
-	tx.Body.Input1ConfirmSig = sig
+	tx.Body.Input1ConfirmSigs[0] = sig
 	err = reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
-	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 1)
+	requireMismatchedConfirmSigs(v.T(), v.storage, tx, 1, 0)
 }
 
 func (v *spendValidationSuite) TestInvalidSigs_Input0() {
@@ -125,7 +125,7 @@ func (v *spendValidationSuite) TestInvalidSigs_Input1() {
 	// is what we want. block 1 corresponds to input 0.
 	tx.Body.Input1.BlockNumber = 1
 	tx.Body.Input1.TransactionIndex = 0
-	tx.Body.Input1ConfirmSig = tx.Body.Input0ConfirmSig
+	tx.Body.Input1ConfirmSigs[0] = tx.Body.Input0ConfirmSigs[0]
 	err := reSign(tx, v.key, 0)
 	require.NoError(v.T(), err)
 	requireInvalidSpendSignature(v.T(), v.storage, tx, 1)
@@ -182,11 +182,12 @@ func requireNotFound(t *testing.T, storage db.Storage, tx *chain.Transaction, in
 	require.Equal(t, input.TransactionIndex, err.(*ErrTxNotFound).TransactionIndex)
 }
 
-func requireMismatchedConfirmSigs(t *testing.T, storage db.Storage, tx *chain.Transaction, inputIndex uint8) {
+func requireMismatchedConfirmSigs(t *testing.T, storage db.Storage, tx *chain.Transaction, inputIndex uint8, sigIndex uint8) {
 	err := ValidateSpendTransaction(storage, tx)
 	require.Error(t, err)
 	require.IsType(t, &ErrConfirmSigMismatch{}, err)
 	require.Equal(t, inputIndex, err.(*ErrConfirmSigMismatch).InputIndex)
+	require.Equal(t, sigIndex, err.(*ErrConfirmSigMismatch).ConfirmSigIndex)
 }
 
 func requireInvalidSpendSignature(t *testing.T, storage db.Storage, tx *chain.Transaction, inputIndex uint8) {

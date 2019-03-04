@@ -66,37 +66,37 @@ export default class TransactionBody {
    * The confirm signature belonging to the transaction whose outputs are
    * referenced by `input0`.
    */
-  public readonly input0ConfirmSig: Buffer;
+  public readonly input0ConfirmSigs: [Buffer, Buffer];
 
   /**
    * The confirm signature belonging to the transaction whose outputs are
    * referenced by `input1`.
    */
-  public readonly input1ConfirmSig: Buffer;
+  public readonly input1ConfirmSigs: [Buffer, Buffer];
 
   /**
    * The fee paid to the root node to include this transaction.
    */
   public readonly fee: BN;
 
-  constructor (input0: Input, input1: Input, output0: Output, output1: Output, blockNum: number, txIdx: number, input0ConfirmSig: Buffer, input1ConfirmSig: Buffer, fee: BN) {
+  constructor (input0: Input, input1: Input, output0: Output, output1: Output, blockNum: number, txIdx: number, input0ConfirmSigs: [Buffer, Buffer], input1ConfirmSigs: [Buffer, Buffer], fee: BN) {
     this.input0 = input0;
     this.input1 = input1;
     this.output0 = output0;
     this.output1 = output1;
     this.blockNum = blockNum;
     this.txIdx = txIdx;
-    this.input0ConfirmSig = input0ConfirmSig;
-    this.input1ConfirmSig = input1ConfirmSig;
+    this.input0ConfirmSigs = input0ConfirmSigs;
+    this.input1ConfirmSigs = input1ConfirmSigs;
     this.fee = fee;
   }
 
   toArray () {
     return [
       ...this.input0.toArray(),
-      this.input0ConfirmSig,
+      Buffer.concat([this.input0ConfirmSigs[0], this.input0ConfirmSigs[1]]),
       ...this.input1.toArray(),
-      this.input1ConfirmSig,
+      Buffer.concat([this.input1ConfirmSigs[0], this.input1ConfirmSigs[1]]),
       ...this.output0.toArray(),
       ...this.output1.toArray(),
       toBuffer(this.fee),
@@ -109,6 +109,8 @@ export default class TransactionBody {
 
   sigHash () {
     const rlp = this.toRLP();
+    console.log(rlp.toString('hex'));
+    console.log(keccak256(rlp).toString('hex'));
     return keccak256(rlp);
   }
 }

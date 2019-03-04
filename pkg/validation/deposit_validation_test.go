@@ -73,7 +73,7 @@ func (d *depositValidationSuite) TestDefinedInput1() {
 	tx.Transaction.Body.Input1.BlockNumber = 0
 	sig, err := randSig()
 	require.NoError(d.T(), err)
-	tx.Transaction.Body.Input1ConfirmSig = sig
+	tx.Transaction.Body.Input1ConfirmSigs[0] = sig
 
 	err = ValidateDepositTransaction(d.storage, d.mockClient, tx.Transaction)
 	require.Error(d.T(), err)
@@ -84,7 +84,7 @@ func (d *depositValidationSuite) TestNonEmptyConfirmSig() {
 	sig, err := randSig()
 	require.NoError(d.T(), err)
 	tx := d.bwm1.ConfirmedTransactions[0]
-	tx.Transaction.Body.Input0ConfirmSig = sig
+	tx.Transaction.Body.Input0ConfirmSigs[0] = sig
 
 	err = ValidateDepositTransaction(d.storage, d.mockClient, tx.Transaction)
 	require.Error(d.T(), err)
