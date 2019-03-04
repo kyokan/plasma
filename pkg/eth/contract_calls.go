@@ -19,7 +19,7 @@ func ContractCall(client *ethclient.Client, generator TxGenerator) (*types.Recei
 
 	rawReceipt, err := util.WithRetries(func() (interface{}, error) {
 		return client.TransactionReceipt(context.Background(), tx.Hash())
-	}, 10, 5 * time.Second)
+	}, 24, 5 * time.Second)
 	if err != nil {
 		return nil, err
 	}
