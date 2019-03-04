@@ -109,8 +109,6 @@ export default class TransactionBody {
 
   sigHash () {
     const rlp = this.toRLP();
-    console.log(rlp.toString('hex'));
-    console.log(keccak256(rlp).toString('hex'));
     return keccak256(rlp);
   }
 }

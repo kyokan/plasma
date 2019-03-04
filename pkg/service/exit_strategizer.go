@@ -1,14 +1,14 @@
 package service
 
 import (
+	"github.com/kyokan/plasma/pkg/db"
 	"github.com/kyokan/plasma/pkg/eth"
 	"github.com/kyokan/plasma/pkg/log"
-	"time"
-	"github.com/sirupsen/logrus"
-	"sync/atomic"
-	"github.com/kyokan/plasma/pkg/db"
 	"github.com/kyokan/plasma/pkg/merkle"
 	"github.com/kyokan/plasma/util"
+	"github.com/sirupsen/logrus"
+	"sync/atomic"
+	"time"
 )
 
 var exitStratLogger = log.ForSubsystem("ExitStrategizer")
@@ -123,12 +123,16 @@ func (e *ExitStrategizer) doExit() {
 			leaves[i] = tx.Transaction.RLPHash(util.Sha256)
 		}
 		_, proof := merkle.RootAndProof(leaves, int64(utxo.Transaction.Body.TransactionIndex))
-		_, err = e.ethClient.Exit(&utxo, utxo.Transaction.Body.OutputIndexFor(&addr), proof)
-		if err != nil {
-			log.WithError(exitStratLogger, err).Error("failed to perform exit")
-			continue
+
+		indices := utxo.Transaction.Body.OutputIndicesFor(&addr)
+		for _, idx := range indices {
+			_, err = e.ethClient.Exit(&utxo, idx, proof)
+			if err != nil {
+				log.WithError(exitStratLogger, err).Error("failed to perform exit")
+				continue
+			}
+			exitStratLogger.Info("successfully exited output")
 		}
-		exitStratLogger.Info("successfully exited output")
 	}
 
 	logger.Warn("mass exit complete. you can shut down your node now.")

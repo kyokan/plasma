@@ -31,6 +31,11 @@ type sendCmdOutput struct {
 
 var sendCmdLog = log.ForSubsystem("SendCmd")
 
+type outpoint struct {
+	tx  chain.ConfirmedTransaction
+	idx uint8
+}
+
 var sendCmd = &cobra.Command{
 	Use:   "send to value [depositNonce] [contractAddr]",
 	Short: "Sends funds",
@@ -182,7 +187,7 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 	if len(utxos) == 0 {
 		return errors.New("no spendable outputs")
 	}
-	selectedUTXOs, err := selectUTXOs(utxos, from, value)
+	selectedTransactions, outputIndices, err := selectUTXOs(utxos, from, value)
 	if err != nil {
 		return err
 	}
@@ -191,7 +196,7 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 	tx := &chain.Transaction{
 		Body: chain.ZeroBody(),
 	}
-	for i, utxo := range selectedUTXOs {
+	for i, utxo := range selectedTransactions {
 		txBody := utxo.Transaction.Body
 		var input *chain.Input
 		if i == 0 {
@@ -204,7 +209,7 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 
 		input.BlockNumber = txBody.BlockNumber
 		input.TransactionIndex = txBody.TransactionIndex
-		input.OutputIndex = txBody.OutputIndexFor(&from)
+		input.OutputIndex = outputIndices[i]
 
 		if i == 0 {
 			tx.Body.Input0ConfirmSigs = [2]chain.Signature{
@@ -218,7 +223,7 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 			}
 		}
 
-		total = total.Add(total, txBody.OutputFor(&from).Amount)
+		total = total.Add(total, txBody.OutputAt(outputIndices[i]).Amount)
 	}
 
 	tx.Body.Output0.Amount = value
@@ -261,7 +266,6 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 		confirmSig1 = confirmSig0
 	}
 
-
 	sendCmdLog.Info("confirming transaction")
 
 	ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
@@ -290,35 +294,46 @@ func SpendTx(client pb.RootClient, privKey *ecdsa.PrivateKey, from common.Addres
 	return PrintJSON(out)
 }
 
-func selectUTXOs(confirmedTxs []chain.ConfirmedTransaction, addr common.Address, total *big.Int) ([]chain.ConfirmedTransaction, error) {
-	sort.Slice(confirmedTxs, func(i, j int) bool {
-		a := confirmedTxs[i].Transaction.Body.OutputFor(&addr).Amount
-		b := confirmedTxs[j].Transaction.Body.OutputFor(&addr).Amount
-		return a.Cmp(b) > 0
-	})
-
-	first := confirmedTxs[0]
-	firstBody := first.Transaction.Body
-
-	if firstBody.OutputFor(&addr).Amount.Cmp(total) >= 0 {
-		return []chain.ConfirmedTransaction{first}, nil
-	}
-
-	for i := len(confirmedTxs) - 1; i >= 0; i-- {
-		second := confirmedTxs[i]
-		secondBody := second.Transaction.Body
-		sum := big.NewInt(0)
-		sum = sum.Add(sum, firstBody.OutputFor(&addr).Amount)
-		sum = sum.Add(sum, secondBody.OutputFor(&addr).Amount)
-		if sum.Cmp(total) >= 0 {
-			return []chain.ConfirmedTransaction{
-				first,
-				second,
-			}, nil
+func selectUTXOs(confirmedTxs []chain.ConfirmedTransaction, addr common.Address, total *big.Int) ([]chain.ConfirmedTransaction, []uint8, error) {
+	var outpoints []outpoint
+	for _, tx := range confirmedTxs {
+		indices := tx.Transaction.Body.OutputIndicesFor(&addr)
+		for _, idx := range indices {
+			outpoints = append(outpoints, outpoint{
+				tx:  tx,
+				idx: idx,
+			})
 		}
 	}
 
-	return nil, errors.New("no suitable UTXOs found")
+	sort.Slice(outpoints, func(i, j int) bool {
+		a := outpoints[i].tx.Transaction.Body.OutputAt(outpoints[i].idx).Amount
+		b := outpoints[j].tx.Transaction.Body.OutputAt(outpoints[j].idx).Amount
+		return a.Cmp(b) > 0
+	})
+
+	first := outpoints[0]
+	firstBody := first.tx.Transaction.Body
+
+	if firstBody.OutputAt(first.idx).Amount.Cmp(total) >= 0 {
+		return []chain.ConfirmedTransaction{first.tx}, []uint8{first.idx}, nil
+	}
+
+	for i := len(confirmedTxs) - 1; i >= 0; i-- {
+		second := outpoints[i]
+		secondBody := second.tx.Transaction.Body
+		sum := big.NewInt(0)
+		sum = sum.Add(sum, firstBody.OutputAt(first.idx).Amount)
+		sum = sum.Add(sum, secondBody.OutputAt(second.idx).Amount)
+		if sum.Cmp(total) >= 0 {
+			return []chain.ConfirmedTransaction{
+				first.tx,
+				second.tx,
+			}, []uint8 { first.idx, second.idx }, nil
+		}
+	}
+
+	return nil, nil, errors.New("no suitable UTXOs found")
 }
 
 func init() {

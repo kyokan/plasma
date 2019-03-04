@@ -1,6 +1,6 @@
 {
   "name": "kyokan-plasma-client",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "A JavaScript client library for Kyokan's Plasma implementation.",
   "main": "./lib/Plasma.js",
   "directories": {
