@@ -21,22 +21,27 @@ func Sign(privKey *ecdsa.PrivateKey, hash util.Hash) (chain.Signature, error) {
 }
 
 func ValidateSignature(hash, signature []byte, address common.Address) error {
+        // 2 Us
 	ethHash := util.GethHash(hash)
 
+        // 200 ns
 	sigCopy := make([]byte, len(signature))
 	copy(sigCopy, signature)
 	if len(sigCopy) == 65 && sigCopy[64] > 26 {
 		sigCopy[64] -= 27
 	}
 
+        // 220 Us
 	pubKey, err := crypto.SigToPub(ethHash, sigCopy)
 	if err != nil {
 		return err
 	}
 
+        // 3 Us
 	signatureAddress := crypto.PubkeyToAddress(*pubKey)
 	if address != signatureAddress {
 		return errors.New("invalid signature")
 	}
+
 	return nil
 }

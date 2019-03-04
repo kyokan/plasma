@@ -14,6 +14,7 @@ import (
 		)
 
 func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error) {
+        // 300 ns
 	if tx.Body.Output0.Amount.Cmp(big.NewInt(0)) == -1 {
 		return NewErrNegativeOutput(0)
 	}
@@ -21,6 +22,7 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		return NewErrNegativeOutput(1)
 	}
 
+        // 20 Us
 	prevTx0Conf, err := storage.FindTransactionByBlockNumTxIdx(tx.Body.Input0.BlockNumber, tx.Body.Input0.TransactionIndex)
 	if err == leveldb.ErrNotFound {
 		return NewErrTxNotFound(0, tx.Body.Input0.BlockNumber, tx.Body.Input0.TransactionIndex)
@@ -28,6 +30,8 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 	if err != nil {
 		return err
 	}
+
+        // 10 Us
 	prevTx0 := prevTx0Conf.Transaction
 	if prevTx0Conf.ConfirmSigs[0] != tx.Body.Input0ConfirmSigs[0] {
 		return NewErrConfirmSigMismatch(0, 0)
@@ -36,12 +40,15 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		return NewErrConfirmSigMismatch(0, 1)
 	}
 	sigHash0 := tx.Body.SignatureHash()
+
+        // 200 Us
 	prevTx0Output := prevTx0.Body.OutputAt(tx.Body.Input0.OutputIndex)
 	err = eth.ValidateSignature(sigHash0, tx.Sigs[0][:], prevTx0Output.Owner)
 	if err != nil {
 		return NewErrInvalidSignature(0)
 	}
 
+        // 450 ns
 	totalInput := big.NewInt(0)
 	totalInput = totalInput.Add(totalInput, prevTx0Output.Amount)
 
@@ -66,7 +73,9 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		}
 		prevTx1Output := prevTx1.Body.OutputAt(tx.Body.Input1.OutputIndex)
 		sigHash1 := tx.Body.SignatureHash()
+
 		err = eth.ValidateSignature(sigHash1, tx.Sigs[1][:], prevTx1Output.Owner)
+
 		if err != nil {
 			return NewErrInvalidSignature(1)
 		}
@@ -74,6 +83,7 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		totalInput = totalInput.Add(totalInput, prevTx1Output.Amount)
 	}
 
+        // 600-900 ns
 	totalOutput := big.NewInt(0)
 	totalOutput = totalOutput.Add(totalOutput, tx.Body.Output0.Amount)
 	totalOutput = totalOutput.Add(totalOutput, tx.Body.Fee)
@@ -85,6 +95,7 @@ func ValidateSpendTransaction(storage db.Storage, tx *chain.Transaction) (error)
 		return NewErrInputOutputValueMismatch(totalInput, totalOutput)
 	}
 
+        // 20 Us
 	isDoubleSpent, err := storage.IsDoubleSpent(tx)
 	if err != nil {
 		return err
