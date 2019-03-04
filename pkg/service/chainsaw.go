@@ -105,7 +105,10 @@ func (c *Chainsaw) processTxExits(wg *sync.WaitGroup, head uint64) {
 	}()
 
 	if tail > head {
-		logFields.Warn("head is behind last block, implies bug")
+		if tail > head + 1 {
+			logFields.Warn("head is behind last block, implies bug")
+		}
+
 		return
 	}
 
@@ -201,7 +204,10 @@ func (c *Chainsaw) processDepositExits(wg *sync.WaitGroup, head uint64) {
 	}()
 
 	if tail > head {
-		logFields.Warn("head is behind last block, implies bug")
+		if tail > head + 1 {
+			logFields.Warn("head is behind last block, implies bug")
+		}
+
 		return
 	}
 
