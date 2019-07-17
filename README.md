@@ -54,17 +54,17 @@ is most recent to support Solidity [v0.4.18](https://github.com/ethereum/solidit
 
 ## Installation and Setup
 
-1. Checkout, install deps, and build:
+1. Run ganache on default port 7545
+2. Checkout, install deps, and build:
 
 ```
 mkdir -p $GOPATH/src/github.com/kyokan
-git clone https://github.com/kyokan/plasma.git
+cd $GOPATH/src/github.com/kyokan
+git clone https://github.com/kyokan/plasma.git -b master
 cd plasma
 dep ensure
 make
 ```
-
-2. Run ganache on default port 7545
 
 3. Deploy contracts:
 
